@@ -1,29 +1,33 @@
-# Custom theme samples
+# Custom themes
 
-Example AXAML files you can feed to MenYou's **Settings → Custom →
-Load…** button. These are **full working themes wired to MenYou's live
-data**, not standalone mockups: each one binds to the real
-`StartMenuViewModel` (Pinned / Recent / Programs / Search / Power /
-RightPanel), paints with MenYou's app-level brushes
+MenYou's **Settings → Custom** tab loads a self-contained AXAML file,
+parses it through `AvaloniaRuntimeXamlLoader` on every keystroke, and
+renders the result in a live preview pane next to the editor. This guide
+covers the bundled sample, how loading works, and how to author your own.
+
+The example files under
+[`samples/custom-themes/`](../samples/custom-themes/) are **full working
+themes wired to MenYou's live data**, not standalone mockups: each binds to
+the real `StartMenuViewModel` (Pinned / Recent / Programs / Search / Power
+/ RightPanel), paints with MenYou's app-level brushes
 (`MenuBackgroundBrush`, `PowerDangerBrush`, …), and embeds MenYou's own
-custom controls (`ctrl:AppGrid`, `ctrl:ProgramsTree`, …).
+controls (`ctrl:AppGrid`, `ctrl:ProgramsTree`, …).
 
-What lets them parse through `AvaloniaRuntimeXamlLoader.Parse<Control>`
-is that they omit a compiled `x:Class` and use **reflection-style
-bindings** (no `x:DataType`, no compiled-binding casts). They render in
-full only when run **inside MenYou** — selected as the active theme,
-where the app's resources and view-model are in scope. The in-dialog
-**preview pane** has the app resources but not the `StartMenuViewModel`
-data context, so it shows the chrome (backgrounds, section headers,
-power glyphs) with the app/folder lists empty — that's expected, not a
-bug.
+What lets them parse through `AvaloniaRuntimeXamlLoader.Parse<Control>` is
+that they omit a compiled `x:Class` and use **reflection-style bindings**
+(no `x:DataType`, no compiled-binding casts). They render in full only when
+run **inside MenYou** — selected as the active theme, where the app's
+resources and view-model are in scope. The in-dialog **preview pane** has
+the app resources but not the `StartMenuViewModel` data context, so it
+shows the chrome (backgrounds, section headers, power glyphs) with the
+app/folder lists empty — that's expected, not a bug.
 
 | File | What it mimics |
 |---|---|
-| [`Windows7Square.axaml`](Windows7Square.axaml) | A clone of the built-in "Modern (Windows 7)" layout with every corner squared off — pinned tile grid + user header on top, scrollable Recent / All Programs and the shell-shortcut / search-context column in the middle, search box + six power glyphs along the bottom. Re-declares MenYou's rounded control styles (`Button.menu`, the circular power buttons, the search box, list highlights, the round avatar) with `CornerRadius=0`, so the whole interior reads sharp/pointy instead of rounded. |
+| [`Windows7Square.axaml`](../samples/custom-themes/Windows7Square.axaml) | A clone of the built-in "Modern (Windows 7)" layout with every corner squared off — pinned tile grid + user header on top, scrollable Recent / All Programs and the shell-shortcut / search-context column in the middle, search box + six power glyphs along the bottom. Re-declares MenYou's rounded control styles (`Button.menu`, the circular power buttons, the search box, list highlights, the round avatar) with `CornerRadius=0`, so the whole interior reads sharp/pointy instead of rounded. |
 
-> **Heads up — the Windows 11 and Linux Mint Cinnamon samples graduated
-> to built-in styles.** They used to ship here as `Windows11.axaml` and
+> **Heads up — the Windows 11 and Linux Mint Cinnamon samples graduated to
+> built-in styles.** They used to ship here as `Windows11.axaml` and
 > `MintCinnamon.axaml`; both are now first-class layouts you pick from
 > **Settings → Wygląd (Appearance)** (alongside Modern (Windows 7),
 > Classic XP and Classic 9x) instead of loading by hand. `Windows7Square`
@@ -35,12 +39,12 @@ bug.
 1. Open MenYou Settings (tray icon → Settings, or Shift+Win → Settings).
 2. Switch to the **Custom** tab.
 3. Tick **Use custom theme** (enables the editor + buttons).
-4. Click **Load…** and pick a file from this directory.
-5. The XAML lands in the editor; the right-hand preview pane renders
-   it live.
+4. Click **Load…** and pick a file from `samples/custom-themes/`.
+5. The XAML lands in the editor; the right-hand preview pane renders it
+   live.
 6. Edit, then **Save** to write the modified version back out to disk
-   (the loaded copy in `%AppData%\MenYou\CustomThemes\` stays
-   untouched — Save is export, not in-place overwrite).
+   (the loaded copy in `%AppData%\MenYou\CustomThemes\` stays untouched —
+   Save is export, not in-place overwrite).
 
 ## Authoring your own
 
@@ -85,9 +89,6 @@ Either way:
 
 ## License notes
 
-`Windows7Square.axaml` ships no third-party assets — it reuses MenYou's
-own control styles and Segoe Fluent Icons glyphs, so there's nothing
-extra to attribute. If you author your own theme with Material Design
-Icons path data, those glyphs are under the
-[Pictogrammers / MDI](https://pictogrammers.com/library/mdi/) license
-(Apache-2.0).
+`Windows7Square.axaml` ships no third-party assets of its own — it reuses
+MenYou's own control styles and Segoe Fluent Icons glyphs, so there's
+nothing extra you need to attribute.

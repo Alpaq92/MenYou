@@ -20,7 +20,7 @@
     <licenseUrl>https://github.com/Alpaq92/MenYou/blob/main/LICENSE</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <projectSourceUrl>https://github.com/Alpaq92/MenYou</projectSourceUrl>
-    <docsUrl>https://github.com/Alpaq92/MenYou/blob/main/docs/overview.md</docsUrl>
+    <docsUrl>https://github.com/Alpaq92/MenYou/blob/main/docs/OVERVIEW.md</docsUrl>
     <bugTrackerUrl>https://github.com/Alpaq92/MenYou/issues</bugTrackerUrl>
     <tags>menyou start-menu windows shell replacement avalonia</tags>
     <summary>Windows Start-menu replacement (Avalonia / .NET).</summary>

@@ -11,26 +11,17 @@ JumpLists) rather than reinventing them.
 
 ## Why
 
-A little backstory. I'd set up a slimmed-down Windows 11 using the
-excellent [Tiny11](https://github.com/ntdevlabs/tiny11builder) builder
-script — a genuinely great project. One trade-off of a debloated image,
-though, is that Start-menu **search stopped finding my locally installed
-apps**: that search path quietly leans on a few components a minimal
-install leaves out. (It turns out the browser is more load-bearing in the
-Start menu than you'd ever expect — searching your own machine shouldn't
-really need Edge, but here we are. 🙂)
-
-So I went looking for a Start-menu replacement. The standout free and
-open-source option was the wonderful
-[Open-Shell](https://github.com/Open-Shell/Open-Shell-Menu), which I have
-a lot of respect for — the bundled skins just weren't quite to my taste.
-I tried building my own skin for it, and after digging into how it works
-under the hood I realised what I really wanted was something a bit more
-flexible, on a more familiar and modern tech stack.
-
-And that's how **MenYou** came to be — a Start-menu replacement built on
-**.NET 10** and **Avalonia 12**, designed to be skinnable from the ground
-up.
+This started with a debloated Windows 11
+([Tiny11](https://github.com/ntdevlabs/tiny11builder)). Stripping the
+image also strips out whatever Start-menu search uses to find local apps
+— apparently locating Notepad on your own PC routes through Edge. With
+search broken, I needed a new Start menu.
+[Open-Shell](https://github.com/Open-Shell/Open-Shell-Menu) was the one
+solid free/OSS option, but none of its skins did it for me. I tried
+theming it, went down the rabbit hole of how it works, and concluded I
+wanted something more flexible on a stack I'd rather maintain. MenYou is
+the result: a ground-up-skinnable Start menu on **.NET 10** + **Avalonia
+12**.
 
 ## Install
 
@@ -102,7 +93,7 @@ A worked example lives in
 — the Modern (Windows 7) layout with every corner squared off, a
 compact illustration of re-skinning an existing layout by overriding
 its styles. Load it from Settings → Custom → Load… and edit live. See
-[`samples/custom-themes/README.md`](samples/custom-themes/README.md)
+[`docs/THEMING.md`](docs/THEMING.md)
 for the authoring constraints (no `x:Class`, no compiled bindings,
 SVG paths for glyphs).
 
@@ -113,13 +104,13 @@ Modern (Windows 7), Classic XP and Classic 9x) from
 
 ## Documentation
 
-- [`docs/overview.md`](docs/overview.md) — architecture, inspirations,
-  credits.
+- [`docs/OVERVIEW.md`](docs/OVERVIEW.md) — architecture, tech stack, how it
+  works, credits.
 - [`docs/AUTOMATION.md`](docs/AUTOMATION.md) — CI/CD map, code-signing
-  options (SignPath Foundation / Certum / EV), required secrets, and
-  the release pipeline detail.
-- [`samples/custom-themes/`](samples/custom-themes/) — runnable AXAML
-  examples for the Settings → Custom feature.
+  options, required secrets, and the release pipeline.
+- [`docs/THEMING.md`](docs/THEMING.md) — authoring custom themes for the
+  Settings → Custom feature.
+- [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) — translating MenYou.
 - [`CHANGELOG.md`](CHANGELOG.md) — versioned change log (auto-generated
   by release-please from Conventional Commits).
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — building, layout, PR flow.
