@@ -25,12 +25,12 @@ the result: a ground-up-skinnable Start menu on **.NET 10** + **Avalonia
 
 ## Install
 
-| Channel              | Command                                |
-|----------------------|----------------------------------------|
-| **winget**           | `winget install Alpaq.MenYou`          |
-| **Scoop** (extras)   | `scoop install menyou`                 |
-| **Chocolatey**       | `choco install menyou`                 |
-| **GitHub Releases**  | [Latest release](https://github.com/Alpaq92/MenYou/releases/latest) — download the `MenYou-Setup-x64.exe` |
+| Channel | Command |
+|---|---|
+| **GitHub Releases** | [Latest release](https://github.com/Alpaq92/MenYou/releases/latest) — download `MenYou-Setup-<version>.exe` |
+| **Scoop** | `scoop bucket add menyou https://github.com/Alpaq92/scoop-menyou`<br>`scoop install menyou` |
+| **winget** | _coming soon_ |
+| **Chocolatey** | _coming soon_ |
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) —
 a standard setup wizard where you can override the install location,
