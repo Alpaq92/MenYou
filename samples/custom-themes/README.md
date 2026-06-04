@@ -80,7 +80,7 @@ Either way:
   their xmlns declared at the root AND need their assemblies to be
   loaded in the host process, which limits portability.
 - **Use SVG path data for icons** — `Path Data="..."` with a Material
-  Design Icons path (CC-BY 4.0) is the lightest option. No image
+  Design Icons path (Apache-2.0) is the lightest option. No image
   files = no asset-path resolution problems.
 
 ## License notes

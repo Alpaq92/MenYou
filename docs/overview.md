@@ -245,7 +245,7 @@ App icon assets live at the repo root (`icon.svg`, `icon_v2.svg`,
 
 - `icon.svg` is a flat 24×24 source — four blue tiles, `#165BFF` —
   based on the [`view-dashboard`](https://pictogrammers.com/library/mdi/icon/view-dashboard/)
-  glyph from Material Design Icons (Pictogrammers).
+  glyph from Material Design Icons (Pictogrammers), Apache-2.0.
 - `icon_v2.svg` wraps that glyph on a white-glass disc: radial body
   gradient, upper sheen ellipse, specular catchlight, refracted
   inner rim, bottom bounce light — a Liquid Glass-style treatment.

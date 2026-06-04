@@ -145,3 +145,8 @@ MenYou stands on the shoulders of projects I learned a great deal from:
 ## License
 
 [MIT](LICENSE) © Alpaq and MenYou contributors.
+
+The app icon is adapted from
+[`view-dashboard`](https://pictogrammers.com/library/mdi/icon/view-dashboard/),
+part of [Material Design Icons](https://pictogrammers.com/library/mdi/) by
+Pictogrammers (Apache-2.0).
