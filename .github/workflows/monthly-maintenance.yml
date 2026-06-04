@@ -15,12 +15,12 @@
 # so auto-merge would wait forever. With the PAT, the PR's CI runs, it
 # merges, and the release flows automatically.
 #
-# TRANSLATIONS: this job does NOT pull from GitLocalize — GitLocalize
-# delivery is moderator-triggered (a moderator opens the PR in its UI),
-# not schedulable from CI, so it can't be automated here. The monthly
-# release simply ships whatever translations are already on `main`. To
-# include fresh translations in a given month, open the GitLocalize PR
-# (and let it auto-merge) before this job runs.
+# TRANSLATIONS (Crowdin): this job also syncs translations. It PULLS
+# completed translations from the Crowdin project into the same refresh PR
+# (so they ship in that month's release), and at the END pushes the current
+# en.json source strings back to Crowdin so newly added strings become
+# translatable. Both steps self-skip when CROWDIN_PROJECT_ID /
+# CROWDIN_PERSONAL_TOKEN aren't set, so the dependency bump still runs.
 # --------------------------------------------------------------------------
 name: Monthly maintenance
 
@@ -57,6 +57,33 @@ jobs:
           # minor/patch upgrades are applied.
           dotnet outdated src/MenYou/MenYou.csproj --upgrade --version-lock Major
 
+      - name: Detect Crowdin config
+        id: crowdin
+        shell: bash
+        env:
+          CROWDIN_PROJECT_ID:     ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+        run: |
+          if [ -n "$CROWDIN_PROJECT_ID" ] && [ -n "$CROWDIN_PERSONAL_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Crowdin secrets not set — skipping translation sync."
+          fi
+
+      - name: Install Crowdin CLI
+        if: steps.crowdin.outputs.configured == 'true'
+        run: npm install -g @crowdin/cli
+
+      # Pull completed translations into the working tree so they're part of
+      # the refresh PR below (and thus this month's release).
+      - name: Pull translations from Crowdin
+        if: steps.crowdin.outputs.configured == 'true'
+        env:
+          CROWDIN_PROJECT_ID:     ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+        run: crowdin download --config crowdin.yml --no-progress
+
       - name: Open dependency-refresh PR
         id: cpr
         uses: peter-evans/create-pull-request@v7
@@ -66,11 +93,12 @@ jobs:
           commit-message: "fix(deps): monthly dependency refresh"
           title: "fix(deps): monthly dependency refresh"
           body: |
-            Automated monthly NuGet refresh (minor/patch only — major bumps
-            are left to deliberate, reviewed upgrades).
+            Automated monthly maintenance: a NuGet minor/patch refresh (major
+            bumps are left to deliberate, reviewed upgrades) plus any completed
+            translations pulled from Crowdin.
 
             Auto-merges once CI is green; release-please then cuts a patch
-            release. If nothing was outdated this month, no PR is created.
+            release. If nothing changed this month, no PR is created.
 
             > Needs the `RELEASE_PLEASE_PAT` secret to run CI + merge + release
             > unattended (a GITHUB_TOKEN-created PR doesn't trigger workflows).
@@ -79,6 +107,7 @@ jobs:
           labels: |
             dependencies
             nuget
+            i18n
           delete-branch: true
 
       - name: Enable auto-merge on the refresh PR
@@ -87,3 +116,13 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
           PR: ${{ steps.cpr.outputs.pull-request-number }}
         run: gh pr merge --auto --squash "$PR" --repo "$GITHUB_REPOSITORY"
+
+      # Push current en.json source strings to Crowdin so newly added ones
+      # become translatable. Idempotent — Crowdin only registers strings that
+      # are actually new, so this is a no-op when en.json hasn't gained any.
+      - name: Push source strings (en.json) to Crowdin
+        if: steps.crowdin.outputs.configured == 'true'
+        env:
+          CROWDIN_PROJECT_ID:     ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+        run: crowdin upload sources --config crowdin.yml --no-progress

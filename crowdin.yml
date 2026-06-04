@@ -1,0 +1,19 @@
+# Crowdin configuration for MenYou's translation sync.
+#
+# en.json is the source of truth; every other locale is a translation of
+# it. Used by:
+#   - .github/workflows/monthly-maintenance.yml — monthly two-way sync
+#     (pull completed translations, push new source strings).
+#   - tools/crowdin-upload.ps1 — one-off seed of existing translations.
+#
+# Credentials come from the environment so no token is committed:
+#   CROWDIN_PROJECT_ID, CROWDIN_PERSONAL_TOKEN (set as repo secrets / locally).
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env:  CROWDIN_PERSONAL_TOKEN
+
+preserve_hierarchy: true
+
+files:
+  - source:      /src/MenYou/Languages/en.json
+    translation: /src/MenYou/Languages/%two_letters_code%.json
+    type:        json

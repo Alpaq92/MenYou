@@ -58,7 +58,7 @@ monitor at runtime.
 
 Press **Shift+Win** to toggle the menu.
 
-## Translate MenYou
+## Translation
 
 MenYou is partly translated for free: every system label
 ("Settings", "Pinned", "Apply", "Sign out", …) pulls live from the
@@ -68,11 +68,10 @@ statuses, etc.) live in
 [`src/MenYou/Languages/*.json`](src/MenYou/Languages/) and need
 humans.
 
-**Help out via [GitLocalize](https://gitlocalize.com/repo/10801)**: sign
-in with GitHub, pick your language, and translate the strings that read
-awkwardly in its web editor. A moderator reviews completed translations
-and turns them into a pull request back to this repo, which lands in the
-next release. Prefer git? Edit
+**Help out via [Crowdin](https://crowdin.com/project/menyou)**: pick your
+language and translate the strings that read awkwardly in the web editor.
+The monthly maintenance job syncs completed translations back into the
+repo, so they ship in the next release. Prefer git? Edit
 [`src/MenYou/Languages/<lang>.json`](src/MenYou/Languages/) directly and
 open a PR — it's merged the same way.
 

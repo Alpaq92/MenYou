@@ -95,9 +95,12 @@ packages to their latest **minor/patch** (`dotnet outdated --upgrade
 --version-lock Major`; majors are left to deliberate review), opens a
 `fix(deps): monthly dependency refresh` PR, and enables auto-merge. The
 `fix(deps):` commit then drives release-please to cut a patch release — a
-maintained, re-released build every month. Needs `RELEASE_PLEASE_PAT` to
-run the PR's CI and the merge/release unattended (a `GITHUB_TOKEN`-created
-PR doesn't trigger workflows).
+maintained, re-released build every month. It also runs the **Crowdin
+two-way sync** (pull translations into the same PR, push `en.json` sources
+at the end — see Translations below). Needs `RELEASE_PLEASE_PAT` to run the
+PR's CI and the merge/release unattended (a `GITHUB_TOKEN`-created PR
+doesn't trigger workflows); the Crowdin steps additionally need the
+`CROWDIN_*` secrets and skip without them.
 
 ### `release.yml`
 Tag push `v*.*.*` + `workflow_dispatch`. Publishes the self-contained x64
@@ -107,20 +110,21 @@ creates the GitHub Release, and fans out to winget / Scoop / Chocolatey
 Signing is optional: with SignPath secrets absent, the release still ships
 and the body gets a `⚠ Unsigned build` banner.
 
-### Translations (GitLocalize)
-Translations are handled by
-[GitLocalize](https://gitlocalize.com/repo/10801) through its **GitHub
-App** — there is **no workflow or config file in this repo**. It tracks
-`src/MenYou/Languages/en.json` as the source (paths are set in the
-GitLocalize UI: source `src/MenYou/Languages/en.json`, target
-`src/MenYou/Languages/%lang%.json`); contributors translate in the web UI,
-and a Language Moderator reviews and opens a PR back to `main`. Delivery is
-**moderator-triggered, not scheduled** — so a release ships whatever
-translations have already landed on `main`. To include fresh work in a
-release (including the monthly one), create the GitLocalize PR before it.
-Translation PRs auto-merge once CI is green if their author is a trusted
-author (the moderator account / a bot added to
-`trusted-author-auto-merge.yml`).
+### Translations (Crowdin)
+Community translation runs on
+[Crowdin](https://crowdin.com/project/menyou). There's **no standalone
+workflow** — the sync is folded into `monthly-maintenance.yml`, keyed off
+the repo-root `crowdin.yml` (source `src/MenYou/Languages/en.json`, targets
+`%two_letters_code%.json`). Each month it:
+- **pulls** completed translations from Crowdin into the monthly refresh
+  PR, so they ship in that month's release; and
+- **pushes** the current `en.json` source strings back to Crowdin at the
+  end, so newly added strings become translatable.
+
+Both steps self-skip when the `CROWDIN_*` secrets are absent. A one-off
+seed of the locale files already in the repo is available via
+[`tools/crowdin-upload.ps1`](../tools/crowdin-upload.ps1) (run once after
+adding the target languages in Crowdin).
 
 ## Conventional Commits
 
@@ -171,6 +175,7 @@ sign step self-skips and the release ships unsigned.
 | `WINGET_PAT` | `public_repo` PAT for `winget-releaser`. | for winget |
 | `SCOOP_PAT` | PAT for the `Alpaq92/scoop-menyou` bucket repo. | for Scoop |
 | `CHOCO_API_KEY` | chocolatey.org API key. | for Chocolatey |
+| `CROWDIN_PROJECT_ID` / `CROWDIN_PERSONAL_TOKEN` | Crowdin numeric project ID + personal token (Projects scope). Enable the monthly translation sync. | for translations |
 | `SIGNPATH_API_TOKEN` / `SIGNPATH_ORG_ID` / `SIGNPATH_PROJECT_SLUG` / `SIGNPATH_SIGNING_POLICY_SLUG` | SignPath signing (last one defaults to `release-signing`). | optional |
 
 ## Required GitHub settings
