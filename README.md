@@ -19,7 +19,7 @@ search broken, I needed a new Start menu.
 [Open-Shell](https://github.com/Open-Shell/Open-Shell-Menu) was the one
 solid free/OSS option, but none of its skins did it for me. I tried
 theming it, went down the rabbit hole of how it works, and concluded I
-wanted something more flexible on a stack I'd rather maintain. MenYou is
+wanted something more flexible on a well-known stack. MenYou is
 the result: a ground-up-skinnable Start menu on **.NET 10** + **Avalonia
 12**.
 
@@ -119,9 +119,8 @@ MenYou stands on the shoulders of projects I learned a great deal from:
   an enormous amount about how the Windows shell works under the hood.
 - **[Fluid.Avalonia](https://github.com/Alpaq92/Fluid.Avalonia)** — the
   Fluent-2 theme that gives MenYou's Settings window its look.
-- **Windows 10** — the classic, no-nonsense Start menu that several of
-  MenYou's built-in layouts pay homage to (alongside Windows 7 and the
-  XP / 9x classics).
+- **Good old Windows** — the classic, no-nonsense Start menu that several
+  of MenYou's built-in layouts pay homage to.
 - **[SukiUI](https://github.com/kikipoulet/SukiUI)** — its slim
   scrollbar templates and live-XAML-preview pattern inspired the
   equivalents in MenYou.

@@ -54,9 +54,14 @@ User-facing strings flow through `Platform/Windows/Strings.cs`:
    label, MenYou matches the OS phrasing in every display language for
    free.
 2. The fallback is a Jeek.Avalonia.Localization JSON entry under
-   `src/MenYou/Languages/`. There are 21 languages today — add your key
-   to `en.json` and `pl.json` at minimum; the release process keeps the
-   others mechanically translated.
+   `src/MenYou/Languages/` (13 languages today). When you add a new
+   string, add its key to `en.json` — that's the source everything else is
+   translated from. The other locales are managed on
+   **[Crowdin](https://crowdin.com/project/menyou)**, which is the source
+   of truth for translations: the monthly maintenance job pulls completed
+   translations from there into the repo and pushes new `en.json` strings
+   back. You can still PR a `*.json` fix directly, but enter it in Crowdin
+   too or the next sync will revert it.
 
 ## Pull requests
 
