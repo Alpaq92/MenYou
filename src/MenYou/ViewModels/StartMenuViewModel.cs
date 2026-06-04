@@ -17,6 +17,7 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     private readonly IIconService _icons;
     private readonly ISettingsService _settings;
     private readonly IPinService _pin;
+    private readonly IUserAvatarService _avatarService;
 
     public ProgramsViewModel Programs { get; }
     public SearchViewModel Search { get; }
@@ -87,9 +88,13 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         PowerMenuViewModel power,
         RightPanelViewModel rightPanel)
     {
-        var avatarResult = avatarService.LoadAvatar();
-        _avatar = avatarResult.Bitmap;
-        _isDefaultAvatar = avatarResult.IsDefault;
+        // Avatar lookup hits the registry and decodes a JPEG/PNG (the
+        // high-res account picture can be 448–1080 px). Doing it here would
+        // block VM construction — which happens on the UI thread during the
+        // post-login warm-up — so it's deferred to LoadAvatarAsync and the
+        // Avatar/IsDefaultAvatar properties light up a beat later. Same
+        // "show first, paint later" policy the rest of the menu follows.
+        _avatarService = avatarService;
         _discovery = discovery;
         _recent = recent;
         _launcher = launcher;
@@ -126,24 +131,95 @@ public sealed partial class StartMenuViewModel : ViewModelBase
             RebuildRecent();
             _ = Task.Run(LoadIconsAsync);
         });
+        // The Mint Cinnamon layout binds the computed Places slice, which —
+        // being a plain getter over RightPanel.Shortcuts — can't raise its
+        // own change notification. RightPanel streams its shell icons in
+        // after construction; when it's done, re-publish Places so those
+        // rows repaint with real icons. (The Win11 flyout binds Shortcuts
+        // directly and refreshes off the collection's own notifications.)
+        RightPanel.IconsLoaded += () =>
+            Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(Places)));
+
+        _ = LoadAvatarAsync();
     }
 
-    /// Builds the menu's pinned / recent / programs surfaces. Called
-    /// directly from <see cref="Views.StartMenuWindow.OnOpened"/> — no
-    /// XAML Command binding, so no [RelayCommand] attribute is needed.
-    public async Task LoadAsync()
+    /// Loads the user's account picture off the UI thread (registry probe +
+    /// image decode) and lights up the bound properties when ready, so VM
+    /// construction during the post-login warm-up isn't blocked on it.
+    private async Task LoadAvatarAsync()
     {
-        await Programs.LoadAsync();
-        // EnsureSeededAsync also runs at app startup (see App.SeedPinnedAsync);
-        // calling here again is a cheap idempotent no-op once seeded, but
-        // it covers the edge case where the user opens the menu before
-        // startup seeding finishes.
-        await _pin.EnsureSeededAsync(_discovery);
-        await ComputeNewlyInstalledAsync();
-        RebuildPinned();
-        RebuildRecent();
-        Programs.MarkNew(_newlyInstalledIds);
-        _ = Task.Run(LoadIconsAsync);
+        var result = await Task.Run(_avatarService.LoadAvatar);
+        Avatar = result.Bitmap;
+        IsDefaultAvatar = result.IsDefault;
+    }
+
+    private bool _warmLoaded;
+
+    /// Called by App.WarmupStartMenu once the post-login warm-up
+    /// <see cref="LoadAsync"/> has completed (and right before the off-screen
+    /// PreRender realizes the now-populated tree). Lets the first real open
+    /// skip a redundant reload.
+    public void MarkWarmLoaded() => _warmLoaded = true;
+
+    /// Returns true exactly once — when the first menu open directly follows a
+    /// completed warm-up load. <see cref="Views.StartMenuWindow.OnOpened"/>
+    /// uses it to skip that single redundant <see cref="LoadAsync"/>: the data
+    /// is microseconds old and PreRender has already realized the populated
+    /// visual tree, so re-running it would only tear the lists down and
+    /// re-lay-them-out (the ~600 ms first-open cost the trace showed). Every
+    /// later open returns false and loads normally, so refresh-on-open and the
+    /// newly-installed rescan are unaffected.
+    public bool ConsumeWarmLoad()
+    {
+        if (!_warmLoaded) return false;
+        _warmLoaded = false;
+        return true;
+    }
+
+    private Task? _activeLoad;
+    private bool _hasLoaded;
+
+    /// True once the menu's data (pinned / recent / programs) has been built
+    /// at least once this session.
+    public bool HasLoaded => _hasLoaded;
+
+    /// Builds (or refreshes) the menu's pinned / recent / programs surfaces.
+    /// Called from <see cref="Views.StartMenuWindow.OnOpened"/> and the
+    /// warm-up. SINGLE-FLIGHT: concurrent callers — classically the post-login
+    /// warm-up and a first user open that beats it on a cold start — share one
+    /// in-flight load instead of racing two rebuilds over the same
+    /// ObservableCollections. The field resets when the load finishes, so
+    /// later opens still refresh.
+    public Task LoadAsync() => _activeLoad ??= RunLoadAsync();
+
+    /// Awaited by the show path before it reveals the window, so a cold first
+    /// open never flashes an empty menu. Resolves instantly once the data
+    /// exists; otherwise piggybacks the in-flight (or a fresh) load.
+    public Task EnsureLoadedAsync() => _hasLoaded ? Task.CompletedTask : LoadAsync();
+
+    private async Task RunLoadAsync()
+    {
+        try
+        {
+            await Programs.LoadAsync();
+            // EnsureSeededAsync also runs at app startup (see App.SeedPinnedAsync);
+            // calling here again is a cheap idempotent no-op once seeded, but
+            // it covers the edge case where the user opens the menu before
+            // startup seeding finishes.
+            await _pin.EnsureSeededAsync(_discovery);
+            await ComputeNewlyInstalledAsync();
+            RebuildPinned();
+            RebuildRecent();
+            Programs.MarkNew(_newlyInstalledIds);
+            _hasLoaded = true;
+            _ = Task.Run(LoadIconsAsync);
+        }
+        finally
+        {
+            // Clear so the next open starts a fresh refresh; in-flight awaiters
+            // already hold their reference to this task.
+            _activeLoad = null;
+        }
     }
 
     /// Marks any app whose <c>.lnk</c> shortcut was created within the
@@ -214,28 +290,62 @@ public sealed partial class StartMenuViewModel : ViewModelBase
 
     private void RebuildPinned()
     {
-        Pinned.Clear();
-        foreach (var p in _settings.Current.Pinned.OrderBy(p => p.Order))
-        {
-            var entry = _discovery.FindById(p.AppId);
-            if (entry is null) continue;
-            var vm = new AppItemViewModel(entry, _launcher, _pin);
-            if (_newlyInstalledIds.Contains(p.AppId)) vm.IsNew = true;
-            Pinned.Add(vm);
-        }
+        var entries = _settings.Current.Pinned
+            .OrderBy(p => p.Order)
+            .Select(p => _discovery.FindById(p.AppId))
+            .Where(e => e is not null)
+            .Select(e => e!)
+            .ToList();
+        RebuildList(Pinned, entries);
     }
 
     private void RebuildRecent()
     {
-        Recent.Clear();
-        foreach (var r in _recent.Recent)
+        var entries = _recent.Recent
+            .Select(r => _discovery.FindById(r.AppId))
+            .Where(e => e is not null)
+            .Select(e => e!)
+            .ToList();
+        RebuildList(Recent, entries);
+    }
+
+    /// Reconciles an item collection against the desired entry list, but
+    /// ONLY rebuilds when the contents actually changed. Tearing the
+    /// collection down and recreating fresh AppItemViewModels on every
+    /// open (the old behaviour) reset each tile's Icon to null, so the
+    /// faster reveal path now exposed a cog → real-icon flash on every
+    /// open. When the app set + order is unchanged we keep the existing
+    /// view-models — they already hold their loaded bitmaps — so repeat
+    /// opens paint icons immediately. A genuine change (pin added,
+    /// reordered, recent updated) still rebuilds; only the changed tiles
+    /// stream an icon.
+    private void RebuildList(ObservableCollection<AppItemViewModel> target, IReadOnlyList<AppEntry> entries)
+    {
+        if (SameEntries(target, entries))
         {
-            var entry = _discovery.FindById(r.AppId);
-            if (entry is null) continue;
-            var vm = new AppItemViewModel(entry, _launcher, _pin);
-            if (_newlyInstalledIds.Contains(r.AppId)) vm.IsNew = true;
-            Recent.Add(vm);
+            // Contents match — just refresh the newly-installed accent in
+            // place (cheap, no icon reset) in case the 3-day window moved.
+            for (var i = 0; i < target.Count; i++)
+                target[i].IsNew = _newlyInstalledIds.Contains(target[i].Entry.Id);
+            return;
         }
+
+        target.Clear();
+        foreach (var entry in entries)
+        {
+            var vm = new AppItemViewModel(entry, _launcher, _pin);
+            if (_newlyInstalledIds.Contains(entry.Id)) vm.IsNew = true;
+            target.Add(vm);
+        }
+    }
+
+    private static bool SameEntries(ObservableCollection<AppItemViewModel> current, IReadOnlyList<AppEntry> desired)
+    {
+        if (current.Count != desired.Count) return false;
+        for (var i = 0; i < current.Count; i++)
+            if (!string.Equals(current[i].Entry.Id, desired[i].Id, StringComparison.OrdinalIgnoreCase))
+                return false;
+        return true;
     }
 
     private async Task LoadIconsAsync()

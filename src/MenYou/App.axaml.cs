@@ -82,9 +82,16 @@ public partial class App : Application
         // during idle time before the user does anything; first show is
         // instant.
         Dispatcher.UIThread.Post(WarmupStartMenu, DispatcherPriority.ApplicationIdle);
-        // Same idea for the Settings window: pre-load its Fluid.Avalonia
-        // theme during idle so the first cog click doesn't stall.
-        Dispatcher.UIThread.Post(WarmupSettings, DispatcherPriority.ApplicationIdle);
+        // NOTE: there is deliberately no Settings-window warm-up. It used to
+        // Show() a throwaway off-screen, Opacity=0 SettingsWindow during idle
+        // to pre-realize its control tree — but at a cold first launch (just
+        // after login / install) the off-screen position + zero opacity
+        // weren't applied before the window's first composited frame, so it
+        // flashed a faint window on screen for a split second. With Fluid.
+        // Avalonia now app-wide its theme loads at startup regardless, so the
+        // warm-up's only remaining benefit was JIT-ing the window — not worth
+        // a visible flash on every cold start. The first cog click realizes
+        // the window cold (Settings is a rare, cold-path window).
 
         base.OnFrameworkInitializationCompleted();
     }
@@ -276,7 +283,11 @@ public partial class App : Application
         s.AddTransient<ProgramsViewModel>();
         s.AddTransient<SearchViewModel>();
         s.AddTransient<PowerMenuViewModel>();
-        s.AddTransient<RightPanelViewModel>();
+        // Singleton (not transient): its constructor extracts ~10 shell icons
+        // (several via slow AUMID/AppX resolution). Both the tray "Places"
+        // submenu and the StartMenu's Places flyout resolve it — sharing one
+        // instance means that work happens once, not once per consumer.
+        s.AddSingleton<RightPanelViewModel>();
         s.AddSingleton<StartMenuViewModel>();
         s.AddTransient<SettingsViewModel>();
 
@@ -343,20 +354,29 @@ public partial class App : Application
         // menu's Places flyout lists (Start menu, Documents, Pictures,
         // Music, Downloads, This PC, Network, Control Panel, Settings,
         // Run…), reachable straight from the tray without opening MenYou.
-        // A transient RightPanelViewModel builds the (deterministic)
-        // shortcut list; each item routes back through its OpenCommand,
-        // which launches via the shared IShellLauncher. The closures
-        // capture `places`, keeping the VM alive for the menu's lifetime.
-        var places = Services.GetRequiredService<RightPanelViewModel>();
+        // Each item routes back through RightPanelViewModel.OpenCommand,
+        // which launches via the shared IShellLauncher.
+        //
+        // Populate it OFF the synchronous startup path: resolving
+        // RightPanelViewModel runs ~10 shell-icon extractions (slow AUMID
+        // resolution included), and doing that here would delay the tray
+        // icon + hotkey becoming usable right after login. The tray menu
+        // only needs the titles, and the user won't open it in the few ms
+        // this takes — so add the submenu now (empty) and fill it at
+        // Background priority once the synchronous startup has settled.
         var placesParent = new NativeMenuItem(Strings.Places) { Menu = new NativeMenu() };
-        foreach (var shortcut in places.Shortcuts)
-        {
-            var captured = shortcut;
-            var placeItem = new NativeMenuItem(shortcut.Title);
-            placeItem.Click += (_, _) => places.OpenCommand.Execute(captured);
-            placesParent.Menu!.Items.Add(placeItem);
-        }
         menu.Items.Add(placesParent);
+        Dispatcher.UIThread.Post(() =>
+        {
+            var places = Services.GetRequiredService<RightPanelViewModel>();
+            foreach (var shortcut in places.Shortcuts)
+            {
+                var captured = shortcut;
+                var placeItem = new NativeMenuItem(shortcut.Title);
+                placeItem.Click += (_, _) => places.OpenCommand.Execute(captured);
+                placesParent.Menu!.Items.Add(placeItem);
+            }
+        }, DispatcherPriority.Background);
 
         var settingsItem = new NativeMenuItem(Strings.Settings);
         settingsItem.Click += (_, _) => ShowSettings();
@@ -537,7 +557,24 @@ public partial class App : Application
     {
         EnsureStartMenu();
         if (_startMenu?.DataContext is StartMenuViewModel vm)
-            _ = vm.LoadAsync();
+            _ = WarmupSequenceAsync(vm);
+    }
+
+    /// Post-login warm-up, ordered so the off-screen render warms the
+    /// POPULATED tree:
+    ///   1. await LoadAsync — build pinned / recent / programs + stream icons.
+    ///   2. MarkWarmLoaded — so the first real open skips a redundant reload.
+    ///   3. PreRender — realize the now-populated window once, off-screen and
+    ///      transparent, paying the first-paint + first-populated-layout cost
+    ///      here instead of on the user's first open.
+    /// The earlier ordering pre-rendered the EMPTY tree (LoadAsync was
+    /// fire-and-forget), so the first open still paid ~600 ms for the first
+    /// populated layout; this sequence moves that into idle time.
+    private async Task WarmupSequenceAsync(StartMenuViewModel vm)
+    {
+        await vm.LoadAsync();
+        vm.MarkWarmLoaded();
+        _startMenu?.PreRender();
     }
 
     /// Tray-menu Restart: spawns a fresh MenYou.exe and exits the
@@ -621,35 +658,6 @@ public partial class App : Application
                 Win32Foreground.Bring(hwnd);
             }
         }, DispatcherPriority.Background);
-
-    /// One-shot warm-up for the Settings window, mirroring
-    /// <see cref="WarmupStartMenu"/>. Fluid.Avalonia is app-wide now, so its
-    /// theme dictionaries load at startup regardless; this warm-up instead
-    /// pays the remaining first-open cost — realizing the Settings window's
-    /// own control tree (TabControl, the custom-theme editor/preview, etc.)
-    /// and JIT-ing its code-behind — during idle time so the user's first
-    /// real open is snappy. ShowActivated=false + Opacity=0 + off-screen +
-    /// no taskbar entry keep the warm-up from stealing focus or flashing.
-    private void WarmupSettings()
-    {
-        try
-        {
-            var warm = new SettingsWindow
-            {
-                ShowActivated = false,
-                ShowInTaskbar = false,
-                Opacity = 0,
-                WindowStartupLocation = WindowStartupLocation.Manual,
-                Position = new PixelPoint(-32000, -32000),
-            };
-            warm.Show();
-            warm.Close();
-        }
-        catch
-        {
-            // Best-effort — a warm-up failure must never break startup.
-        }
-    }
 
     private void ExitApp()
     {

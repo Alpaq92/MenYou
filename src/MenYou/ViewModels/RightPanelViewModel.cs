@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Avalonia.Media.Imaging;
@@ -37,6 +36,15 @@ public sealed partial class RightPanelViewModel : ViewModelBase
 
     public ObservableCollection<ShellShortcut> Shortcuts { get; } = new();
 
+    /// Raised on the UI thread once <see cref="LoadShellIconsAsync"/> has
+    /// finished streaming the deferred shell icons into <see cref="Shortcuts"/>.
+    /// Layouts that bind the collection directly (the Win11 flyout) re-render
+    /// automatically off ObservableCollection's Replace notifications; the
+    /// Mint Cinnamon layout binds the curated
+    /// <see cref="StartMenuViewModel.Places"/> slice instead, so
+    /// StartMenuViewModel hooks this to re-publish that property.
+    public event Action? IconsLoaded;
+
     private readonly IShellLauncher _launcher;
 
     public RightPanelViewModel(IShellLauncher launcher)
@@ -52,59 +60,74 @@ public sealed partial class RightPanelViewModel : ViewModelBase
         // on a Polish Windows). Activating it synthesizes a Win-key tap;
         // our LL keyboard hook skips injected events, so the system shell
         // sees a real lone-tap and opens its own Start menu.
-        // Segoe Fluent Icons / MDL2 Assets codepoints (literals so the
-        // strings compile without escape gymnastics). Each is picked to
-        // read at a glance:
-        //   E700 GlobalNavButton  — three-line hamburger, the Win11 Start glyph
-        //   E8B7 DocumentLibrary  — folder stacked with documents
-        //   E91B Picture           — landscape mountains
-        //   E8D6 MusicNote         — eighth note
-        //   E896 Download          — down arrow into tray
-        //   E977 PC1               — desktop tower + monitor
-        //   E968 NetworkConnected  — globe with network rings
-        //   E770 Repair            — wrench, reads as "tools / controls"
-        //   E713 Settings          — cog
-        //   E756 CommandPrompt     — ">_" prompt
-        Shortcuts.Add(new ShellShortcut(Strings.StartMenu, "startmenu", "", ResolveShellIcon("startmenu")));
-        Shortcuts.Add(FromKnownFolder("documents", ShellLocalization.KnownFolders.Documents,      "Documents", ""));
-        Shortcuts.Add(FromKnownFolder("pictures",  ShellLocalization.KnownFolders.Pictures,       "Pictures",  ""));
-        Shortcuts.Add(FromKnownFolder("music",     ShellLocalization.KnownFolders.Music,          "Music",     ""));
-        Shortcuts.Add(FromKnownFolder("downloads", ShellLocalization.KnownFolders.Downloads,      "Downloads", ""));
-        Shortcuts.Add(FromKnownFolder("computer",  ShellLocalization.KnownFolders.ComputerFolder, "This PC",   ""));
-        Shortcuts.Add(FromKnownFolder("network",   ShellLocalization.KnownFolders.NetworkFolder,  "Network",   ""));
+        // The real per-row shell ICONS are deferred (see
+        // LoadShellIconsAsync): each ResolveShellIcon hop is a shell-COM
+        // call (SHGetFileInfo / IShellItemImageFactory / AppX-manifest
+        // AUMID resolution) and four of the ten entries take the slowest
+        // AUMID path. Running all ten synchronously stalled the UI thread
+        // while the menu warmed up right after login, so the rows are
+        // built icon-less here and the bitmaps streamed in afterwards —
+        // MenYou's "show first, paint icons later" policy. Only the
+        // Win11 + Mint Cinnamon layouts render these icons at all.
+        Shortcuts.Add(new ShellShortcut(Strings.StartMenu, "startmenu"));
+        Shortcuts.Add(FromKnownFolder("documents", ShellLocalization.KnownFolders.Documents, "Documents"));
+        Shortcuts.Add(FromKnownFolder("pictures", ShellLocalization.KnownFolders.Pictures, "Pictures"));
+        Shortcuts.Add(FromKnownFolder("music", ShellLocalization.KnownFolders.Music, "Music"));
+        Shortcuts.Add(FromKnownFolder("downloads", ShellLocalization.KnownFolders.Downloads, "Downloads"));
+        Shortcuts.Add(FromKnownFolder("computer", ShellLocalization.KnownFolders.ComputerFolder, "This PC"));
+        Shortcuts.Add(FromKnownFolder("network", ShellLocalization.KnownFolders.NetworkFolder, "Network"));
 
         // KNOWNFOLDERID for Control Panel returns the verbose "All Control
         // Panel Items" name. The short string ("Control Panel" / "Panel
         // sterowania" / etc.) lives at shell32.dll,-4161.
-        Shortcuts.Add(FromIndirect("control",  @"@%SystemRoot%\System32\shell32.dll,-4161",  "Control Panel", ""));
+        Shortcuts.Add(FromIndirect("control", @"@%SystemRoot%\System32\shell32.dll,-4161", "Control Panel"));
         // Win 11 Settings name is in a UWP package, not in shell32 —
         // Strings.Settings already wraps the SHLoadIndirectString
         // attempt + culture-dictionary fallback (same approach the rest
         // of MenYou uses), so reuse it here instead of maintaining a
         // second translation table.
-        Shortcuts.Add(new ShellShortcut(Strings.Settings, "settings", "", ResolveShellIcon("settings")));
+        Shortcuts.Add(new ShellShortcut(Strings.Settings, "settings"));
         // "Run..." is shell32.dll,-12710 on every modern Windows build.
-        Shortcuts.Add(FromIndirect("run",      @"@%SystemRoot%\System32\shell32.dll,-12710", "Run...",        ""));
+        Shortcuts.Add(FromIndirect("run", @"@%SystemRoot%\System32\shell32.dll,-12710", "Run..."));
+
+        _ = LoadShellIconsAsync();
     }
 
-    private static ShellShortcut FromKnownFolder(string action, Guid knownFolderId, string fallback, string glyph)
+    /// Streams the real Windows shell icons into the Places rows after
+    /// construction. ResolveShellIcon is all shell-COM, so each hop runs on
+    /// the thread pool; the finished bitmap is swapped into the matching row
+    /// back on the UI thread (the await resumes on Avalonia's UI
+    /// synchronization context, so the ObservableCollection mutation and the
+    /// IconsLoaded callback are both raised there). Replacing the record via
+    /// `with { Icon }` raises a Replace on the collection, so the Win11
+    /// flyout re-renders that row; IconsLoaded lets StartMenuViewModel
+    /// re-publish its curated Places slice for the Mint Cinnamon layout.
+    private async Task LoadShellIconsAsync()
+    {
+        for (var i = 0; i < Shortcuts.Count; i++)
+        {
+            var sc = Shortcuts[i];
+            var icon = await Task.Run(() => ResolveShellIcon(sc.Action));
+            if (icon is not null)
+                Shortcuts[i] = sc with { Icon = icon };
+        }
+        IconsLoaded?.Invoke();
+    }
+
+    private static ShellShortcut FromKnownFolder(string action, Guid knownFolderId, string fallback)
     {
         var title = ShellLocalization.GetKnownFolderDisplayName(knownFolderId);
         return new ShellShortcut(
             string.IsNullOrWhiteSpace(title) ? fallback : title!,
-            action,
-            glyph,
-            ResolveShellIcon(action));
+            action);
     }
 
-    private static ShellShortcut FromIndirect(string action, string indirect, string fallback, string glyph)
+    private static ShellShortcut FromIndirect(string action, string indirect, string fallback)
     {
         var title = ShellLocalization.LoadIndirectString(indirect);
         return new ShellShortcut(
             string.IsNullOrWhiteSpace(title) ? fallback : title!,
-            action,
-            glyph,
-            ResolveShellIcon(action));
+            action);
     }
 
     /// Resolves a Windows shell icon for a given action key. Earlier
