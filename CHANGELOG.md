@@ -14,6 +14,13 @@ the merged commit log when it cuts the next release PR.
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.2.0](https://github.com/Alpaq92/MenYou/compare/v0.1.1...v0.2.0) (2026-06-04)
+
+
+### Performance
+
+* **startup:** faster, flicker-free Start menu open ([5a758a6](https://github.com/Alpaq92/MenYou/commit/5a758a6e79339f340e8cc5ff1b5e9318d48c3ffb))
+
 ## [0.1.1](https://github.com/Alpaq92/MenYou/compare/v0.1.0...v0.1.1) (2026-06-04)
 
 
