@@ -29,7 +29,10 @@ updates:
       - dependencies
       - nuget
     commit-message:
-      prefix: "fix(deps)"
+      # `include: scope` already appends the (deps)/(deps-dev) scope, so the
+      # prefix must be the bare type — otherwise you get `fix(deps)(deps):`,
+      # which isn't valid conventional-commit syntax and breaks release-please.
+      prefix: "fix"
       include: scope
     # Group minor + patch bumps into a single PR so the CI cost stays
     # bounded. Major bumps stay separate — they're more likely to
@@ -52,5 +55,6 @@ updates:
       - dependencies
       - github-actions
     commit-message:
-      prefix: "chore(deps)"
+      # Bare type — `include: scope` appends the (deps) scope (see above).
+      prefix: "chore"
       include: scope
