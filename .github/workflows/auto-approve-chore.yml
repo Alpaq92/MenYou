@@ -4,10 +4,16 @@
 #
 # A solo-maintainer repo still benefits from a "Require approval" rule
 # for external contributors. But that rule blocks every bot- and
-# owner-driven non-feature PR (release-please's release PR, Dependabot
-# bumps, the owner's own docs/ci tweaks). This workflow posts an approval
-# under github-actions[bot] for that allowlisted set, leaving feat/fix
-# PRs to a real review (human or CodeRabbit).
+# owner-driven non-feature PR (Dependabot bumps, the owner's own docs/ci
+# tweaks). This workflow posts an approval under github-actions[bot] for
+# that allowlisted set, leaving feat/fix PRs to a real review (human or
+# CodeRabbit).
+#
+# NOTE: release-please's own release PR is authored by github-actions[bot],
+# and a token cannot approve a PR it authored ("Can not approve your own
+# pull request"). So github-actions[bot] is intentionally NOT in the
+# allowlist — the ruleset requires 0 approvals, so the release PR merges
+# via auto-merge once required checks pass, no approval needed.
 #
 # Requires repo setting "Allow GitHub Actions to create and approve pull
 # requests" to be ON.
@@ -34,7 +40,7 @@ jobs:
        startsWith(github.event.pull_request.title, 'refactor') ||
        startsWith(github.event.pull_request.title, 'build') ||
        startsWith(github.event.pull_request.title, 'i18n')) &&
-      contains(fromJson('["Alpaq92", "github-actions[bot]", "dependabot[bot]", "crowdin-bot"]'), github.event.pull_request.user.login)
+      contains(fromJson('["Alpaq92", "dependabot[bot]", "crowdin-bot"]'), github.event.pull_request.user.login)
     runs-on: ubuntu-latest
     steps:
       - name: gh pr review --approve
