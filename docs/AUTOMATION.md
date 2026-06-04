@@ -76,8 +76,9 @@ on (build, CodeQL, Security) completion, `workflow_dispatch`.
    - `coderabbitai[bot]`
 4. The latest eligible approval is **≥ 7 days old**. The clock starts
    at *approval time*, not PR creation — a stale PR that just got
-   approved doesn't merge instantly. Dependabot PRs skip this (handled
-   by `dependabot-auto-merge.yml`).
+   approved doesn't merge instantly. Trusted-author PRs (the maintainer,
+   Dependabot, GitHub Actions) skip this entirely — handled by
+   `trusted-author-auto-merge.yml`.
 5. No failing or pending check runs on the head SHA.
 6. PR is mergeable (no conflicts).
 
@@ -85,18 +86,22 @@ When all hold, the PR is squash-merged via the GitHub REST API. The
 merge commit uses `RELEASE_PLEASE_PAT` so it triggers downstream
 workflows (notably `release-please.yml` on the bumped `main`).
 
-### `.github/workflows/dependabot-auto-merge.yml`
-**Trigger:** PR opened.
-**Filter:** actor is `dependabot[bot]` AND ecosystem is `nuget` or
-`github_actions`. Enables GitHub's **native auto-merge** (`gh pr merge
---auto --squash`) — the PR merges as soon as required checks pass,
-without the 7-day soak.
+### `.github/workflows/trusted-author-auto-merge.yml`
+**Trigger:** `pull_request_target` on opened / reopened /
+ready_for_review / synchronize, base = `main`.
+**Filter:** non-draft + author in `{Alpaq92, dependabot[bot],
+github-actions[bot]}`. Enables GitHub's **native auto-merge** (`gh pr
+merge --auto --squash`) — these pre-trusted PRs (your own, Dependabot
+bumps, release-please's release PR, the monthly refresh PR) merge as
+soon as the required checks pass, with no approval and no 7-day soak.
+Everyone else goes through the soak in `auto-merge.yml`.
 
 ### `.github/workflows/auto-approve-chore.yml`
 **Trigger:** `pull_request_target` on opened / reopened /
 ready_for_review / synchronize, base = `main`.
 **Filter:** non-draft + title prefix in `{chore, ci, docs, refactor,
-build}` + author in `{Alpaq92, github-actions[bot], dependabot[bot]}`.
+build, i18n}` + author in `{Alpaq92, dependabot[bot], crowdin-bot}`
+(`github-actions[bot]` is excluded — a token can't approve its own PR).
 **Does:** posts an `APPROVED` review under `github-actions[bot]` so the
 branch ruleset's "Require approval" gate is satisfied without a human
 review. Feature / fix PRs are **deliberately excluded** — those still
@@ -110,6 +115,18 @@ PR (bumps version + appends CHANGELOG section), and queues that PR for
 auto-merge via `gh pr merge --auto --squash`. When the release PR
 merges, it pushes the tag `vX.Y.Z`. The tag push triggers
 `release.yml` (which is the publish pipeline).
+
+### `.github/workflows/monthly-maintenance.yml`
+**Trigger:** cron `0 6 1 * *` (06:00 UTC, 1st of each month),
+`workflow_dispatch`.
+**Does:** upgrades the project's NuGet packages to their latest
+**minor/patch** versions (`dotnet outdated --upgrade --version-lock
+Major`; majors are left to deliberate review), opens a `fix(deps):
+monthly dependency refresh` PR, and enables auto-merge on it. The PR
+auto-merges once CI is green (trusted author), and the `fix(deps):`
+commit drives release-please to cut a patch release — a maintained,
+re-released build every month. Needs `RELEASE_PLEASE_PAT` to run the
+PR's CI + merge + release unattended.
 
 ### `.github/workflows/release.yml`
 **Trigger:** tag push matching `v*.*.*`, `workflow_dispatch`.

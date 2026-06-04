@@ -13,10 +13,10 @@
 #     failure / cancelled / timed_out, no pending)
 #   - PR is mergeable (no conflicts)
 #
-# Dependabot PRs bypass the 7-day soak — they merge as soon as CI
-# turns green via dependabot-auto-merge.yml. release-please's release
-# PR also bypasses via the auto-approve-chore.yml + ruleset combination.
-# This workflow targets external + owner-of-PR human contributions.
+# Trusted-author PRs (the maintainer, Dependabot, GitHub Actions) bypass
+# this soak entirely — they merge as soon as the required checks pass via
+# trusted-author-auto-merge.yml. This workflow is the 7-day path for
+# everyone else: external and other non-trusted human contributions.
 #
 # Trigger surface:
 #   - cron (every 6h) to evaluate stale PRs as their soak windows expire
@@ -70,6 +70,10 @@ jobs:
           script: |
             const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
             const APPROVER_BOTS = new Set(['coderabbitai[bot]', 'coderabbitai']);
+            // Trusted authors merge immediately via trusted-author-auto-merge.yml
+            // (no approval, no soak). Skip them here so this workflow is purely
+            // the 7-day-from-approval path for everyone else.
+            const TRUSTED_AUTHORS = new Set(['Alpaq92', 'dependabot[bot]', 'github-actions[bot]']);
 
             const explicitPr = '${{ github.event.inputs.pr_number }}';
             const reviewPr = context.payload?.pull_request?.number;
@@ -143,6 +147,10 @@ jobs:
               core.startGroup(`PR #${pr.number} — ${pr.title}`);
               try {
                 if (pr.draft) { core.info('Skip: draft'); continue; }
+                if (TRUSTED_AUTHORS.has(pr.user?.login)) {
+                  core.info('Skip: trusted author — handled by trusted-author-auto-merge.yml');
+                  continue;
+                }
 
                 const { data: reviews } = await github.rest.pulls.listReviews({
                   owner: context.repo.owner,
@@ -166,45 +174,38 @@ jobs:
                   continue;
                 }
 
-                // Dependabot PRs are pre-trusted by the author and skip
-                // the soak entirely — handled in dependabot-auto-merge.yml.
-                // We still let them flow through THIS workflow so the
-                // CHANGES_REQUESTED guard above applies if a reviewer
-                // explicitly requests changes on a Dependabot PR.
-                const isDependabot = pr.user?.login === 'dependabot[bot]';
+                // Require an eligible APPROVED review (code owner,
+                // collaborator, or CodeRabbit), then a 7-day soak measured
+                // from that approval.
                 let eligibleApprover = null;
                 let approvalTime = null;
 
-                if (isDependabot) {
-                  eligibleApprover = 'dependabot[bot] (author-trusted, no soak)';
-                } else {
-                  if (approvers.length === 0) {
-                    core.info('Skip: no APPROVED reviews');
-                    continue;
+                if (approvers.length === 0) {
+                  core.info('Skip: no APPROVED reviews');
+                  continue;
+                }
+                for (const r of approvers) {
+                  const login = r.user.login;
+                  const isEligible = APPROVER_BOTS.has(login)
+                    || ownersList.includes(login)
+                    || await isCollaborator(login);
+                  if (!isEligible) continue;
+                  const t = new Date(r.submitted_at).getTime();
+                  if (approvalTime === null || t > approvalTime) {
+                    approvalTime = t;
+                    eligibleApprover = login;
                   }
-                  for (const r of approvers) {
-                    const login = r.user.login;
-                    const isEligible = APPROVER_BOTS.has(login)
-                      || ownersList.includes(login)
-                      || await isCollaborator(login);
-                    if (!isEligible) continue;
-                    const t = new Date(r.submitted_at).getTime();
-                    if (approvalTime === null || t > approvalTime) {
-                      approvalTime = t;
-                      eligibleApprover = login;
-                    }
-                  }
-                  if (!eligibleApprover) {
-                    core.info(`Skip: approvals (${approvers.map(r => r.user.login).join(', ')}) are not code-owner, collaborator, or CodeRabbit`);
-                    continue;
-                  }
+                }
+                if (!eligibleApprover) {
+                  core.info(`Skip: approvals (${approvers.map(r => r.user.login).join(', ')}) are not code-owner, collaborator, or CodeRabbit`);
+                  continue;
+                }
 
-                  const ageSinceApproval = Date.now() - approvalTime;
-                  if (ageSinceApproval < ONE_WEEK_MS) {
-                    const daysLeft = ((ONE_WEEK_MS - ageSinceApproval) / (24 * 3600 * 1000)).toFixed(1);
-                    core.info(`Skip: ${daysLeft} day(s) left in 7-day soak window from approval by ${eligibleApprover}`);
-                    continue;
-                  }
+                const ageSinceApproval = Date.now() - approvalTime;
+                if (ageSinceApproval < ONE_WEEK_MS) {
+                  const daysLeft = ((ONE_WEEK_MS - ageSinceApproval) / (24 * 3600 * 1000)).toFixed(1);
+                  core.info(`Skip: ${daysLeft} day(s) left in 7-day soak window from approval by ${eligibleApprover}`);
+                  continue;
                 }
 
                 const { data: checks } = await github.rest.checks.listForRef({

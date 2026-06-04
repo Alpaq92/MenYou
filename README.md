@@ -9,6 +9,29 @@ JumpLists) rather than reinventing them.
 > [!TIP]
 > Press **Shift+Win** to toggle the menu.
 
+## Why
+
+A little backstory. I'd set up a slimmed-down Windows 11 using the
+excellent [Tiny11](https://github.com/ntdevlabs/tiny11builder) builder
+script — a genuinely great project. One trade-off of a debloated image,
+though, is that Start-menu **search stopped finding my locally installed
+apps**: that search path quietly leans on a few components a minimal
+install leaves out. (It turns out the browser is more load-bearing in the
+Start menu than you'd ever expect — searching your own machine shouldn't
+really need Edge, but here we are. 🙂)
+
+So I went looking for a Start-menu replacement. The standout free and
+open-source option was the wonderful
+[Open-Shell](https://github.com/Open-Shell/Open-Shell-Menu), which I have
+a lot of respect for — the bundled skins just weren't quite to my taste.
+I tried building my own skin for it, and after digging into how it works
+under the hood I realised what I really wanted was something a bit more
+flexible, on a more familiar and modern tech stack.
+
+And that's how **MenYou** came to be — a Start-menu replacement built on
+**.NET 10** and **Avalonia 12**, designed to be skinnable from the ground
+up.
+
 ## Install
 
 | Channel              | Command                                |
@@ -100,6 +123,24 @@ Modern (Windows 7), Classic XP and Classic 9x) from
 - [`CHANGELOG.md`](CHANGELOG.md) — versioned change log (auto-generated
   by release-please from Conventional Commits).
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — building, layout, PR flow.
+
+## Inspiration
+
+MenYou stands on the shoulders of projects I learned a great deal from:
+
+- **[Open-Shell](https://github.com/Open-Shell/Open-Shell-Menu)** — beyond
+  being the project that started this whole journey, its source taught me
+  an enormous amount about how the Windows shell works under the hood.
+- **[Fluid.Avalonia](https://github.com/Alpaq92/Fluid.Avalonia)** — the
+  Fluent-2 theme that gives MenYou's Settings window its look.
+- **Windows 10** — the classic, no-nonsense Start menu that several of
+  MenYou's built-in layouts pay homage to (alongside Windows 7 and the
+  XP / 9x classics).
+- **[SukiUI](https://github.com/kikipoulet/SukiUI)** — its slim
+  scrollbar templates and live-XAML-preview pattern inspired the
+  equivalents in MenYou.
+- **[Avalonia](https://avaloniaui.net/)** — the cross-platform UI
+  framework the whole app is built on.
 
 ## License
 

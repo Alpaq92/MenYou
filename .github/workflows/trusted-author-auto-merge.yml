@@ -1,0 +1,43 @@
+# --------------------------------------------------------------------------
+# trusted-author-auto-merge.yml — immediate auto-merge for trusted authors.
+#
+# PRs authored by the maintainer (Alpaq92), Dependabot, or GitHub Actions
+# (e.g. release-please's release PR, the monthly dependency-refresh PR) are
+# pre-trusted and skip the 7-day review soak that auto-merge.yml applies to
+# everyone else. They merge as soon as the required status checks pass.
+#
+# `gh pr merge --auto --squash` turns on GitHub's native auto-merge, so the
+# merge happens the instant the branch ruleset's required checks (build +
+# CodeQL) go green — no approval needed (the ruleset requires 0 approvals).
+#
+# pull_request_target (not pull_request) so Dependabot/bot PRs get a
+# writable token. The job only reads the PR author and calls the merge API;
+# it never checks out or runs PR code, so it's safe against fork PRs.
+# --------------------------------------------------------------------------
+name: Auto-merge trusted-author PRs
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    name: Enable auto-merge for trusted author
+    if: >
+      !github.event.pull_request.draft &&
+      contains(fromJson('["Alpaq92", "dependabot[bot]", "github-actions[bot]"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable native auto-merge
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          # PAT preferred so the squash-merge commit fires downstream
+          # workflows (release-please on bumped main, the release pipeline
+          # if a tag is cut). GITHUB_TOKEN merges don't trigger them.
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "$PR_URL"

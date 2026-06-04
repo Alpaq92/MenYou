@@ -1,0 +1,82 @@
+# --------------------------------------------------------------------------
+# monthly-maintenance.yml — monthly dependency refresh + release.
+#
+# On the 1st of every month it upgrades the project's NuGet packages to
+# their latest MINOR/PATCH versions (majors are deliberately left out — a
+# major bump like Avalonia 12 -> 13 should be a conscious, reviewed change),
+# opens a `fix(deps): monthly dependency refresh` PR, and enables auto-merge
+# on it. Once CI is green the PR squash-merges; the `fix(deps):` commit then
+# drives release-please to open + auto-merge a release PR, cutting a fresh
+# patch release. The net effect: a maintained, re-released build every month.
+#
+# NOTE: for this to run end-to-end unattended, set a `RELEASE_PLEASE_PAT`
+# repository secret (a PAT with `repo` + `workflow` scope). A PR opened with
+# the default GITHUB_TOKEN does NOT trigger the build/CodeQL/Security checks,
+# so auto-merge would wait forever. With the PAT, the PR's CI runs, it
+# merges, and the release flows automatically.
+# --------------------------------------------------------------------------
+name: Monthly maintenance
+
+on:
+  schedule:
+    - cron: "0 6 1 * *"   # 06:00 UTC on the 1st of each month
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: monthly-maintenance
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh dependencies and open release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Upgrade NuGet packages (minor/patch only)
+        run: |
+          dotnet tool install --global dotnet-outdated-tool
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          # --version-lock Major keeps the major component fixed, so only
+          # minor/patch upgrades are applied.
+          dotnet outdated src/MenYou/MenYou.csproj --upgrade --version-lock Major
+
+      - name: Open dependency-refresh PR
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          # PAT preferred so the PR triggers CI and downstream release flow.
+          token: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
+          commit-message: "fix(deps): monthly dependency refresh"
+          title: "fix(deps): monthly dependency refresh"
+          body: |
+            Automated monthly NuGet refresh (minor/patch only — major bumps
+            are left to deliberate, reviewed upgrades).
+
+            Auto-merges once CI is green; release-please then cuts a patch
+            release. If nothing was outdated this month, no PR is created.
+
+            > Needs the `RELEASE_PLEASE_PAT` secret to run CI + merge + release
+            > unattended (a GITHUB_TOKEN-created PR doesn't trigger workflows).
+          branch: chore/monthly-deps
+          base: main
+          labels: |
+            dependencies
+            nuget
+          delete-branch: true
+
+      - name: Enable auto-merge on the refresh PR
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr merge --auto --squash "$PR" --repo "$GITHUB_REPOSITORY"
