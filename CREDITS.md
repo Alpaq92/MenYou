@@ -10,7 +10,8 @@ MenYou stands on the shoulders of projects I learned a great deal from:
 - **[Fluid.Avalonia](https://github.com/Alpaq92/Fluid.Avalonia)** — the
   Fluent-2 theme that gives MenYou's Settings window its look.
 - **Good old Windows** — the classic, no-nonsense Start menu that several of
-  MenYou's built-in layouts pay homage to.
+  MenYou's built-in layouts pay homage to, alongside the Windows 11 menu
+  (but with working search).
 - **[SukiUI](https://github.com/kikipoulet/SukiUI)** — its slim scrollbar
   templates and live-XAML-preview pattern inspired the equivalents in MenYou.
 - **[Avalonia](https://avaloniaui.net/)** — the cross-platform UI framework
