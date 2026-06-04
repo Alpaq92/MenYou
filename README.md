@@ -75,10 +75,6 @@ whatever reads awkwardly, click Save. A scheduled GitHub Action
 translations into a PR every Monday, which lands in the next release
 automatically.
 
-See [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) for the full flow
-(Crowdin, or editing the JSONs directly, plus alternatives like
-Weblate / Tolgee).
-
 ## Custom themes
 
 The Settings dialog has a **Custom** tab that loads a self-contained
@@ -110,7 +106,6 @@ Modern (Windows 7), Classic XP and Classic 9x) from
   options, required secrets, and the release pipeline.
 - [`docs/THEMING.md`](docs/THEMING.md) — authoring custom themes for the
   Settings → Custom feature.
-- [`docs/TRANSLATIONS.md`](docs/TRANSLATIONS.md) — translating MenYou.
 - [`CHANGELOG.md`](CHANGELOG.md) — versioned change log (auto-generated
   by release-please from Conventional Commits).
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — building, layout, PR flow.

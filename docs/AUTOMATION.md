@@ -109,7 +109,7 @@ and the body gets a `⚠ Unsigned build` banner.
 
 ### `crowdin.yml`
 Scheduled sync that pulls completed translations from the Crowdin project
-into a PR. See [`TRANSLATIONS.md`](TRANSLATIONS.md).
+(<https://crowdin.com/project/menyou>) into a PR.
 
 ## Conventional Commits
 
