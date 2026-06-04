@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.1](https://github.com/Alpaq92/MenYou/compare/v0.1.0...v0.1.1) (2026-06-04)
+
+
+### Bug Fixes
+
+* **installer:** avoid premature comment close in Inno [Code] block ([f21162e](https://github.com/Alpaq92/MenYou/commit/f21162eeec508077ea6bb8af386d9c2045be7fc3))
+* **installer:** use correct Inno page type for the Setup Type page ([0c317a6](https://github.com/Alpaq92/MenYou/commit/0c317a67fe56358eadd12c72c60803d9e6ae0644))
+
+## Changelog
+
 All notable changes to MenYou are documented in this file.
 
 The format is maintained by
