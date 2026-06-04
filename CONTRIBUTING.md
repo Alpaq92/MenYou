@@ -97,28 +97,12 @@ User-facing strings flow through `Platform/Windows/Strings.cs`:
 
 ## Releasing (maintainers only)
 
-The release pipeline is mostly automatic:
-
-1. Merge PRs to `main` using Conventional Commits in their titles.
-2. release-please (`.github/workflows/release-please.yml`) reads the
-   merged commits and opens a **"chore(main): release X.Y.Z"** PR
-   that bumps the version + writes the next CHANGELOG section.
-3. That release PR is auto-merged once CI is green.
-4. Merging the release PR pushes the tag `vX.Y.Z`, which triggers
-   `release.yml` — publishes the GitHub Release, signs the installer
-   (when SignPath is configured), and pushes to winget / Scoop /
-   Chocolatey.
-
-To cut a release **out of band**, push a tag manually:
-
-```powershell
-git tag -a v0.2.0 -m "v0.2.0"
-git push origin v0.2.0
-```
-
-`release.yml` still picks that up directly. See
-[`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the full picture
-(pipeline, code-signing options, secrets to configure once).
+Releases are automatic: merging Conventional-Commit PRs to `main` lets
+release-please open a version-bump PR, and merging that tags `vX.Y.Z`,
+which triggers the publish pipeline (GitHub Release + signing + winget /
+Scoop / Chocolatey). To cut one out of band, push a `vX.Y.Z` tag manually.
+The full flow — pipeline, code-signing options, and the secrets to set
+once — lives in [`docs/AUTOMATION.md`](docs/AUTOMATION.md).
 
 ## License
 

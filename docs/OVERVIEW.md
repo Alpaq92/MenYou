@@ -134,10 +134,10 @@ press **Shift+Win** to toggle the menu.
 
 App-icon assets live at the repo root (`icon.svg`, `icon_v2.svg`,
 `icon_v2.png`, `icon_v2.ico`), with copies under `src/MenYou/Assets/` for
-`avares://` resolution. `icon.svg` is a flat four-tile glyph based on
-[`view-dashboard`](https://pictogrammers.com/library/mdi/icon/view-dashboard/)
-from Material Design Icons (Pictogrammers, Apache-2.0); `icon_v2.*` wraps
-it in a hand-authored Liquid-Glass disc. `icon_v2.ico` (256→16 multi-size)
+`avares://` resolution. `icon.svg` is a flat four-tile glyph based on MDI's
+`view-dashboard` (attribution in [`../CREDITS.md`](../CREDITS.md));
+`icon_v2.*` wraps it in a hand-authored Liquid-Glass disc. `icon_v2.ico`
+(256→16 multi-size)
 is referenced from `MenYou.csproj` as `<ApplicationIcon>` and from the
 windows/tray via `avares://`.
 
@@ -150,19 +150,6 @@ Everything MenYou persists lives under `%AppData%\MenYou\`:
 | `settings.json` | `Models/UserSettings` — mirror state, pin/exclusion lists, per-skin selection, accent override, custom-theme toggle + active XAML, the `SeenAppIds` baseline, and one-shot migration flags. |
 | `CustomThemes\*.axaml` | Custom-theme files imported via Settings → Custom → Load. |
 
-## Credits
-
-- **[Open-Shell](https://github.com/Open-Shell/Open-Shell-Menu)** — the
-  JumpList COM-reading approach is ported from its `JumpLists.cpp`, and it
-  informed the Shift+Win activation and pin-fallback strategies.
-- **[Fluid.Avalonia](https://github.com/Alpaq92/Fluid.Avalonia)** —
-  app-wide Fluent-2 theme + system-accent integration.
-- **[SukiUI](https://github.com/kikipoulet/SukiUI)** — the slim
-  ScrollBar/ScrollViewer templates and the live-XAML-preview converter.
-- **[Material Design Icons](https://pictogrammers.com/library/mdi/)
-  (Pictogrammers, Apache-2.0)** — the source glyph for the app icon.
-- **Avalonia, CommunityToolkit.Mvvm, Inno Setup, .NET 10** — the rest of
-  the stack.
-
 See [`AUTOMATION.md`](AUTOMATION.md) for CI/CD, signing, and distribution,
-and [`THEMING.md`](THEMING.md) for authoring custom themes.
+[`THEMING.md`](THEMING.md) for authoring custom themes, and
+[`../CREDITS.md`](../CREDITS.md) for inspirations and attributions.
