@@ -14,6 +14,13 @@
 # the default GITHUB_TOKEN does NOT trigger the build/CodeQL/Security checks,
 # so auto-merge would wait forever. With the PAT, the PR's CI runs, it
 # merges, and the release flows automatically.
+#
+# TRANSLATIONS: this job does NOT pull from GitLocalize — GitLocalize
+# delivery is moderator-triggered (a moderator opens the PR in its UI),
+# not schedulable from CI, so it can't be automated here. The monthly
+# release simply ships whatever translations are already on `main`. To
+# include fresh translations in a given month, open the GitLocalize PR
+# (and let it auto-merge) before this job runs.
 # --------------------------------------------------------------------------
 name: Monthly maintenance
 

@@ -68,12 +68,13 @@ statuses, etc.) live in
 [`src/MenYou/Languages/*.json`](src/MenYou/Languages/) and need
 humans.
 
-**Help out without a GitHub account**: open the Crowdin project at
-<https://crowdin.com/project/menyou>, pick your language, translate
-whatever reads awkwardly, click Save. A scheduled GitHub Action
-([`crowdin.yml`](.github/workflows/crowdin.yml)) pulls completed
-translations into a PR every Monday, which lands in the next release
-automatically.
+**Help out via [GitLocalize](https://gitlocalize.com/repo/10801)**: sign
+in with GitHub, pick your language, and translate the strings that read
+awkwardly in its web editor. A moderator reviews completed translations
+and turns them into a pull request back to this repo, which lands in the
+next release. Prefer git? Edit
+[`src/MenYou/Languages/<lang>.json`](src/MenYou/Languages/) directly and
+open a PR — it's merged the same way.
 
 ## Custom themes
 

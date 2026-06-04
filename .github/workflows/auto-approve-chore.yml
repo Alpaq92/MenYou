@@ -40,7 +40,7 @@ jobs:
        startsWith(github.event.pull_request.title, 'refactor') ||
        startsWith(github.event.pull_request.title, 'build') ||
        startsWith(github.event.pull_request.title, 'i18n')) &&
-      contains(fromJson('["Alpaq92", "dependabot[bot]", "crowdin-bot"]'), github.event.pull_request.user.login)
+      contains(fromJson('["Alpaq92", "dependabot[bot]"]'), github.event.pull_request.user.login)
     runs-on: ubuntu-latest
     steps:
       - name: gh pr review --approve

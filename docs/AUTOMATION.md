@@ -79,9 +79,9 @@ commit triggers downstream workflows.
 ### `auto-approve-chore.yml`
 `pull_request_target` on `main`. Posts an `APPROVED` review (as
 `github-actions[bot]`) for non-draft PRs whose title is `chore`/`ci`/`docs`/
-`refactor`/`build`/`i18n` **and** whose author is `Alpaq92`,
-`dependabot[bot]`, or `crowdin-bot`. `github-actions[bot]` is excluded — a
-token can't approve its own PR. Feature/fix PRs are left for real review.
+`refactor`/`build`/`i18n` **and** whose author is `Alpaq92` or
+`dependabot[bot]`. `github-actions[bot]` is excluded — a token can't
+approve its own PR. Feature/fix PRs are left for real review.
 
 ### `release-please.yml`
 Push to `main` + `workflow_dispatch`. Reads Conventional Commits since the
@@ -107,9 +107,20 @@ creates the GitHub Release, and fans out to winget / Scoop / Chocolatey
 Signing is optional: with SignPath secrets absent, the release still ships
 and the body gets a `⚠ Unsigned build` banner.
 
-### `crowdin.yml`
-Scheduled sync that pulls completed translations from the Crowdin project
-(<https://crowdin.com/project/menyou>) into a PR.
+### Translations (GitLocalize)
+Translations are handled by
+[GitLocalize](https://gitlocalize.com/repo/10801) through its **GitHub
+App** — there is **no workflow or config file in this repo**. It tracks
+`src/MenYou/Languages/en.json` as the source (paths are set in the
+GitLocalize UI: source `src/MenYou/Languages/en.json`, target
+`src/MenYou/Languages/%lang%.json`); contributors translate in the web UI,
+and a Language Moderator reviews and opens a PR back to `main`. Delivery is
+**moderator-triggered, not scheduled** — so a release ships whatever
+translations have already landed on `main`. To include fresh work in a
+release (including the monthly one), create the GitLocalize PR before it.
+Translation PRs auto-merge once CI is green if their author is a trusted
+author (the moderator account / a bot added to
+`trusted-author-auto-merge.yml`).
 
 ## Conventional Commits
 
