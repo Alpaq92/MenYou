@@ -153,9 +153,9 @@ begin
              (PageID = wpSelectTasks));
 end;
 
-{ Read the version a prior install recorded in its uninstall key (HKCU for
-  a per-user install, HKLM for per-machine). Single-brace GUID built here
-  because [Code] strings can't use the {{ }} escape form. }
+// Read the version a prior install recorded in its uninstall key (HKCU for
+// a per-user install, HKLM for per-machine). Single-brace GUID built here
+// because [Code] strings can't use the ISPP brace-escape form.
 function PreviousVersion(): String;
 var
   Key, V: String;
