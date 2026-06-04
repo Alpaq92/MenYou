@@ -1,0 +1,510 @@
+<!--
+  Windows11Layout: built-in menu style that visually mirrors the
+  Windows 11 Start menu (Mica-style chrome, search bar at top, 4-column
+  Pinned grid, scrollable All-Programs section, avatar + power glyphs in
+  the bottom bar). Derived from samples/custom-themes/Windows11.axaml,
+  promoted to a first-class compiled layout so it shows up in the
+  Settings → Wygląd (Appearance) style picker alongside Win7 / Classic.
+
+  x:CompileBindings="False" keeps the reflection-style bindings the
+  sample was authored with (no x:DataType, untyped `.DataContext.X`
+  paths in the Places flyout). The project default is compiled
+  bindings; disabling it for this file lets the proven sample markup
+  compile verbatim. DataContext is StartMenuViewModel, same as the
+  other layouts.
+
+  Bindings (all against StartMenuViewModel): Avatar, UserName, Pinned,
+  Recent, Programs.Items, Search.Query/HasQuery, Power.*Command,
+  OpenSettingsCommand, OpenAccountSettingsCommand, RightPanel.Shortcuts
+  + RightPanel.OpenCommand (Places flyout). ctrl:ProgramsTree drives the
+  All-Programs grid source; ctrl:SearchResultsList is the search overlay.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="using:MenYou.Views.Controls"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             xmlns:items="using:MenYou.ViewModels.Items"
+             x:Class="MenYou.Views.Layouts.Windows11Layout"
+             x:CompileBindings="False">
+  <Grid Width="560" Height="640"
+        RowDefinitions="60,*,60"
+        ColumnDefinitions="*">
+
+  <!-- Theme-aware palette. Win 11 Start uses a Mica-like background
+       that's distinctly lighter than the desktop wallpaper in dark
+       mode and slightly off-white in light mode. SectionHeader is
+       the muted "Przypięte / Proponowane / Wszystkie programy" label
+       weight; LinkAccent is the "Pokaż wszystkie" right-side link. -->
+  <Grid.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="Win11Bg"            Color="#202020" />
+          <SolidColorBrush x:Key="Win11BottomBar"     Color="#1A1A1A" />
+          <SolidColorBrush x:Key="Win11Divider"       Color="#2E2E2E" />
+          <SolidColorBrush x:Key="Win11SectionHeader" Color="#E5E5E5" />
+          <SolidColorBrush x:Key="Win11Muted"         Color="#A0A0A0" />
+          <SolidColorBrush x:Key="Win11LinkAccent"    Color="#4CC2FF" />
+          <SolidColorBrush x:Key="Win11AvatarOrb"     Color="#5A6B82" />
+          <!-- Filled shutdown-circle red. Decoupled from PowerDangerBrush
+               (whose dark value #FF6B6B is a bright coral tuned for red
+               GLYPHS on dark, which reads as glaring when used to FILL the
+               whole circle). A calmer deep red works as a filled tile in
+               both themes; hover (#E25B4F below) lightens it. -->
+          <SolidColorBrush x:Key="Win11ShutdownFill"  Color="#C42B1C" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="Win11Bg"            Color="#F3F3F3" />
+          <SolidColorBrush x:Key="Win11BottomBar"     Color="#E9E9E9" />
+          <SolidColorBrush x:Key="Win11Divider"       Color="#D8D8D8" />
+          <SolidColorBrush x:Key="Win11SectionHeader" Color="#1F1F1F" />
+          <SolidColorBrush x:Key="Win11Muted"         Color="#5C5C5C" />
+          <SolidColorBrush x:Key="Win11LinkAccent"    Color="#005FB8" />
+          <SolidColorBrush x:Key="Win11AvatarOrb"     Color="#5A6B82" />
+          <!-- Filled shutdown-circle red. Decoupled from PowerDangerBrush
+               (whose dark value #FF6B6B is a bright coral tuned for red
+               GLYPHS on dark, which reads as glaring when used to FILL the
+               whole circle). A calmer deep red works as a filled tile in
+               both themes; hover (#E25B4F below) lightens it. -->
+          <SolidColorBrush x:Key="Win11ShutdownFill"  Color="#C42B1C" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Grid.Resources>
+
+  <!-- Inline styles. Pinned tiles want a vertical icon + name block;
+       Recent tiles want a horizontal icon + name+subtitle block. Both
+       share the rounded-corner hover treatment that's now the app
+       default (Button.menu CornerRadius=8). The shutdown-hover
+       override below keeps the danger-red fill from collapsing to
+       MenuHoverBrush. -->
+  <Grid.Styles>
+    <Style Selector="TextBlock.section-header">
+      <Setter Property="Foreground" Value="{DynamicResource Win11SectionHeader}" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.section-link">
+      <Setter Property="Foreground" Value="{DynamicResource Win11LinkAccent}" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!-- Shutdown-tile fill override (same pattern as Mint Cinnamon).
+         The app-level Button.power:pointerover style sets the
+         ContentPresenter background to MenuHoverBrush (a gray),
+         which would blank out the red rest fill on hover. These
+         styles keep the danger-red across rest / hover / pressed,
+         using the theme-tuned Win11ShutdownFill (a deep red) rather
+         than the glyph-bright PowerDangerBrush so the dark-mode
+         circle isn't glaring. -->
+    <Style Selector="Button.shutdown /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Win11ShutdownFill}" />
+    </Style>
+    <Style Selector="Button.shutdown:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#E25B4F" />
+    </Style>
+    <Style Selector="Button.shutdown:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource Win11ShutdownFill}" />
+    </Style>
+  </Grid.Styles>
+
+  <!-- Background fill spans both content rows; the bottom-bar Border
+       paints over it with its own darker shade. -->
+  <Border Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource Win11Bg}" />
+
+  <!-- ===================================================================
+       Row 0: search bar.
+       =================================================================== -->
+  <Border Grid.Row="0" Padding="20,14" VerticalAlignment="Center">
+    <TextBox Classes="search"
+             Text="{Binding Search.Query, Mode=TwoWay}"
+             PlaceholderText="{x:Static loc:Strings.SearchPlaceholder}" />
+  </Border>
+
+  <!-- ===================================================================
+       Row 1: scrollable content (Pinned → Recent → All Programs).
+       =================================================================== -->
+  <ScrollViewer Grid.Row="1" Padding="20,4,20,8"
+                HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Spacing="18">
+
+      <!-- Pinned section header. -->
+      <TextBlock Classes="section-header" Text="{x:Static loc:Strings.Pinned}" />
+
+      <!-- Pinned: a 4-column wrapping grid with the SAME tile template as
+           the All Programs grid below, so the columns line up exactly and
+           it never shows a partial "peek" item the way a horizontal-scroll
+           strip does. Extra items wrap to a new row; the whole content
+           area scrolls vertically via the outer ScrollViewer. -->
+      <ItemsControl ItemsSource="{Binding Pinned}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="4" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Classes="menu"
+                    Padding="8,12"
+                    Margin="4"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding LaunchCommand}">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{x:Static loc:Strings.Open}" Command="{Binding LaunchCommand}" />
+                  <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}" Command="{Binding RunAsAdministratorCommand}" />
+                  <Separator />
+                  <MenuItem Header="{Binding PinToggleLabel}" Command="{Binding TogglePinCommand}" IsVisible="{Binding CanModifyPin}" />
+                  <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}" Command="{Binding OpenFileLocationCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Width="32" Height="32" Source="{Binding Icon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="{Binding DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           MaxWidth="104"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="12" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Recent section header. -->
+      <TextBlock Classes="section-header" Text="{x:Static loc:Strings.Recent}" />
+
+      <!-- Recent: same 4-column wrapping grid as Pinned / All Programs,
+           so all three sections share one column layout and none shows a
+           partial peek item. Extra items wrap; the outer ScrollViewer
+           scrolls vertically. -->
+      <ItemsControl ItemsSource="{Binding Recent}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="4" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Button Classes="menu"
+                    Padding="8,12"
+                    Margin="4"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding LaunchCommand}">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{x:Static loc:Strings.Open}" Command="{Binding LaunchCommand}" />
+                  <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}" Command="{Binding RunAsAdministratorCommand}" />
+                  <Separator />
+                  <MenuItem Header="{Binding PinToggleLabel}" Command="{Binding TogglePinCommand}" IsVisible="{Binding CanModifyPin}" />
+                  <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}" Command="{Binding OpenFileLocationCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Width="32" Height="32" Source="{Binding Icon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="{Binding DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           MaxWidth="104"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="12" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- All Programs section header. -->
+      <TextBlock Classes="section-header" Text="{x:Static loc:Strings.AllPrograms}" Margin="0,4,0,0" />
+
+      <!-- All Programs as a 4-column uniform grid. Per-DataType
+           templates split folders from apps so the auto-disable that
+           gives Buttons a gray background when Command binds to null
+           doesn't fire on folder tiles. Folder template carries the
+           single Open-folder-location verb; app template carries the
+           full 4-verb set (Open / Run as admin / Pin / Open new
+           window) — same as the Pinned and Recent grids. -->
+      <!-- Bottom margin = trailing scroll space. It's part of the
+           scrollable content (extends the extent), so at full scroll the
+           last tile row clears the bottom power strip — without shrinking
+           the viewport the way ScrollViewer.Padding would. -->
+      <ItemsControl ItemsSource="{Binding Programs.Items}"
+                    Margin="0,0,0,20">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="4" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.DataTemplates>
+
+          <!-- Folder tile. No Command binding ⇒ Button never enters
+               the auto-disabled state ⇒ no gray background. Right-
+               click opens "Open new window" against the folder's
+               on-disk path via OpenFolderLocationCommand. -->
+          <DataTemplate DataType="items:FolderItemViewModel">
+            <Button Classes="menu"
+                    Padding="8,12"
+                    Margin="4"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{x:Static loc:Strings.OpenFolderLocation}"
+                            Command="{Binding OpenFolderLocationCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <!-- Left-click opens the folder's contents in a flyout:
+                   apps launch (and carry their own context menu),
+                   subfolders cascade into nested flyouts. The button
+                   has no Command, so a left-click just opens the
+                   Flyout; right-click still hits the context menu. -->
+              <Button.Flyout>
+                <Flyout Placement="Bottom">
+                  <ctrl:ProgramsFolderFlyout />
+                </Flyout>
+              </Button.Flyout>
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Width="32" Height="32" Source="{Binding Icon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="{Binding DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           MaxWidth="104"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="12" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+
+          <!-- App tile. Click launches; right-click shows the full
+               4-verb context menu. -->
+          <DataTemplate DataType="items:AppItemViewModel">
+            <Button Classes="menu"
+                    Padding="8,12"
+                    Margin="4"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Command="{Binding LaunchCommand}">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{x:Static loc:Strings.Open}" Command="{Binding LaunchCommand}" />
+                  <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}" Command="{Binding RunAsAdministratorCommand}" />
+                  <Separator />
+                  <MenuItem Header="{Binding PinToggleLabel}" Command="{Binding TogglePinCommand}" IsVisible="{Binding CanModifyPin}" />
+                  <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}" Command="{Binding OpenFileLocationCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Width="32" Height="32" Source="{Binding Icon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="{Binding DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           MaxWidth="104"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="12" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+
+    </StackPanel>
+  </ScrollViewer>
+
+  <!-- ===================================================================
+       Row 2: bottom bar — avatar + name on the left, power strip
+       (with a chevron-up Places flyout) on the right. Darker
+       background than the content area for visual separation,
+       matching Win 11's own Start chrome.
+       =================================================================== -->
+  <!-- Bottom-bar Border padding is asymmetric (left 4, right 12) on
+       purpose: the right keeps the 12 px inset for the power strip, while
+       the left is pulled in to 4 px so the avatar button below can carry
+       its own 8 px horizontal Padding — that gives the hover highlight
+       left/right breathing room around the orb + name WITHOUT pushing the
+       orb off the 12 px line (4 + 8 = 12), so it stays aligned with the
+       shutdown circle on the right. -->
+  <Border Grid.Row="2" Background="{DynamicResource Win11BottomBar}"
+          BorderBrush="{DynamicResource Win11Divider}" BorderThickness="0,1,0,0"
+          Padding="4,4,12,4">
+    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+
+      <!-- Avatar + name button. Whole row is the click target; opens
+           ms-settings:yourinfo, same as clicking the avatar in the real
+           Windows Start menu.
+
+           Hover-highlight height = min(orb 32 + 2·this.Padding.vertical,
+           cap), where cap = the bottom bar's content area = row 60 − 1 px
+           top divider − 2·Border.vertical-padding(4) = 51 px. The 14 px
+           vertical padding here makes the unclamped desired height
+           (32 + 28 = 60) overshoot the 51 px cap, so the button fills the
+           whole content area (51 px). The 32 px orb is vertically centered
+           inside it, so the visible top/bottom hover padding is
+           (51 − 32) / 2 ≈ 9.5 px. (Both levers matter: the cap must be
+           raised AND the padding must reach it — lowering either one
+           shrinks the highlight.) The 8 px horizontal is unrelated: 4 px
+           Border left padding + 8 = 12 px keeps the orb aligned with the
+           shutdown circle on the right. -->
+      <Button Grid.Column="0"
+              Background="Transparent"
+              BorderThickness="0"
+              HorizontalAlignment="Left"
+              HorizontalContentAlignment="Left"
+              Padding="8,14"
+              Command="{Binding OpenAccountSettingsCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Panel Width="32" Height="32">
+            <Border Background="{DynamicResource Win11AvatarOrb}" CornerRadius="16"
+                    IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
+              <TextBlock Text="{Binding UserName[0]}"
+                         Foreground="#FFFFFF" FontSize="15" FontWeight="SemiBold"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     RenderOptions.BitmapInterpolationMode="HighQuality">
+              <Ellipse.Fill>
+                <ImageBrush Source="{Binding Avatar}" Stretch="UniformToFill" />
+              </Ellipse.Fill>
+            </Ellipse>
+          </Panel>
+          <TextBlock Text="{Binding UserName}"
+                     Foreground="{DynamicResource Win11SectionHeader}"
+                     FontSize="13" FontWeight="SemiBold"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+
+      <!-- Power strip — Places (chevron-up Flyout), Settings, separator,
+           then the same five power verbs as the Win7 layout: Lock,
+           SignOut, Sleep, Restart, Shutdown. Places + Settings sit
+           left of the vertical 1-px separator because they aren't
+           destructive verbs; the chevron-up glyph (E70E) opens a
+           Flyout listing the full RightPanel.Shortcuts set (Start
+           Menu / Documents / Settings / Control Panel / Pictures /
+           Music / Downloads / This PC / Network / Run...). Shutdown
+           carries the danger-red tile + Classes="power shutdown" so
+           its hover state stays red instead of collapsing to
+           MenuHoverBrush. -->
+      <StackPanel Grid.Column="1" Orientation="Horizontal"
+                  Spacing="2" VerticalAlignment="Center">
+        <!-- Places flyout button. ChevronUp glyph (E70E) hints at the
+             "pops upward from the bottom bar" affordance. The Flyout's
+             ItemsControl binds to RightPanel.Shortcuts so every Place
+             the user has on disk shows up — no curated filter. Each
+             row is a Button.menu so it picks up the same rounded
+             hover treatment as the rest of the menu. -->
+        <Button Classes="power"
+                ToolTip.Tip="{x:Static loc:Strings.Places}">
+          <TextBlock Classes="power-glyph" Text="&#xE70E;" />
+          <Button.Flyout>
+            <Flyout Placement="Top">
+              <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}"
+                            MinWidth="240">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Button Classes="menu"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"
+                            Margin="0,1"
+                            Padding="8,6"
+                            Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                            CommandParameter="{Binding}">
+                      <Grid ColumnDefinitions="Auto,*">
+                        <Image Grid.Column="0" Source="{Binding Icon}"
+                               Width="20" Height="20"
+                               IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               Margin="0,0,10,0"
+                               VerticalAlignment="Center"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding Title}"
+                                   VerticalAlignment="Center"
+                                   FontSize="13" />
+                      </Grid>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
+        <Button Classes="power"
+                Command="{Binding OpenSettingsCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE713;" />
+        </Button>
+        <!-- Phone Link (CellPhone glyph E8EA). Grouped with the other
+             app launchers (Places / Settings) on the non-destructive
+             side of the separator. -->
+        <Button Classes="power"
+                Command="{Binding OpenPhoneLinkCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.PhoneLinkTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE8EA;" />
+        </Button>
+        <Border Width="1" Margin="4,6"
+                Background="{DynamicResource Win11Divider}" />
+        <Button Classes="power"
+                Command="{Binding Power.LockCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.LockTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE72E;" />
+        </Button>
+        <Button Classes="power"
+                Command="{Binding Power.SignOutCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+        </Button>
+        <Button Classes="power"
+                Command="{Binding Power.SleepCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE708;" />
+        </Button>
+        <Button Classes="power"
+                Command="{Binding Power.RestartCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.RestartTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE777;" />
+        </Button>
+        <!-- Extra left margin sets the red shutdown circle slightly apart
+             from the Restart glyph (on top of the strip's 2 px Spacing),
+             matching Win 11's own visual break before the destructive
+             power action. -->
+        <Button Classes="power shutdown"
+                Margin="8,0,0,0"
+                Command="{Binding Power.ShutdownCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}">
+          <TextBlock Classes="power-glyph" Foreground="#FFFFFF" Text="&#xE7E8;" />
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+
+  <!-- ===================================================================
+       Search results overlay. Sits on top of the scrollable content
+       area when Search.HasQuery is true. The bottom bar stays visible
+       so the user can still see their account / shut down without
+       clearing the search. Same pattern as the production layouts.
+       =================================================================== -->
+  <Border Grid.Row="1"
+          Background="{DynamicResource Win11Bg}"
+          IsVisible="{Binding Search.HasQuery}">
+    <ctrl:SearchResultsList DataContext="{Binding Search}" />
+  </Border>
+
+  </Grid>
+</UserControl>

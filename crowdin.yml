@@ -1,0 +1,31 @@
+# Crowdin configuration — drives the community-translation workflow.
+# Source bundle is en.json; target bundles are de.json, pl.json, etc.
+# When a translator finishes a string in the Crowdin web UI it lands
+# back in this repo as a PR via the GitHub Action in
+# .github/workflows/crowdin.yml.
+#
+# Setup (one-time, by repo owner):
+#   1. Apply for free Crowdin OSS plan at
+#      https://crowdin.com/page/open-source-project-setup-request
+#   2. After approval, create a project pointing at this repo.
+#   3. Copy the numeric project ID into the CROWDIN_PROJECT_ID secret.
+#   4. Generate a personal API token at https://crowdin.com/settings#api-key
+#      with `Projects (Source files / Translations)` scope and store
+#      it as the CROWDIN_PERSONAL_TOKEN secret.
+#   5. Push this file (and the workflow). The action does the rest.
+
+project_id_env: CROWDIN_PROJECT_ID
+api_token_env:  CROWDIN_PERSONAL_TOKEN
+
+# en.json is the source of truth — every other locale is a translation
+# of it. When new keys land in en.json (because a new Strings.cs Jeek
+# key was added), Crowdin surfaces them as missing entries in the
+# translation UI for every language.
+preserve_hierarchy: true
+
+files:
+  - source:      /src/MenYou/Languages/en.json
+    translation: /src/MenYou/Languages/%two_letters_code%.json
+    # Treat the JSON as i18n source. Keys are atomic strings, no escape
+    # gymnastics, and Crowdin won't touch the JSON structure.
+    type:        json

@@ -1,0 +1,61 @@
+# Normalize line endings on commit so Windows/macOS/Linux contributors all
+# see the same blob hashes. Source files are forced to LF in the repo;
+# Git will translate to CRLF on Windows checkout via core.autocrlf=true.
+
+* text=auto eol=lf
+
+# --- C# / project files force LF in repo --------------------------------
+*.cs        text eol=lf
+*.csproj    text eol=lf
+*.sln       text eol=lf merge=union
+*.props     text eol=lf
+*.targets   text eol=lf
+*.xml       text eol=lf
+*.axaml     text eol=lf
+*.xaml      text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.editorconfig text eol=lf
+*.gitignore text eol=lf
+*.gitattributes text eol=lf
+
+# --- Scripts: keep platform-native -------------------------------------
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+*.sh        text eol=lf
+
+# --- C++ (MenYou.Bridge) -----------------------------------------------
+*.cpp       text eol=lf
+*.h         text eol=lf
+*.hpp       text eol=lf
+*.vcxproj   text eol=lf
+*.vcxproj.filters text eol=lf
+
+# --- Binary assets ------------------------------------------------------
+*.ico       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.bmp       binary
+*.pdf       binary
+*.zip       binary
+*.7z        binary
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.lib       binary
+*.so        binary
+*.dylib     binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary
+
+# --- Linguist hints -----------------------------------------------------
+openshell_research/** linguist-vendored
+docs/** linguist-documentation
+*.axaml linguist-language=XML

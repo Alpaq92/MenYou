@@ -1,0 +1,79 @@
+# --------------------------------------------------------------------------
+# build.yml — pull-request + push verification.
+#
+# Restores, builds, and dry-compiles the Inno Setup installer against the
+# resulting publish output so we catch packaging regressions on every PR
+# (not only at tag time). Does NOT sign and does NOT publish anywhere —
+# release.yml owns those steps.
+# --------------------------------------------------------------------------
+name: build
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - "docs/**"
+      - "*.md"
+      - "LICENSE"
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+          # Honor global.json if we add one later; today the project just
+          # pins TargetFramework=net10.0-windows.
+
+      - name: Restore
+        run: dotnet restore src/MenYou/MenYou.csproj
+
+      - name: Build (Release)
+        run: dotnet build src/MenYou/MenYou.csproj --no-restore -c Release
+
+      # Dry-compile the Inno installer against a non-portable publish
+      # output. We discard the artifact (the release workflow re-runs
+      # publish + compile with the actual version), but failing the build
+      # on an iscc error catches missing-file / script issues at PR time.
+      - name: Publish (Release, win-x64)
+        run: >
+          dotnet publish src/MenYou/MenYou.csproj
+          -c Release -r win-x64 --self-contained
+          -p:PublishSingleFile=false
+          -o publish/win-x64
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Dry-compile installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc `
+            "/DMyAppVersion=0.0.0" `
+            "/DMyPublishDir=${{ github.workspace }}\publish\win-x64" `
+            "installer\inno\menyou.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: Upload publish output as artifact (for inspection)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-debug
+          path: publish/win-x64
+          retention-days: 3

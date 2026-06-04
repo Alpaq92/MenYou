@@ -1,0 +1,133 @@
+# ---------------------------------------------------------------------------
+# MenYou .gitignore
+# Based on the GitHub VisualStudio.gitignore template + project-specific
+# entries for Avalonia, installer artifacts, and Windows tooling.
+# ---------------------------------------------------------------------------
+
+# --- Build output --------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Dd]ebug[Pp]ublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+ARM64/
+[Ww][Ii][Nn]32/
+build/
+bld/
+out/
+publish/
+[Aa]rtifacts/
+
+# --- Installer / release artifacts --------------------------------------
+# Inno Setup (iscc) drops MenYou-Setup-<ver>.exe under .\dist\; `choco
+# pack` can produce a local .nupkg. We commit none of this — the GitHub
+# Actions release workflow regenerates everything from source on each tag
+# push. Releases/ is an additional installer output dir, also ignored.
+dist/
+Releases/
+*.nupkg
+*.snupkg
+
+# --- .NET tooling --------------------------------------------------------
+project.lock.json
+project.fragment.lock.json
+artifacts/
+*.csproj.user
+*.vbproj.user
+*.binlog
+*.svclog
+*.scc
+*.coverage
+*.coveragexml
+**/coverage.cobertura.xml
+**/TestResults/
+.dotnet/
+
+# --- Visual Studio --------------------------------------------------------
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.psess
+*.vsp
+*.vspx
+*.sap
+*.tlog
+*.opendb
+*.VC.db
+*.VC.VC.opendb
+*.dbmdl
+*.dbproj.schemaview
+*.jfm
+.ntvs_analysis.dat
+node_modules/
+
+# --- Rider / ReSharper ---------------------------------------------------
+.idea/
+*.sln.iml
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# --- VS Code -------------------------------------------------------------
+.vscode/
+
+# --- Native (MenYou.Bridge) ----------------------------------------------
+# The C++/VC project drops its intermediates under bin/obj already (caught
+# above) but Visual Studio occasionally emits these in-tree.
+*.iobj
+*.ipdb
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.sln.cache
+ipch/
+dlldata.c
+
+# --- Avalonia ------------------------------------------------------------
+# Avalonia's compiled-bindings + XAML-loader generators land in obj/, which
+# is already ignored. Nothing extra needed.
+
+# --- Logs / temp ---------------------------------------------------------
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# --- Local-only secrets --------------------------------------------------
+*.local.json
+*.local.config
+secrets.json
+appsettings.Local.json
+.env
+.env.*
+!.env.example
+
+# --- SignPath / signing local-only artifacts -----------------------------
+# In case someone runs `signtool` locally against a personal cert.
+*.pfx
+*.p12
+*.snk
+!signing/example.snk
+
+# --- Inno Setup / WiX local builds (if added later) ---------------------
+*.iss.user
+
+# --- Local research / scratch (not part of the shipped project) ---------
+# Vendored Open-Shell source kept locally for reference; never committed.
+openshell_research/
+
+# --- Claude / agent metadata --------------------------------------------
+.claude/

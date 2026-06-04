@@ -1,0 +1,248 @@
+# --------------------------------------------------------------------------
+# auto-merge.yml — 7-day-soak auto-merge for human-authored PRs.
+#
+# Eligibility:
+#   - PR is not a draft
+#   - Has at least one APPROVED review from a code owner (CODEOWNERS),
+#     a repo collaborator, or coderabbitai[bot]
+#   - The latest APPROVED review is at least 7 days old (soak window
+#     measured from approval, NOT from PR creation — keeps the rule
+#     meaningful for PRs that sat in review for a while before approval)
+#   - No open CHANGES_REQUESTED reviews
+#   - All check runs on the head SHA finished successfully (no
+#     failure / cancelled / timed_out, no pending)
+#   - PR is mergeable (no conflicts)
+#
+# Dependabot PRs bypass the 7-day soak — they merge as soon as CI
+# turns green via dependabot-auto-merge.yml. release-please's release
+# PR also bypasses via the auto-approve-chore.yml + ruleset combination.
+# This workflow targets external + owner-of-PR human contributions.
+#
+# Trigger surface:
+#   - cron (every 6h) to evaluate stale PRs as their soak windows expire
+#   - pull_request_review on submit — re-evaluate the moment a new
+#     approval lands
+#   - workflow_run when CI / CodeQL / Security finish — re-evaluate the
+#     moment checks turn green, so a fresh approval + green build merges
+#     within minutes of the soak window expiring (instead of waiting up
+#     to 6 hours for the next cron tick)
+#   - workflow_dispatch for manual evaluation (e.g. after fixing a
+#     branch-protection rule)
+# --------------------------------------------------------------------------
+name: Auto-merge approved PRs (after 7 days)
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"   # every 6 hours at xx:23
+  pull_request_review:
+    types: [submitted]
+  workflow_run:
+    workflows: [build, CodeQL, Security]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to evaluate (blank = scan all open PRs)"
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: auto-merge
+  cancel-in-progress: false
+
+jobs:
+  evaluate:
+    name: Evaluate and merge eligible PRs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          # PAT preferred so the resulting squash-merge commit fires
+          # downstream workflows (release-please.yml on bumped main, the
+          # release pipeline if release-please cuts a tag, etc.).
+          # GITHUB_TOKEN merges don't trigger other workflows on the
+          # default branch — that's the documented GitHub behavior.
+          github-token: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+            const APPROVER_BOTS = new Set(['coderabbitai[bot]', 'coderabbitai']);
+
+            const explicitPr = '${{ github.event.inputs.pr_number }}';
+            const reviewPr = context.payload?.pull_request?.number;
+
+            // Decide which PR(s) to evaluate. workflow_run doesn't carry
+            // a PR number, so we fall through to the open-PR list on
+            // that trigger.
+            let prs;
+            if (explicitPr) {
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: Number(explicitPr),
+              });
+              prs = [data];
+            } else if (reviewPr) {
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: reviewPr,
+              });
+              prs = [data];
+            } else {
+              const { data } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100,
+              });
+              prs = data;
+            }
+
+            const collaboratorCache = new Map();
+            async function isCollaborator(login) {
+              if (collaboratorCache.has(login)) return collaboratorCache.get(login);
+              try {
+                await github.rest.repos.checkCollaborator({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  username: login,
+                });
+                collaboratorCache.set(login, true);
+                return true;
+              } catch {
+                collaboratorCache.set(login, false);
+                return false;
+              }
+            }
+
+            // Load CODEOWNERS so a code-owner approval counts even when
+            // the approver isn't yet listed as a collaborator on the repo.
+            let ownersList = [];
+            try {
+              const { data: file } = await github.rest.repos.getContent({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                path: '.github/CODEOWNERS',
+              });
+              const text = Buffer.from(file.content, 'base64').toString('utf8');
+              ownersList = [...new Set(
+                text.split('\n')
+                  .filter(l => l.trim() && !l.trim().startsWith('#'))
+                  .flatMap(l => l.match(/@[A-Za-z0-9-]+/g) || [])
+                  .map(o => o.slice(1))
+              )];
+            } catch {
+              core.info('No CODEOWNERS file found; falling back to collaborator/bot checks only.');
+            }
+
+            for (const pr of prs) {
+              core.startGroup(`PR #${pr.number} — ${pr.title}`);
+              try {
+                if (pr.draft) { core.info('Skip: draft'); continue; }
+
+                const { data: reviews } = await github.rest.pulls.listReviews({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                });
+
+                // Latest review state per reviewer wins. A reviewer who
+                // first APPROVED then submitted CHANGES_REQUESTED blocks
+                // merge until they re-approve, and vice versa.
+                const latest = new Map();
+                for (const r of reviews) {
+                  const login = r.user?.login;
+                  if (!login) continue;
+                  latest.set(login, r);
+                }
+                const approvers = [...latest.values()].filter(r => r.state === 'APPROVED');
+                const requestChanges = [...latest.values()].filter(r => r.state === 'CHANGES_REQUESTED');
+                if (requestChanges.length > 0) {
+                  core.info(`Skip: open CHANGES_REQUESTED from ${requestChanges.map(r => r.user.login).join(', ')}`);
+                  continue;
+                }
+
+                // Dependabot PRs are pre-trusted by the author and skip
+                // the soak entirely — handled in dependabot-auto-merge.yml.
+                // We still let them flow through THIS workflow so the
+                // CHANGES_REQUESTED guard above applies if a reviewer
+                // explicitly requests changes on a Dependabot PR.
+                const isDependabot = pr.user?.login === 'dependabot[bot]';
+                let eligibleApprover = null;
+                let approvalTime = null;
+
+                if (isDependabot) {
+                  eligibleApprover = 'dependabot[bot] (author-trusted, no soak)';
+                } else {
+                  if (approvers.length === 0) {
+                    core.info('Skip: no APPROVED reviews');
+                    continue;
+                  }
+                  for (const r of approvers) {
+                    const login = r.user.login;
+                    const isEligible = APPROVER_BOTS.has(login)
+                      || ownersList.includes(login)
+                      || await isCollaborator(login);
+                    if (!isEligible) continue;
+                    const t = new Date(r.submitted_at).getTime();
+                    if (approvalTime === null || t > approvalTime) {
+                      approvalTime = t;
+                      eligibleApprover = login;
+                    }
+                  }
+                  if (!eligibleApprover) {
+                    core.info(`Skip: approvals (${approvers.map(r => r.user.login).join(', ')}) are not code-owner, collaborator, or CodeRabbit`);
+                    continue;
+                  }
+
+                  const ageSinceApproval = Date.now() - approvalTime;
+                  if (ageSinceApproval < ONE_WEEK_MS) {
+                    const daysLeft = ((ONE_WEEK_MS - ageSinceApproval) / (24 * 3600 * 1000)).toFixed(1);
+                    core.info(`Skip: ${daysLeft} day(s) left in 7-day soak window from approval by ${eligibleApprover}`);
+                    continue;
+                  }
+                }
+
+                const { data: checks } = await github.rest.checks.listForRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: pr.head.sha,
+                });
+                // Filter to terminal failure states. completed+success is fine.
+                const failed = checks.check_runs.filter(c =>
+                  c.status === 'completed' && ['failure', 'cancelled', 'timed_out'].includes(c.conclusion)
+                );
+                if (failed.length > 0) {
+                  core.info(`Skip: failing checks (${failed.map(c => c.name).join(', ')})`);
+                  continue;
+                }
+                const pending = checks.check_runs.filter(c => c.status !== 'completed');
+                if (pending.length > 0) {
+                  core.info(`Skip: pending checks (${pending.map(c => c.name).join(', ')})`);
+                  continue;
+                }
+
+                if (pr.mergeable === false) {
+                  core.info('Skip: PR has merge conflicts');
+                  continue;
+                }
+
+                core.info(`MERGE: PR #${pr.number} approved by ${eligibleApprover}, checks green`);
+                await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  merge_method: 'squash',
+                  commit_title: `${pr.title} (#${pr.number})`,
+                });
+                core.info(`Merged PR #${pr.number}`);
+              } catch (err) {
+                core.warning(`PR #${pr.number}: ${err.message}`);
+              } finally {
+                core.endGroup();
+              }
+            }

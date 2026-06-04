@@ -1,0 +1,403 @@
+# --------------------------------------------------------------------------
+# release.yml — main release pipeline.
+#
+# Triggers on annotated tag pushes matching v*.*.* (e.g. `git tag -a v0.2.0`)
+# and on manual workflow_dispatch from the Actions UI.
+#
+# Stages:
+#   1. publish      — `dotnet publish` self-contained win-x64.
+#   2. pack         — Inno Setup (iscc) → dist\MenYou-Setup-<ver>.exe.
+#   3. sign         — optional. If SIGNPATH_API_TOKEN + SIGNPATH_ORG_ID +
+#                     SIGNPATH_PROJECT_SLUG are all present in repository
+#                     secrets the SignPath GitHub Action signs the
+#                     Setup.exe. Missing secrets → step is skipped, NOT
+#                     a failure; the release body gets a "⚠ Unsigned
+#                     build" notice instead.
+#   4. release      — upload the signed installer to a fresh GitHub
+#                     Release for the tag, with a body that embeds the
+#                     recent commits and the signing status.
+#   5. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
+#                     Chocolatey using each platform's official-ish
+#                     GitHub Action. Each is `continue-on-error: true`
+#                     so a flake on one channel doesn't gate the others.
+#
+# Required secrets (set under Repo Settings → Secrets → Actions):
+#
+#   SIGNPATH_API_TOKEN        — SignPath personal API token (optional)
+#   SIGNPATH_ORG_ID           — SignPath organization ID    (optional)
+#   SIGNPATH_PROJECT_SLUG     — SignPath project slug       (optional)
+#   SIGNPATH_SIGNING_POLICY_SLUG — usually "release-signing" (optional)
+#
+#   WINGET_PAT     — GitHub PAT with public_repo scope for the winget
+#                    submission (winget-releaser opens a PR against the
+#                    microsoft/winget-pkgs fork it manages).
+#
+#   SCOOP_PAT      — GitHub PAT for committing manifest updates back to
+#                    the (separate) scoop bucket repo. Without it the
+#                    scoop step is skipped.
+#
+#   CHOCO_API_KEY  — Chocolatey community feed API key.
+#
+# --------------------------------------------------------------------------
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (no leading v, e.g. 0.2.0)"
+        required: true
+
+permissions:
+  contents: write   # needed by softprops/action-gh-release
+
+jobs:
+  build:
+    name: Build + package + (optional) sign
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.resolve_version.outputs.version }}
+      signed:  ${{ steps.mark_signed.outputs.signed }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: resolve_version
+        shell: pwsh
+        run: |
+          # Tag push: strip leading `v`. workflow_dispatch: take the input as-is.
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $v = $env:GITHUB_REF.Substring('refs/tags/v'.Length)
+          } else {
+            $v = '${{ github.event.inputs.version }}'
+          }
+          if (-not $v) { throw "No version resolved." }
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+          echo "Resolved version: $v"
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore src/MenYou/MenYou.csproj
+
+      - name: Publish (Release, win-x64, self-contained)
+        run: >
+          dotnet publish src/MenYou/MenYou.csproj
+          -c Release -r win-x64 --self-contained
+          -p:Version=${{ steps.resolve_version.outputs.version }}
+          -p:PublishSingleFile=false
+          -p:DebugType=embedded
+          -o publish/win-x64
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Compile installer (Inno Setup)
+        shell: pwsh
+        run: |
+          # iscc emits dist\MenYou-Setup-<ver>.exe from the self-contained
+          # publish folder. Relative paths inside the .iss resolve against
+          # the script's own directory (installer\inno), so the publish
+          # folder is passed as an absolute path.
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc `
+            "/DMyAppVersion=${{ steps.resolve_version.outputs.version }}" `
+            "/DMyPublishDir=${{ github.workspace }}\publish\win-x64" `
+            "installer\inno\menyou.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          Get-ChildItem dist
+
+      # --- Optional signing -----------------------------------------------
+      # SignPath issues OV certs for free to qualifying open-source projects.
+      # The action pulls a named GH-Actions artifact, ships it to SignPath
+      # HSM-backed signing, polls until signed, and writes the signed file
+      # back into a configured directory. If the required secrets aren't
+      # configured this step short-circuits (step.if=false) and we mark
+      # the build as unsigned for the release body.
+      #
+      # Ordering: we upload the unsigned installer FIRST so SignPath has
+      # an artifact handle to download — the action will not accept a
+      # local file path. After signing, the working-tree copy in
+      # dist/ is the signed file, which we then re-upload under the
+      # canonical name menyou-installer for the release job to consume.
+      - name: Detect SignPath configuration
+        id: signpath_config
+        shell: pwsh
+        run: |
+          $hasToken = -not [string]::IsNullOrEmpty($env:SIGNPATH_API_TOKEN)
+          $hasOrg   = -not [string]::IsNullOrEmpty($env:SIGNPATH_ORG_ID)
+          $hasProj  = -not [string]::IsNullOrEmpty($env:SIGNPATH_PROJECT_SLUG)
+          $ok = $hasToken -and $hasOrg -and $hasProj
+          echo "configured=$ok" >> $env:GITHUB_OUTPUT
+          if ($ok) { echo "SignPath secrets present — signing enabled." }
+          else     { echo "SignPath secrets missing — release will be unsigned." }
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+          SIGNPATH_ORG_ID:    ${{ secrets.SIGNPATH_ORG_ID }}
+          SIGNPATH_PROJECT_SLUG: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+
+      - name: Upload unsigned installer (SignPath input handle)
+        if: steps.signpath_config.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: menyou-installer-unsigned
+          path: |
+            dist/MenYou-Setup-*.exe
+          if-no-files-found: error
+
+      - name: Sign installer via SignPath
+        id: sign
+        if: steps.signpath_config.outputs.configured == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token:               ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id:         ${{ secrets.SIGNPATH_ORG_ID }}
+          project-slug:            ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug:     ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+          github-artifact-name:    menyou-installer-unsigned
+          wait-for-completion:     true
+          output-artifact-directory: dist
+
+      # Set the `signed` job output to "true" only when both:
+      #   - the SignPath secrets were present, AND
+      #   - the SignPath step's outcome is success.
+      # This way a misconfigured policy slug or transient SignPath outage
+      # produces a clearly unsigned release (with the warning in the body)
+      # rather than a release that claims signed but isn't.
+      - name: Mark signed flag
+        id: mark_signed
+        shell: pwsh
+        run: |
+          $configured = '${{ steps.signpath_config.outputs.configured }}'
+          $signSuccess = '${{ steps.sign.outcome }}' -eq 'success'
+          $signed = ($configured -eq 'True' -or $configured -eq 'true') -and $signSuccess
+          echo "signed=$($signed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+
+      - name: Upload installer (canonical)
+        uses: actions/upload-artifact@v4
+        with:
+          name: menyou-installer
+          path: |
+            dist/MenYou-Setup-*.exe
+          if-no-files-found: error
+          overwrite: true
+
+  github_release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download installer
+        uses: actions/download-artifact@v4
+        with:
+          name: menyou-installer
+          path: dist
+
+      - name: Build release body
+        id: body
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.version }}"
+          signed="${{ needs.build.outputs.signed }}"
+          {
+            echo "## MenYou v$version"
+            echo
+            if [ "$signed" = "true" ]; then
+              echo "**Signed:** ✅ Authenticode signature via SignPath Foundation."
+            else
+              echo "**Signed:** ⚠ This build is **unsigned**. Windows SmartScreen will display"
+              echo "a 'protected your PC' warning on first run — click *More info → Run anyway*."
+              echo "(Signing is configured but no SignPath secrets were available in CI for this"
+              echo "release; the next signed build will be reported here in green.)"
+            fi
+            echo
+            echo "### Install"
+            echo
+            echo "\`\`\`pwsh"
+            echo "winget install Alpaq.MenYou"
+            echo "# or"
+            echo "scoop install menyou"
+            echo "# or"
+            echo "choco install menyou"
+            echo "\`\`\`"
+            echo
+            echo "Direct download: \`MenYou-Setup-${version}.exe\` below."
+            echo
+            echo "### Changes"
+            echo
+            echo "See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/v${version}/CHANGELOG.md)."
+          } > body.md
+          echo "path=$PWD/body.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: MenYou v${{ needs.build.outputs.version }}
+          body_path: ${{ steps.body.outputs.path }}
+          files: |
+            dist/MenYou-Setup-*.exe
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
+
+  # ------------------------------------------------------------------------
+  # Package-manager pushes. Each one is independent + continue-on-error so
+  # an outage on one channel doesn't gate the others. All three target the
+  # same Setup.exe asset that we just uploaded to the GH Release.
+  # ------------------------------------------------------------------------
+  publish_winget:
+    name: Publish to winget
+    needs: [build, github_release]
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - name: winget-releaser
+        uses: vedantmgoyal9/winget-releaser@main
+        with:
+          identifier: Alpaq.MenYou
+          version: ${{ needs.build.outputs.version }}
+          installers-regex: '^MenYou-Setup-.*\.exe$'
+          token: ${{ secrets.WINGET_PAT }}
+
+  publish_scoop:
+    name: Publish to Scoop
+    needs: [build, github_release]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    # secrets.* can't be referenced in job-level `if`. We check at step
+    # level: if SCOOP_PAT is empty the steps short-circuit, the job
+    # finishes green, and continue-on-error keeps the rest of the
+    # workflow moving even if something does fail.
+    env:
+      SCOOP_PAT: ${{ secrets.SCOOP_PAT }}
+    steps:
+      - name: Skip if SCOOP_PAT missing
+        id: gate
+        shell: bash
+        run: |
+          if [ -z "$SCOOP_PAT" ]; then
+            echo "SCOOP_PAT not set — skipping Scoop publish."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout MenYou (for manifest template)
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Compute installer hash
+        id: hash
+        if: steps.gate.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.build.outputs.version }}"
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${version}/MenYou-Setup-${version}.exe"
+          curl -fL -o setup.exe "$url"
+          hash=$(sha256sum setup.exe | awk '{print toupper($1)}')
+          echo "hash=$hash"   >> "$GITHUB_OUTPUT"
+          echo "url=$url"     >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Render manifest
+        if: steps.gate.outputs.skip != 'true'
+        shell: bash
+        run: |
+          mkdir -p out
+          sed \
+            -e "s|@@VERSION@@|${{ steps.hash.outputs.version }}|g" \
+            -e "s|@@URL@@|${{ steps.hash.outputs.url }}|g" \
+            -e "s|@@HASH@@|${{ steps.hash.outputs.hash }}|g" \
+            installer/scoop/menyou.json.template > out/menyou.json
+          cat out/menyou.json
+
+      # The Scoop bucket lives in a separate repo (e.g. Alpaq92/scoop-menyou).
+      # The PAT pushes the rendered manifest into that bucket's `bucket/`
+      # folder so `scoop install menyou` picks up the new version.
+      - name: Push manifest to Scoop bucket repo
+        if: steps.gate.outputs.skip != 'true'
+        uses: dmnemec/copy_file_to_another_repo_action@main
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.SCOOP_PAT }}
+        with:
+          source_file: out/menyou.json
+          destination_repo: Alpaq92/scoop-menyou
+          destination_folder: bucket
+          user_email: bot@menyou.app
+          user_name: menyou-release-bot
+          commit_message: |
+            menyou ${{ steps.hash.outputs.version }}
+
+  publish_chocolatey:
+    name: Publish to Chocolatey
+    needs: [build, github_release]
+    runs-on: windows-latest
+    continue-on-error: true
+    env:
+      CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
+    steps:
+      - name: Skip if CHOCO_API_KEY missing
+        id: gate
+        shell: bash
+        run: |
+          if [ -z "$CHOCO_API_KEY" ]; then
+            echo "CHOCO_API_KEY not set — skipping Chocolatey publish."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Render nuspec + install script
+        if: steps.gate.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          $version = '${{ needs.build.outputs.version }}'
+          $url     = "https://github.com/${env:GITHUB_REPOSITORY}/releases/download/v$version/MenYou-Setup-$version.exe"
+          $tmp     = New-Item -ItemType Directory -Path choco-pkg
+          # Download the same installer the GH Release shipped so we can
+          # hash it for chocolateyInstall.ps1's checksum guard.
+          Invoke-WebRequest -Uri $url -OutFile setup.exe
+          $hash = (Get-FileHash setup.exe -Algorithm SHA256).Hash.ToUpper()
+
+          Copy-Item installer/chocolatey/menyou.nuspec    "$tmp/menyou.nuspec"
+          Copy-Item installer/chocolatey/tools/*           "$tmp/tools" -Recurse
+
+          (Get-Content "$tmp/menyou.nuspec") -replace '@@VERSION@@', $version |
+            Set-Content "$tmp/menyou.nuspec"
+
+          (Get-Content "$tmp/tools/chocolateyInstall.ps1") `
+            -replace '@@URL@@',     $url `
+            -replace '@@HASH@@',    $hash `
+            -replace '@@VERSION@@', $version |
+            Set-Content "$tmp/tools/chocolateyInstall.ps1"
+
+      - name: choco pack
+        if: steps.gate.outputs.skip != 'true'
+        shell: pwsh
+        run: choco pack choco-pkg/menyou.nuspec --out choco-pkg
+
+      - name: choco push
+        if: steps.gate.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          $nupkg = Get-ChildItem choco-pkg -Filter 'menyou.*.nupkg' | Select-Object -First 1
+          choco push $nupkg.FullName --source https://push.chocolatey.org/ --api-key $env:CHOCO_API_KEY

@@ -1,0 +1,266 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:conv="using:MenYou.Views.Converters"
+        xmlns:items="using:MenYou.ViewModels.Items">
+
+    <!-- MenYou's flyouts (the Win 11 Places list, the All-Programs folder
+         pop-out) are sized to their content and must never scroll
+         sideways. The Fluent FlyoutPresenter wraps its content in a
+         ScrollViewer whose horizontal bar defaults to Auto, so when the
+         content lands a hair under the presenter width a stray horizontal
+         scrollbar shows along the bottom (the folder pop-out exhibited
+         exactly this). Overriding the attached visibility on the
+         presenter — a Style, which outranks the ControlTheme default —
+         pins it off; the template binds the inner ScrollViewer to this
+         value. Vertical scrolling is left to the flyout content's own
+         ScrollViewer. -->
+    <Style Selector="FlyoutPresenter">
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    </Style>
+
+    <Style Selector="TextBox.search">
+        <Setter Property="Background" Value="{DynamicResource SearchBoxBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="4" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="32" />
+    </Style>
+    <!-- Pin the search box to its rest-state palette across pointer-over
+         and focus. Avalonia's Fluent TextBox brightens the background and
+         swaps the BorderBrush to the accent color on focus, which read
+         as a glaring highlight against the alt panel. -->
+    <Style Selector="TextBox.search:pointerover">
+        <Setter Property="Background" Value="{DynamicResource SearchBoxBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBox.search:focus">
+        <Setter Property="Background" Value="{DynamicResource SearchBoxBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBox.search:focus-within /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SearchBoxBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+        <Setter Property="Background" Value="{DynamicResource SearchBoxBackgroundBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SearchBoxBorderBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style Selector="Button.menu">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="10,6" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <!-- 8 px corners match Win 11's system list-item highlight
+             shape (Start menu app rows, Settings sidebar entries,
+             Explorer file rows). Previous 4 px read as sharp on a
+             modern Win 11 install. -->
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.menu:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.menu:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHighlightBrush}" />
+    </Style>
+
+    <!-- Used by the per-app Recent files list in the search context
+         panel. Like Button.menu but the rest state is forced truly
+         transparent on the inner ContentPresenter too — Avalonia's
+         Fluent button template otherwise paints a subtle tint via the
+         theme resources, which read as a permanent gray pill against
+         the menu's alt-panel. -->
+    <Style Selector="Button.recent-item">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="8,5" />
+        <Setter Property="Margin" Value="0,1" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="FontSize" Value="13" />
+    </Style>
+    <Style Selector="Button.recent-item /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+        <!-- Force foreground inheritance through the ContentPresenter
+             so the TextBlock inside reads as the menu's full foreground
+             rather than the Fluent theme's muted "secondary text" color. -->
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.recent-item:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.recent-item:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHighlightBrush}" />
+    </Style>
+
+    <!-- Right-column shell shortcuts (Documents, Music, Network, etc.).
+         A touch larger and heavier than the default menu button so they
+         read as a navigational list, similar to Win 7's Start right pane.
+         FontWeight=SemiBold instead of Medium so it matches the inline
+         FontWeight on the TextBlock inside the Button — otherwise the
+         FluentTheme's ContentPresenter can propagate the Button-level
+         weight down to the TextBlock in some themes (light), winning
+         over the inline value, while in others (dark) the inheritance
+         breaks at a different point and the inline value lands. Aligned
+         values mean both themes resolve to the same SemiBold weight. -->
+    <Style Selector="Button.menu.shortcut">
+        <Setter Property="FontSize" Value="14" />
+        <!-- ShortcutFontWeight resolves to Normal in light theme and
+             Light in dark theme — keyed in Styles/Colors.axaml under
+             the two ThemeDictionaries. This compensates for dark-theme
+             halation making the same numeric weight render heavier
+             than on light backgrounds. -->
+        <Setter Property="FontWeight" Value="{DynamicResource ShortcutFontWeight}" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI" />
+        <Setter Property="Padding" Value="10,5" />
+    </Style>
+
+    <Style Selector="Button.power">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Width" Value="36" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Inline search button sitting inside TextBox.InnerRightContent.
+         Compact, transparent so it visually merges with the input; hover
+         lights up with the standard MenuHoverBrush. -->
+    <Style Selector="Button.search-inner">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource MenuForegroundMutedBrush}" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Width" Value="28" />
+        <Setter Property="Height" Value="28" />
+        <Setter Property="CornerRadius" Value="14" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Margin" Value="0,0,2,0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.search-inner:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+    </Style>
+
+    <!-- Glyph used as power-button content. 16×16 em-box keeps icons
+         visually proportional to the 36×36 Button.power frame without
+         crowding the button border. Same Segoe Fluent Icons family
+         ensures shared baseline across all power codepoints. -->
+    <Style Selector="TextBlock.power-glyph">
+        <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="Width" Value="16" />
+        <Setter Property="Height" Value="16" />
+        <Setter Property="LineHeight" Value="16" />
+        <Setter Property="TextAlignment" Value="Center" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.power:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
+    </Style>
+
+    <Style Selector="Separator.menu">
+        <Setter Property="Height" Value="1" />
+        <Setter Property="Margin" Value="8,4" />
+        <Setter Property="Background" Value="{DynamicResource MenuSeparatorBrush}" />
+    </Style>
+
+    <!-- Transparent button used as the click target around the user
+         avatar + name header in Win7/Classic1/Classic2 layouts.
+         Clicking it routes to ms-settings:yourinfo, matching what
+         clicking the avatar in the real Windows Start menu does.
+         Padding/Border zeroed out so the wrapper doesn't add chrome
+         on top of the existing user-header design. -->
+    <Style Selector="Button.user-tile">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <!-- The Fluent Button ControlTheme doesn't stretch by
+             default — Button sizes to its content. For the user-tile
+             wrapper this collapses the Button to the avatar/name
+             intrinsic width and pins it left within the surrounding
+             column. Forcing Stretch makes the Button fill the column,
+             so the inner StackPanel's HorizontalAlignment=Center
+             actually has room to center within (Win7Layout's avatar
+             tile). Classic1/2 already place the wrapper inside a
+             horizontal-StackPanel header so Stretch is a no-op there. -->
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Stretch" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <!-- Subtle white-tint hover so the user knows the area is clickable —
+         all three layouts host this button on a colored UserHeaderBrush
+         (or alt-panel) background, so a low-alpha white wash reads as
+         a hover hint without clashing with any specific accent color. -->
+    <Style Selector="Button.user-tile:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#22FFFFFF" />
+    </Style>
+    <Style Selector="Button.user-tile:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="#33FFFFFF" />
+    </Style>
+
+    <Style Selector="TextBlock.section">
+        <Setter Property="Foreground" Value="{DynamicResource SectionHeaderBrush}" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="14,10,14,6" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style Selector="ListBox.transparent">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="4" />
+    </Style>
+    <Style Selector="ListBox.transparent ListBoxItem">
+        <Setter Property="Padding" Value="6,4" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBox.transparent ListBoxItem:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
+    </Style>
+    <Style Selector="ListBox.transparent ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MenuHighlightBrush}" />
+    </Style>
+
+    <!-- "Newly installed" cue in the All Programs tree: a 3 px vertical
+         accent strip in the row's left margin. The strip never touches
+         the row background, so it doesn't fight TreeViewItem hover or
+         selection chrome — both states render entirely as designed.
+         A 6 px right margin separates it from the icon. -->
+    <Style Selector="Border.new-indicator">
+        <Setter Property="Width" Value="3" />
+        <Setter Property="Margin" Value="0,2,6,2" />
+        <Setter Property="CornerRadius" Value="2" />
+        <Setter Property="Background" Value="{DynamicResource MenuAccentBrush}" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
+    </Style>
+
+</Styles>

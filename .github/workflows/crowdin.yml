@@ -1,0 +1,82 @@
+# Crowdin sync — runs both directions of the translation flow.
+#
+# Upload (push): on every push to main that changes en.json, push the
+# new source strings to Crowdin so translators see the additions.
+#
+# Download (pull): on a schedule (and on-demand via workflow_dispatch),
+# pull completed translations back from Crowdin into the Languages/
+# folder and open a PR — auto-merged by the existing auto-merge-chore
+# workflow because the PR title carries an i18n prefix.
+#
+# Required secrets (configured one-time in repo Settings → Secrets):
+#   CROWDIN_PROJECT_ID       — numeric project ID from Crowdin
+#   CROWDIN_PERSONAL_TOKEN   — personal API token, Projects scope
+#   RELEASE_PLEASE_PAT       — already in use by release-please; reused
+#                              here so the PR fires downstream workflows.
+
+name: Crowdin sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/MenYou/Languages/en.json'
+      - 'crowdin.yml'
+  schedule:
+    # Pull completed translations every Monday at 06:00 UTC. Crowdin
+    # itself sends webhooks when translations land, but a schedule is
+    # the lowest-friction option that doesn't require the webhook
+    # endpoint setup.
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      direction:
+        description: 'upload (push sources) or download (pull translations)'
+        required: true
+        default: 'download'
+        type: choice
+        options: [upload, download]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: crowdin-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync with Crowdin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Crowdin sync
+        uses: crowdin/github-action@v2
+        with:
+          config: crowdin.yml
+          # Upload happens on push to main (en.json changed) or when
+          # the manual trigger says "upload". Otherwise download.
+          upload_sources: ${{ github.event_name == 'push' || inputs.direction == 'upload' }}
+          upload_translations: false
+          download_translations: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.direction == 'download') }}
+          create_pull_request: true
+          localization_branch_name: i18n/crowdin-sync
+          pull_request_title: 'i18n: sync translations from Crowdin'
+          pull_request_body: |
+            Translations updated by Crowdin contributors.
+
+            Source of truth: `src/MenYou/Languages/en.json`. Other
+            locales are kept in sync via the Crowdin web UI; this PR is
+            opened automatically when translators finish work there.
+
+            Auto-merge gate: the `i18n:` prefix routes this PR through
+            `.github/workflows/auto-approve-chore.yml`, so it merges on
+            CI green without a manual review.
+          pull_request_labels: 'i18n,dependencies'
+          commit_message: 'i18n: sync translations from Crowdin'
+        env:
+          CROWDIN_PROJECT_ID:     ${{ secrets.CROWDIN_PROJECT_ID }}
+          CROWDIN_PERSONAL_TOKEN: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+          GITHUB_TOKEN:           ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}

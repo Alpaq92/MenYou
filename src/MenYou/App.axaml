@@ -1,0 +1,31 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fluid="clr-namespace:Fluid.Avalonia;assembly=Fluid.Avalonia"
+             x:Class="MenYou.App"
+             RequestedThemeVariant="Default">
+
+    <Application.Styles>
+        <!-- Fluid.Avalonia is the app-wide theme, used vanilla (the way the
+             library is meant to be consumed — app scope, no overrides).
+             Window-scoping it broke composite controls like NumericUpDown,
+             which only render correctly when FluidTheme lives in
+             Application.Styles. FluidTheme nests Avalonia's FluentTheme and
+             its constructor calls AccentColorService.Apply (OS accent ramp).
+             The StartMenu opts back out to the stock FluentTheme via its own
+             Window.Styles (see StartMenuWindow.axaml) so its carefully tuned
+             chrome stays exactly as designed. -->
+        <fluid:FluidTheme />
+        <StyleInclude Source="avares://MenYou/Styles/Scrollbar.axaml" />
+        <StyleInclude Source="avares://MenYou/Styles/ControlStyles.axaml" />
+    </Application.Styles>
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://MenYou/Styles/Colors.axaml" />
+                <ResourceInclude Source="avares://MenYou/Styles/Brushes.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
+</Application>

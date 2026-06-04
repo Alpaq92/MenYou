@@ -1,0 +1,137 @@
+<!--
+  ProgramsFolderFlyout: the content shown when a folder tile in the
+  Windows 11 layout's All-Programs grid is clicked. Styled after the
+  native Windows 11 Start "folder" pop-out: a centered folder-name
+  header, then a centered grid of icon-above-name tiles. DataContext is
+  a FolderItemViewModel (inherited from the flyout's target button); the
+  control lists that folder's Children:
+
+    • App tile    → LEFT click launches the app (and the whole flyout
+                    cascade + menu dismiss on launch); RIGHT click opens
+                    the Open / Run-as-admin / Pin / Open-file-location
+                    context menu.
+    • Folder tile → cascades into a nested ProgramsFolderFlyout listing
+                    ITS children, with a right-click "Open folder
+                    location" verb.
+
+  Layout / scrolling: the outer ScrollViewer has horizontal scrolling
+  DISABLED and vertical AUTO. With horizontal disabled the ScrollViewer
+  hands the content a *finite* width, which lets the WrapPanel wrap tiles
+  into rows (instead of running off to the side behind a horizontal
+  bar) and the vertical bar appear only once the rows overflow MaxHeight.
+  Tiles are a fixed Width so the WrapPanel wraps at a predictable column
+  count and long names trim with an ellipsis; the WrapPanel + items are
+  centred so a one- or two-app folder sits in the middle of the card
+  rather than jammed into the top-left.
+
+  The recursion is safe and lazy: the nested <ctrl:ProgramsFolderFlyout/>
+  lives inside a DataTemplate's Flyout, so it isn't instantiated at parse
+  time, and Avalonia only realizes a flyout's content when the flyout
+  actually opens — so opening one folder never eagerly builds the whole
+  subtree, and there's no infinite construction.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="using:MenYou.Views.Controls"
+             xmlns:items="using:MenYou.ViewModels.Items"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             x:Class="MenYou.Views.Controls.ProgramsFolderFlyout"
+             x:DataType="items:FolderItemViewModel">
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                VerticalScrollBarVisibility="Auto"
+                MaxHeight="460">
+    <StackPanel MinWidth="280" Margin="10,4,10,10">
+
+      <!-- Centered folder name, matching the native Win 11 folder
+           pop-out header. -->
+      <TextBlock Text="{Binding DisplayName}"
+                 FontSize="18" FontWeight="SemiBold"
+                 HorizontalAlignment="Center"
+                 TextTrimming="CharacterEllipsis"
+                 Margin="0,8,0,14" />
+
+      <ItemsControl ItemsSource="{Binding Children}"
+                    HorizontalAlignment="Center">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <!-- MaxWidth = 4 tiles (4 × (100 + 2+2 margin) = 416), so the
+                 panel wraps into rows of four and centres itself. -->
+            <WrapPanel MaxWidth="420" HorizontalAlignment="Center" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.DataTemplates>
+
+          <!-- App tile: vertical icon + name. Left-click launches (and
+               the Click handler tears the flyout cascade down so the
+               menu fully dismisses); right-click shows the full 4-verb
+               context menu (same set as the grid tiles). -->
+          <DataTemplate DataType="items:AppItemViewModel">
+            <Button Classes="menu"
+                    Width="100"
+                    Margin="2"
+                    Padding="6,10"
+                    HorizontalContentAlignment="Center"
+                    Click="OnAppLeafClick"
+                    Command="{Binding LaunchCommand}">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{x:Static loc:Strings.Open}" Command="{Binding LaunchCommand}" />
+                  <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}" Command="{Binding RunAsAdministratorCommand}" />
+                  <Separator />
+                  <MenuItem Header="{Binding PinToggleLabel}" Command="{Binding TogglePinCommand}" IsVisible="{Binding CanModifyPin}" />
+                  <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}" Command="{Binding OpenFileLocationCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Width="32" Height="32" Source="{Binding Icon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="{Binding DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="12" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+
+          <!-- Subfolder tile: no launch command (so no auto-disabled
+               gray); left-click opens the nested flyout, right-click
+               reveals the folder on disk. -->
+          <DataTemplate DataType="items:FolderItemViewModel">
+            <Button Classes="menu"
+                    Width="100"
+                    Margin="2"
+                    Padding="6,10"
+                    HorizontalContentAlignment="Center">
+              <Button.ContextMenu>
+                <ContextMenu>
+                  <MenuItem Header="{x:Static loc:Strings.OpenFolderLocation}"
+                            Command="{Binding OpenFolderLocationCommand}" />
+                </ContextMenu>
+              </Button.ContextMenu>
+              <Button.Flyout>
+                <Flyout Placement="Bottom">
+                  <ctrl:ProgramsFolderFlyout />
+                </Flyout>
+              </Button.Flyout>
+              <StackPanel HorizontalAlignment="Center" Spacing="6">
+                <Image Width="32" Height="32" Source="{Binding Icon}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+                <TextBlock Text="{Binding DisplayName}"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           MaxLines="2"
+                           TextTrimming="CharacterEllipsis"
+                           FontSize="12" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+
+        </ItemsControl.DataTemplates>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

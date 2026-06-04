@@ -1,0 +1,387 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MenYou.ViewModels"
+        xmlns:loc="using:MenYou.Platform.Windows"
+        xmlns:conv="using:MenYou.Views.Converters"
+        x:Class="MenYou.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="{x:Static loc:Strings.SettingsTitle}"
+        Icon="avares://MenYou/Assets/icon_v2.ico"
+        Width="720" Height="560"
+        MinWidth="600" MinHeight="420"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <!-- The Fluid.Avalonia theme is applied app-wide in App.axaml, so
+             this window inherits it automatically (no window-scoped theme
+             here — window-scoping is what broke composite controls like
+             NumericUpDown). The accent override is still driven from
+             code-behind via AccentColorService.SetAccent / UseSystemAccent. -->
+
+        <!-- Description paragraph style. MaxWidth removed and
+             HorizontalAlignment=Stretch added so TextBlock claims the
+             FULL parent width during arrange instead of falling back
+             to its DesiredSize (max wrapped-line width). Without
+             Stretch, an Avalonia TextBlock with TextWrapping=Wrap
+             reports DesiredSize.Width = longest wrapped line — which
+             produces visible ragged-right whitespace when natural word
+             boundaries don't reach the available-width edge. Stretch
+             lets the wrap pass measure against the full available
+             width and arrange against that same width, giving the wrap
+             algorithm maximum room. -->
+        <!-- TextAlignment=Justify: the actual fix for the "centered"
+             look. TextBlock with Wrap renders each line at its natural
+             word-break width — for descriptive prose paragraphs the
+             rightmost word usually can't fit, so each line ends short
+             of the available area, producing ragged right whitespace.
+             Justify distributes inter-word spacing within each line to
+             fill the full available width, which for dense
+             paragraph text (the Polish description here) results in
+             small spacing adjustments that read as normal prose
+             without "river" gaps. This is the only thing that
+             eliminates the visual whitespace without manipulating
+             text content or sacrificing readability. -->
+        <!-- Description "tip card" style: tinted Border wrapping the
+             help text so the visible width-filling element is the Border
+             (full available width), not the wrapped text inside. Same
+             pattern VS Code Settings, Visual Studio, Apple System
+             Preferences, GitHub Settings use for inline help — the
+             tinted background tells the reader "this is contained help
+             text," and the ragged-right wrap inside reads as normal
+             paragraph wrapping rather than misalignment. Border claims
+             Stretch by default and renders its background across the
+             full container width regardless of inner text layout, so
+             the perceived "centering" problem is structurally
+             eliminated. -->
+        <!-- MaxWidth on the Border caps it at a value that fits in the
+             ScrollViewer's actual content area. The ScrollContentPresenter
+             passes infinity for child width in some measure paths even
+             with HorizontalScrollBarVisibility=Disabled — without MaxWidth
+             the Border + non-wrapped text inside expands beyond the
+             viewport. 660 ≈ window 720 − ScrollViewer Padding L 20 −
+             scrollbar gutter / right pad ~40, leaving the tip card with
+             ~620 px of inner content area after its own Padding=12 each
+             side. -->
+        <!-- Description tip-card styles. Both classes now render with
+             identical dimensions (Margin + MaxWidth) so any two
+             descriptions in any tab share a visible width — the
+             previous split that put .help at MaxWidth=640+24-indent
+             vs .help-flush at MaxWidth=660+0-indent produced visibly
+             different-width cards within the same tab. Margin=0 left
+             so neither indents past the section's natural left edge;
+             MaxWidth=660 matches the previous wider variant. -->
+        <Style Selector="Border.help">
+            <Setter Property="Background" Value="{DynamicResource MenuBackgroundAltBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,2,0,4" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="MaxWidth" Value="660" />
+        </Style>
+        <Style Selector="Border.help-flush">
+            <Setter Property="Background" Value="{DynamicResource MenuBackgroundAltBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,2,0,4" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="MaxWidth" Value="660" />
+        </Style>
+        <Style Selector="Border.help > TextBlock, Border.help-flush > TextBlock">
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundMutedBrush}" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="*,Auto">
+        <!-- Padding uniform 20: text gets 720 − 40 = 680 of ScrollViewer
+             inner width, minus the description TextBlock's own 24 px
+             left margin = 656 px available wrap area. Always-visible
+             scrollbar lives in the rightmost ~16 px of the ScrollViewer
+             (overlay style) — text right edge lands at column 700
+             (20 padding + 24 margin + up-to-656 wrap), scrollbar at
+             704–720, leaving ~4 px gap so descender pixels don't kiss
+             the thumb. Tradeoff vs the earlier 36-px gutter: more
+             usable text width at the cost of less visual separation
+             between the wrap edge and the scrollbar. -->
+        <!-- TabControl, not a single tall ScrollViewer. Each settings
+             group has its own independently-sized tab — they don't
+             share vertical space, so adding a new section can never
+             push another section out of view. This is the structural
+             fix for the recurring "X is overflowing the scroll pane"
+             complaints. Per-tab content is short enough to fit
+             comfortably in the default window height, and the
+             editor/preview pane in the last tab gets the full tab
+             content area without competing with other sections. -->
+        <TabControl Grid.Row="0" Padding="20,12">
+            <!-- "Wygląd" + "Układ" merged into one tab per user request.
+                 Header uses the Appearance string; the Layout controls
+                 sit below the Appearance grid in the same StackPanel,
+                 separated only by visual breathing space. -->
+            <TabItem Header="{x:Static loc:Strings.Appearance}">
+                <StackPanel Spacing="14">
+                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MenuStyle}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Row="0" Grid.Column="1"
+                              ItemsSource="{Binding MenuStyles}"
+                              SelectedItem="{Binding SelectedMenuStyle, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Label}" />
+                                    <TextBlock Text="{Binding Description}"
+                                               Foreground="{DynamicResource MenuForegroundMutedBrush}"
+                                               FontSize="11" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static loc:Strings.Theme}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Row="1" Grid.Column="1"
+                              ItemsSource="{Binding Themes}"
+                              SelectedItem="{Binding SelectedTheme, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static loc:Strings.Accent}" VerticalAlignment="Top" Margin="0,6,0,0" />
+                    <StackPanel Grid.Row="2" Grid.Column="1" Spacing="6">
+                        <CheckBox Content="{x:Static loc:Strings.FollowWindowsAccent}"
+                                  IsChecked="{Binding UseSystemAccent, Mode=TwoWay}" />
+                        <TextBox Text="{Binding Accent, Mode=TwoWay}"
+                                 IsEnabled="{Binding CanEditAccent}"
+                                 PlaceholderText="e.g. #0078D4" />
+                    </StackPanel>
+                </Grid>
+
+                <Separator />
+
+                <!-- Layout controls follow Appearance under the same
+                     tab. Visible Separator marks the boundary so the
+                     merged tab still reads as two groupings. -->
+                <StackPanel Spacing="6">
+                    <CheckBox Content="{x:Static loc:Strings.ShowPinned}" IsChecked="{Binding ShowPinned, Mode=TwoWay}" />
+                    <CheckBox Content="{x:Static loc:Strings.ShowRecent}" IsChecked="{Binding ShowRecent, Mode=TwoWay}" />
+                    <CheckBox Content="{x:Static loc:Strings.ShowSearch}" IsChecked="{Binding ShowSearch, Mode=TwoWay}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MaxRecentItems}" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="0" Grid.Column="1"
+                                   Minimum="0" Maximum="30"
+                                   Value="{Binding MaxRecentItems, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static loc:Strings.MenuWidth}" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="1" Grid.Column="1"
+                                   Minimum="480" Maximum="1200" Increment="20"
+                                   Value="{Binding MenuWidth, Mode=TwoWay}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static loc:Strings.MenuHeight}" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="2" Grid.Column="1"
+                                   Minimum="400" Maximum="1000" Increment="20"
+                                   Value="{Binding MenuHeight, Mode=TwoWay}" />
+                </Grid>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static loc:Strings.Behavior}">
+                <StackPanel Spacing="6">
+                    <CheckBox Content="{x:Static loc:Strings.ReplaceStart}"
+                              IsChecked="{Binding ReplaceWinKey, Mode=TwoWay}" />
+                    <Border Classes="help">
+                        <TextBlock Text="{x:Static loc:Strings.ReplaceStartDescription}" />
+                    </Border>
+                    <CheckBox Content="{x:Static loc:Strings.StartWithWindows}"
+                              IsChecked="{Binding StartWithWindows, Mode=TwoWay}" />
+                    <CheckBox Content="{x:Static loc:Strings.HideOnFocusLost}"
+                              IsChecked="{Binding HideOnFocusLost, Mode=TwoWay}" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static loc:Strings.Synchronization}">
+                <StackPanel Spacing="6">
+                    <CheckBox Content="{x:Static loc:Strings.MirrorWinStart}"
+                              IsChecked="{Binding MirrorWindowsStart, Mode=TwoWay}" />
+                    <Border Classes="help">
+                        <TextBlock Text="{x:Static loc:Strings.MirrorWinStartDescription}" />
+                    </Border>
+                    <Button Content="{x:Static loc:Strings.PushToWinStart}"
+                            Command="{Binding PushToWindowsStartCommand}"
+                            HorizontalAlignment="Left"
+                            Margin="0,4,0,0" />
+                    <Border Classes="help-flush">
+                        <TextBlock Text="{x:Static loc:Strings.PushToWinStartDescription}" />
+                    </Border>
+                    <Border Classes="help-flush"
+                            IsVisible="{Binding PushStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <TextBlock Text="{Binding PushStatus}" />
+                    </Border>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static loc:Strings.CustomTab}">
+                <StackPanel Spacing="8">
+                    <!-- Explicit TextBlock with VerticalAlignment=Center
+                         as Content. VerticalContentAlignment on the
+                         CheckBox aligned the wrong layer; targeting
+                         the actual text element directly is what
+                         centers it with the box. -->
+                    <CheckBox IsChecked="{Binding UseCustomTheme, Mode=TwoWay}">
+                        <TextBlock Text="{x:Static loc:Strings.UseCustomTheme}"
+                                   VerticalAlignment="Center" />
+                    </CheckBox>
+
+                    <!-- Select + Load + Save + Forget row.
+                         ComboBox lists every .axaml file under
+                         %AppData%\MenYou\CustomThemes\.
+                         Load picks an external XAML file and imports
+                         it into the managed folder.
+                         Save exports the current editor content to a
+                         user-picked filesystem path (export, not
+                         in-app overwrite).
+                         Forget removes the selected entry from the
+                         managed folder; gated on a real selection. -->
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <ComboBox Grid.Column="0"
+                                  ItemsSource="{Binding CustomThemes}"
+                                  SelectedItem="{Binding SelectedCustomTheme, Mode=TwoWay}"
+                                  IsEnabled="{Binding CanEditCustomTheme}"
+                                  HorizontalAlignment="Stretch"
+                                  PlaceholderText="{x:Static loc:Strings.SelectUploadedTheme}" />
+                        <Button Grid.Column="1"
+                                Content="{x:Static loc:Strings.Open}"
+                                Command="{Binding UploadCustomThemeCommand}"
+                                IsEnabled="{Binding CanEditCustomTheme}" />
+                        <Button Grid.Column="2"
+                                Content="{x:Static loc:Strings.Save}"
+                                Command="{Binding SaveCustomThemeCommand}"
+                                IsEnabled="{Binding CanSaveCustomTheme}" />
+                        <Button Grid.Column="3"
+                                Content="{x:Static loc:Strings.Forget}"
+                                Command="{Binding DeleteCustomThemeCommand}"
+                                IsEnabled="{Binding CanDeleteCustomTheme}" />
+                    </Grid>
+
+                    <!-- Editor + preview fill the remaining vertical
+                         space in the tab via Grid * row. No fixed
+                         Height — the tab gives them whatever the
+                         dialog has, which is plenty since this tab
+                         doesn't compete for space with any other
+                         section. -->
+                    <!-- Editor + preview.
+                         TextBox.Text binding deliberately uses the DEFAULT
+                         UpdateSourceTrigger (LostFocus). Large custom themes
+                         (the bundled MintCinnamon.axaml sample is ~28 KB)
+                         re-parse through AvaloniaRuntimeXamlLoader on every
+                         source-side change; if we trigger that on each
+                         keystroke the UI thread freezes for hundreds of ms
+                         per character and typing appears not to register.
+                         LostFocus keeps editing fast and refreshes the
+                         preview the moment the user clicks anywhere outside
+                         the editor.
+                         The preview Border deliberately omits IsEnabled —
+                         disabling it greyed the rendered content to ~50 %
+                         opacity and the artboard placeholder looked like a
+                         blank pane. The Border stays full-opacity even when
+                         the custom-theme master toggle is off; it's just
+                         a preview surface, not an interactive control. -->
+                    <!-- Both children get an explicit Height so the
+                         StackPanel parent (infinite-height measure pass)
+                         doesn't make the row collapse. Avalonia's
+                         Viewbox needs finite bounds in both dimensions
+                         to compute the Uniform scale — when its parent
+                         offers infinity in either axis, it returns the
+                         child's natural size unscaled and the Mint
+                         Cinnamon mock (640x440) ends up clipped to the
+                         top-left ~280x300 by the surrounding Border. -->
+                    <Grid ColumnDefinitions="*,*" RowDefinitions="320" ColumnSpacing="8">
+                        <!-- TextWrapping=Wrap so long XAML lines (the
+                             Path Data="..." attributes in MintCinnamon
+                             run to ~500 chars each) soft-wrap inside
+                             the editor instead of being clipped at the
+                             right edge with no visible horizontal
+                             scrollbar. The file content itself stays
+                             unchanged on Save — wrap is purely visual. -->
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding CustomThemeXaml, Mode=TwoWay}"
+                                 IsEnabled="{Binding CanEditCustomTheme}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 FontFamily="Cascadia Code, Consolas, monospace"
+                                 FontSize="12"
+                                 VerticalContentAlignment="Top"
+                                 VerticalAlignment="Stretch"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 PlaceholderText="&lt;Button Content=&quot;Click me&quot; Margin=&quot;20&quot; /&gt;" />
+
+                        <!-- Preview pane.
+                             Width/Height on the Border + Stretch on the
+                             Viewbox are the working combination: the
+                             Border is a sized box, the Viewbox sees
+                             finite width AND finite height available
+                             from the Border's content area, and can
+                             therefore compute a finite Uniform scale.
+                             Stretch=Uniform (no DownOnly) means small
+                             themes scale up too, which is fine for a
+                             preview — the user wants to see the whole
+                             thing at the available size, regardless of
+                             the theme's native dimensions. -->
+                        <Border Grid.Column="1"
+                                BorderBrush="{DynamicResource MenuBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Background="{DynamicResource MenuBackgroundBrush}"
+                                ClipToBounds="True">
+                            <Viewbox Stretch="Uniform">
+                                <ContentControl Content="{Binding CustomThemeXaml, Converter={x:Static conv:XamlStringToControlConverter.Instance}}" />
+                            </Viewbox>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="1"
+                BorderBrush="{DynamicResource MenuBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="20,12">
+            <!-- Left group: Reset + Check-for-updates + status line. Right
+                 group: Apply + Close. The "*" gap in the middle pushes the
+                 right group flush right regardless of how wide the status
+                 line gets. UpdateStatus is bound to the SettingsViewModel's
+                 last-check phrase (Aktualna wersja / Aktualizacja gotowa /
+                 the localized failure message). -->
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto"
+                  ColumnSpacing="8">
+                <Button Grid.Column="0"
+                        Content="{x:Static loc:Strings.ResetToDefaults}"
+                        Command="{Binding ResetCommand}" />
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="8"
+                            VerticalAlignment="Center">
+                    <Button Content="{x:Static loc:Strings.CheckForUpdates}"
+                            Command="{Binding CheckForUpdatesCommand}"
+                            IsEnabled="{Binding CanCheckForUpdates}" />
+                    <Button Content="{x:Static loc:Strings.About}"
+                            Command="{Binding OpenAboutCommand}" />
+                    <TextBlock Text="{Binding UpdateStatus}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               MaxWidth="320" />
+                </StackPanel>
+                <Button Grid.Column="3"
+                        Content="{x:Static loc:Strings.Apply}"
+                        Command="{Binding ApplyCommand}" />
+                <Button Grid.Column="4"
+                        Content="{x:Static loc:Strings.Close}"
+                        Click="OnCloseClick" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

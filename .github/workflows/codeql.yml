@@ -1,0 +1,77 @@
+# --------------------------------------------------------------------------
+# codeql.yml — CodeQL static analysis for the managed C# tree.
+#
+# Runs on every push + PR to main, plus a weekly Monday rebuild so we
+# pick up newly published CodeQL queries on dormant branches. SARIF
+# results land in the repo's Security tab.
+# --------------------------------------------------------------------------
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - "icon*.png"
+      - "icon*.svg"
+      - "SECURITY.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - "icon*.png"
+      - "icon*.svg"
+      - "SECURITY.md"
+  schedule:
+    - cron: "17 6 * * 1"   # Mondays 06:17 UTC
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (csharp)
+    runs-on: windows-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [csharp]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          # security-and-quality runs the broader cwe-by-default + style
+          # rule set. Worth the extra runtime on a small project.
+          queries: security-and-quality
+
+      # The native MenYou.Bridge project requires MSVC. Skip its build for
+      # CodeQL analysis — the managed MenYou.csproj already covers all the
+      # C# code under analysis, and the bridge build adds 30+ seconds
+      # + a "skipped" warning when MSVC isn't installed.
+      - name: Build managed project
+        run: dotnet build src/MenYou/MenYou.csproj -c Release
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

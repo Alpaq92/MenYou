@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MenYou.ViewModels"
+        xmlns:c="using:MenYou.Views.Converters"
+        xmlns:layouts="using:MenYou.Views.Layouts"
+        x:Class="MenYou.Views.StartMenuWindow"
+        x:DataType="vm:StartMenuViewModel"
+        Title="MenYou"
+        Icon="avares://MenYou/Assets/icon_v2.ico"
+        SizeToContent="WidthAndHeight"
+        MinWidth="320" MinHeight="420"
+        MaxWidth="900" MaxHeight="760"
+        WindowStartupLocation="Manual"
+        WindowDecorations="None"
+        ShowInTaskbar="False"
+        Topmost="True"
+        TransparencyLevelHint="Transparent,Mica,AcrylicBlur,Blur"
+        Background="Transparent"
+        FontFamily="Segoe UI Variable Text, Segoe UI, Inter"
+        FontSize="13"
+        CanResize="False">
+
+    <Window.Styles>
+        <!-- The app-wide theme is Fluid.Avalonia (see App.axaml). The
+             StartMenu deliberately opts back out to Avalonia's stock
+             FluentTheme so its tuned palette / brushes (Colors.axaml,
+             Brushes.axaml) and all the built-in layouts render exactly as
+             designed, unaffected by Fluid's Fluent-2 token overrides.
+             Window-scoping FluentTheme is safe here — the StartMenu uses
+             only directly-themed controls (no NumericUpDown-style
+             composites that need an app-scope theme). -->
+        <FluentTheme />
+    </Window.Styles>
+
+    <Window.Resources>
+        <c:EnumEqualsConverter x:Key="EnumEquals" />
+    </Window.Resources>
+
+    <Border CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
+            BorderThickness="1"
+            BorderBrush="{DynamicResource MenuBorderBrush}"
+            Background="{DynamicResource MenuBackgroundBrush}"
+            ClipToBounds="True">
+        <!-- Nested rounded Border acts as the real clip mask. Without
+             it the rectangular backgrounds painted by the bottom
+             action bar (search panel, power-button strip) overwrite
+             the outer Border's rounded bottom corners — Avalonia 12's
+             ClipToBounds on a Border with CornerRadius doesn't actually
+             clip children to the rounded shape in every case. -->
+        <Border CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}" ClipToBounds="True">
+            <Grid>
+                <!-- Built-in layouts. Visible only when the master
+                     "Use custom theme" toggle is off (the default). When
+                     UseCustomTheme flips on at Apply, this entire group
+                     hides and the ContentControl below takes over. -->
+                <Grid IsVisible="{Binding !UseCustomTheme}">
+                    <layouts:Win7Layout
+                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Win7}" />
+                    <layouts:Windows11Layout
+                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Windows11}" />
+                    <layouts:MintCinnamonLayout
+                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=MintCinnamon}" />
+                    <layouts:Classic1Layout
+                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Classic1}" />
+                    <layouts:Classic2Layout
+                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Classic2}" />
+                </Grid>
+                <!-- Custom theme. The same XamlStringToControlConverter
+                     that powers the Settings → Custom preview is used here
+                     in production: ContentControl.Content gets the parsed
+                     control tree, or a red error TextBlock if the XAML
+                     doesn't parse. Empty input renders the artboard
+                     placeholder, which signals "you've enabled custom
+                     theme but didn't supply any XAML yet" inside the
+                     real menu (matching the preview behavior 1:1). -->
+                <ContentControl IsVisible="{Binding UseCustomTheme}"
+                                Content="{Binding CustomThemeXaml, Converter={x:Static c:XamlStringToControlConverter.Instance}}" />
+            </Grid>
+        </Border>
+    </Border>
+</Window>

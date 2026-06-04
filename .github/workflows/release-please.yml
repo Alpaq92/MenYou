@@ -1,0 +1,79 @@
+# --------------------------------------------------------------------------
+# release-please.yml — version bump + CHANGELOG generation.
+#
+# release-please reads Conventional Commits on main (feat:, fix:, perf:,
+# deps:, BREAKING CHANGE) and maintains a "Release PR" that:
+#   - bumps the version in .release-please-manifest.json
+#   - prepends a new section to CHANGELOG.md grouping the merged commits
+#   - drafts the GH-Release body
+#
+# Every time the Release PR is opened or updated, this workflow also queues
+# it for native auto-merge via `gh pr merge --auto --squash`. The PR merges
+# on its own when CI / CodeQL / Security pass.
+#
+# Merging the Release PR pushes the tag v<version>. That tag push triggers
+# the existing .github/workflows/release.yml — which publishes the GitHub
+# Release, signs the installer via SignPath, and pushes to winget / Scoop /
+# Chocolatey.
+#
+# IMPORTANT: this workflow needs RELEASE_PLEASE_PAT (a PAT with `repo`
+# scope) so:
+#   1. The merge commit pushed by `gh pr merge` fires release.yml on the
+#      bumped main (GITHUB_TOKEN-driven actions don't trigger other
+#      workflows — that's the documented GitHub behavior).
+#   2. release-please can open / approve PRs when "Allow GitHub Actions
+#      to create and approve pull requests" is off.
+#
+# When RELEASE_PLEASE_PAT isn't set, the workflow falls back to
+# GITHUB_TOKEN — release-please will still open the version-bump PR, but
+# the eventual tag push won't trigger release.yml. You'll need to
+# re-tag manually (or push the tag from a local checkout) to publish.
+# --------------------------------------------------------------------------
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Open / merge release PR
+    runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.rp.outputs.releases_created }}
+      tag:      ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+          token: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
+
+      # Queue the Release PR for auto-merge so it lands on its own when CI
+      # + CodeQL + Security pass. Status checks still gate it — this just
+      # removes the manual "click Merge" step.
+      #
+      # The JSON parse happens in the run-block (not in env:) because GitHub
+      # evaluates env: before honoring `if:`; passing the raw `pr` output
+      # as PR_JSON and parsing with jq at runtime avoids `fromJson('')`
+      # blowing up the workflow when release-please had nothing to release.
+      - name: Enable auto-merge on release PR
+        if: steps.rp.outputs.pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
+          PR_JSON:  ${{ steps.rp.outputs.pr }}
+        run: |
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          echo "Queueing release PR #$PR_NUMBER for auto-merge"
+          gh pr merge --auto --squash "$PR_NUMBER" --repo "$GITHUB_REPOSITORY"

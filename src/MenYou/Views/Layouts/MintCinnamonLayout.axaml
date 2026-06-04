@@ -1,0 +1,338 @@
+<!--
+  MintCinnamonLayout: built-in menu style loosely inspired by the Linux
+  Mint Cinnamon application menu (dark variant). Two columns + bottom
+  search bar: a dark sidebar (avatar header, pinned shortcuts, foldable
+  Places, power glyphs) on the left, and Recent + All-Programs in the
+  content pane on the right. Derived from
+  samples/custom-themes/MintCinnamon.axaml, promoted to a first-class
+  compiled layout so it appears in Settings → Wygląd (Appearance)
+  alongside Win7 / Classic / Windows 11.
+
+  x:CompileBindings="False" keeps the reflection-style bindings the
+  sample was authored with (no x:DataType; the Places rows use an
+  untyped `$parent[ItemsControl].DataContext.RightPanel.OpenCommand`
+  path). DataContext is StartMenuViewModel, same as the other layouts.
+
+  ctrl:AppList renders Pinned + Recent rows; ctrl:ProgramsTree drives
+  the All-Programs cascade; ctrl:SearchResultsList is the search overlay.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="using:MenYou.Views.Controls"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             x:Class="MenYou.Views.Layouts.MintCinnamonLayout"
+             x:CompileBindings="False">
+  <Grid Width="640" Height="480"
+        RowDefinitions="*,56"
+        ColumnDefinitions="220,*">
+
+  <!-- Theme-aware brushes. Dark mode keeps the exact shades the user
+       signed off on (#2B / #3A backgrounds, #3D / #4A dividers); light
+       mode gets a parallel palette of light grays so the theme reads
+       correctly when ActualThemeVariant flips. Foreground / power
+       brushes below use MenYou's existing app-scope brushes
+       (MenuForegroundBrush, MenuForegroundMutedBrush, PowerDangerBrush)
+       which already handle the flip — defining them again here would
+       just duplicate. -->
+  <Grid.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="MintSidebarBg"      Color="#2B2B2B" />
+          <SolidColorBrush x:Key="MintMainBg"         Color="#3A3A3A" />
+          <SolidColorBrush x:Key="MintSidebarDivider" Color="#3D3D3D" />
+          <SolidColorBrush x:Key="MintMainDivider"    Color="#4A4A4A" />
+          <SolidColorBrush x:Key="MintAvatarOrb"      Color="#5A6B82" />
+          <!-- Hover shade for the shutdown tile — a brighter red than
+               the rest state. Without this the app-level
+               Button.power:pointerover style replaces the rest red
+               with MenuHoverBrush (a gray), making the tile blend
+               into the sidebar on hover. -->
+          <SolidColorBrush x:Key="MintShutdownHover"  Color="#E25B4F" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="MintSidebarBg"      Color="#E4E4E4" />
+          <SolidColorBrush x:Key="MintMainBg"         Color="#F5F5F5" />
+          <SolidColorBrush x:Key="MintSidebarDivider" Color="#C8C8C8" />
+          <SolidColorBrush x:Key="MintMainDivider"    Color="#D1D1D1" />
+          <SolidColorBrush x:Key="MintAvatarOrb"      Color="#5A6B82" />
+          <SolidColorBrush x:Key="MintShutdownHover"  Color="#D43429" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Grid.Resources>
+
+  <!-- Local styles. Targets only this layout's tree (the other
+       StartMenu layouts continue using the unmodified Button.power
+       styles). The shutdown tile gets a tinted-red hover instead of
+       the app-level MenuHoverBrush gray so the destructive-action
+       emphasis stays readable when the user mouses over it. -->
+  <Grid.Styles>
+    <Style Selector="Button.shutdown /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PowerDangerBrush}" />
+    </Style>
+    <Style Selector="Button.shutdown:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource MintShutdownHover}" />
+    </Style>
+    <Style Selector="Button.shutdown:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PowerDangerBrush}" />
+    </Style>
+  </Grid.Styles>
+
+  <!-- ===================================================================
+       Column 0 (spans both rows): dark sidebar.
+       Avatar header at top, pinned shortcuts (scrollable), a foldable
+       Places expander, and five power glyphs along the bottom. The
+       shutdown glyph carries a red accent — matches the Cinnamon
+       convention.
+       =================================================================== -->
+  <Border Grid.Row="0" Grid.RowSpan="2" Grid.Column="0" Background="{DynamicResource MintSidebarBg}">
+    <Grid RowDefinitions="130,*,Auto,56">
+
+      <!-- Whole header is one clickable Button bound to
+           OpenAccountSettingsCommand — same UX as clicking the avatar
+           in the real Windows Start menu. The Button gets the click
+           target; the inner StackPanel + Border + Ellipse handle the
+           visuals. Avatar is null on a fresh install where the user
+           never set a picture — we fall through to a coloured circle
+           with the first letter of UserName, matching the production
+           layouts' fallback. -->
+      <Button Grid.Row="0"
+              Background="Transparent" BorderThickness="0"
+              HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+              HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+              Padding="0"
+              Command="{Binding OpenAccountSettingsCommand}">
+        <StackPanel Spacing="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <Panel Width="60" Height="60">
+            <Border Background="{DynamicResource MintAvatarOrb}" CornerRadius="30"
+                    IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
+              <TextBlock Text="{Binding UserName[0]}"
+                         Foreground="#FFFFFF" FontSize="28" FontWeight="SemiBold"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     RenderOptions.BitmapInterpolationMode="HighQuality">
+              <Ellipse.Fill>
+                <ImageBrush Source="{Binding Avatar}" Stretch="UniformToFill" />
+              </Ellipse.Fill>
+            </Ellipse>
+          </Panel>
+          <TextBlock Text="{Binding UserName}"
+                     Foreground="{DynamicResource MenuForegroundBrush}" FontSize="14"
+                     HorizontalAlignment="Center" />
+        </StackPanel>
+      </Button>
+
+      <!-- Pinned apps. ctrl:AppList reads its Items property as
+           IEnumerable AppItemViewModel and renders icon + name + an
+           IsNew accent stripe on freshly-installed apps. Click on a
+           row dispatches AppItemViewModel.LaunchCommand which goes
+           through IShellLauncher.Launch → MenYou auto-hides via the
+           Launched event hook in App.cs. -->
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
+                    Padding="4,4,4,0">
+        <ctrl:AppList Items="{Binding Pinned}" />
+      </ScrollViewer>
+
+      <!-- Places section. Sits below Pinned with a 1 px divider between
+           them; rows use the same Button.menu chrome as Pinned so hover,
+           pressed, and selection chrome are pixel-identical. The Grid's
+           column shape (9 / Auto / *) matches AppList's so the Place
+           titles left-align with the Pinned app names — even though
+           Places rows carry no icon, the empty 20 px column placeholder
+           preserves the same text inset.
+           StartMenuViewModel.Places is the curated 4-entry slice of
+           RightPanel.Shortcuts: Start Menu, Documents, Settings, Control
+           Panel. Each row dispatches RightPanel.OpenCommand with the
+           ShellShortcut as parameter — same path the built-in layouts
+           use for their right-hand shell-link column. -->
+      <!-- StackPanel.Margin="4,0,4,0" matches the Pinned ScrollViewer's
+           Padding="4,4,4,0" left/right values, so Places rows left-
+           align with Pinned rows down to the pixel. Without it the
+           StackPanel was flush against the sidebar's left edge while
+           Pinned was inset by 4 px, producing the misalignment the
+           user spotted. -->
+      <StackPanel Grid.Row="2" Margin="4,0,4,0">
+        <!-- Divider between Pinned and Places. 1 px line slightly
+             lighter than the sidebar background. Margin 8,4 leaves
+             roughly the same left/right gutter the AppList rows use
+             (Button.Margin=6,1 + Button.menu Padding=10,6), so the
+             line ends ~aligned with the icons above and below. -->
+        <Border Height="1" Margin="8,4,8,6" Background="{DynamicResource MintSidebarDivider}" />
+        <ItemsControl ItemsSource="{Binding Places}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Classes="menu"
+                      HorizontalAlignment="Stretch"
+                      Margin="6,1"
+                      Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                      CommandParameter="{Binding}">
+                <Grid ColumnDefinitions="9,Auto,*">
+                  <!-- Column 0 (9 px) and Column 1 (20 px + 10 px right
+                       margin) match AppList's new-indicator + icon
+                       columns exactly. Column 0 stays empty (no IsNew
+                       on ShellShortcut). Column 1 is a Panel that
+                       overlays an Image + glyph TextBlock — whichever
+                       is non-null wins via IsVisible. The Image binds
+                       to ShellShortcut.Icon (real Windows shell icon
+                       extracted from shell32.dll / imageres.dll on
+                       startup); the TextBlock fallback binds to
+                       ShellShortcut.IconGlyph (Segoe Fluent Icons
+                       codepoint) and shows only when Icon failed to
+                       resolve. The 20×20 footprint matches AppList's
+                       Image size so titles in column 2 stay
+                       horizontally aligned with the Pinned app names
+                       above the divider. -->
+                  <Panel Grid.Column="1" Width="20" Height="20" Margin="0,0,10,0">
+                    <!-- Explicit Width/Height on the Image: without
+                         them the Image renders at its source bitmap's
+                         native size (32×32 for SHGFI_LARGEICON) and
+                         overflows the 20-px Panel, pushing the title
+                         text right and breaking horizontal alignment
+                         with the Pinned rows above. AppList sets the
+                         same dimensions on its Image for the same
+                         reason. -->
+                    <Image Source="{Binding Icon}"
+                           Width="20" Height="20"
+                           IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <TextBlock Text="{Binding IconGlyph}"
+                               IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNull}}"
+                               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets, Segoe UI Symbol"
+                               FontSize="14"
+                               Foreground="{DynamicResource MenuForegroundMutedBrush}"
+                               TextAlignment="Center"
+                               VerticalAlignment="Center" />
+                  </Panel>
+                  <TextBlock Grid.Column="2"
+                             Text="{Binding Title}"
+                             VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- Power strip. Settings (cog) sits first, then a 1-px vertical
+           separator, then the four power verbs (Lock, Sleep, Restart,
+           Shutdown) — the same split the Win7 / Win11 layouts use, since
+           the cog is conceptually distinct from the destructive power
+           actions. Centered in the sidebar's bottom row. The separator
+           uses the sidebar divider brush; Shutdown keeps the red tile
+           via Classes="power shutdown". -->
+      <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="2"
+                  HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Button Classes="power"
+                Command="{Binding OpenSettingsCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE713;" />
+        </Button>
+        <!-- Phone Link (CellPhone glyph E8EA) — app launcher, kept with
+             the cog on the non-destructive side of the separator. -->
+        <Button Classes="power"
+                Command="{Binding OpenPhoneLinkCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.PhoneLinkTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE8EA;" />
+        </Button>
+        <Border Width="1" Margin="4,6"
+                Background="{DynamicResource MintSidebarDivider}" />
+        <Button Classes="power"
+                Command="{Binding Power.LockCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.LockTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE72E;" />
+        </Button>
+        <Button Classes="power"
+                Command="{Binding Power.SleepCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE708;" />
+        </Button>
+        <Button Classes="power"
+                Command="{Binding Power.RestartCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.RestartTooltip}">
+          <TextBlock Classes="power-glyph" Text="&#xE777;" />
+        </Button>
+        <Button Classes="power shutdown"
+                Command="{Binding Power.ShutdownCommand}"
+                ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}">
+          <TextBlock Classes="power-glyph" Foreground="#FFFFFF" Text="&#xE7E8;" />
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+
+  <!-- ===================================================================
+       Column 1, row 0: content. Recent above a divider, then the All
+       Programs tree below. ScrollViewer wraps both so a deep program
+       tree doesn't push the search bar off-screen.
+       =================================================================== -->
+  <!-- Right pane content. The outer Border's Padding="0,16,0,0" pushes
+       the inner ScrollViewer down by 16 px from the column's top edge,
+       which is also where the slim overlay scrollbar starts — giving
+       the scrollbar visible breathing room at the top of the column
+       instead of running flush to the rounded window corner. -->
+  <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource MintMainBg}" Padding="0,16,0,0">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Padding="10,0,4,8">
+      <StackPanel>
+
+        <!-- Recent section. The label uses the Windows shell string
+             (StartTileData.dll,-2001) via Strings.Recent so it matches
+             the Windows display language; ctrl:AppList handles the
+             icon/name/IsNew rendering. -->
+        <TextBlock Text="{x:Static loc:Strings.Recent}"
+                   Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" FontWeight="SemiBold"
+                   Margin="4,2,0,4" />
+        <ctrl:AppList Items="{Binding Recent}" />
+
+        <!-- Visual divider between the Recent rows and the All Programs
+             tree. 1 px, slightly lighter than the column bg (#3A3A3A)
+             — matches the left sidebar's Pinned/Places divider pattern
+             (lighter line on darker surface), which reads cleaner on
+             dark themes than the inverse. -->
+        <Border Height="1" Margin="4,10,4,10" Background="{DynamicResource MintMainDivider}" />
+
+        <!-- All Programs tree. ctrl:ProgramsTree reads Programs.Items
+             (the same MenuFolder hierarchy the production Win7 layout
+             uses) and renders an expandable folder tree with Avalonia's
+             standard chevron toggle. Leaf items dispatch the same
+             launch path as ctrl:AppList rows. -->
+        <TextBlock Text="{x:Static loc:Strings.AllPrograms}"
+                   Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" FontWeight="SemiBold"
+                   Margin="4,2,0,4" />
+        <ctrl:ProgramsTree Items="{Binding Programs.Items}" />
+
+      </StackPanel>
+    </ScrollViewer>
+  </Border>
+
+  <!-- ===================================================================
+       Column 1, row 1: search bar. Classes="search" picks up the
+       production search styling (rounded corners, accent border on
+       focus, etc.). TwoWay binding writes back to Search.Query;
+       SearchViewModel's debounced query handler does the actual work.
+       =================================================================== -->
+  <Border Grid.Row="1" Grid.Column="1" Background="{DynamicResource MintMainBg}"
+          Padding="10,10">
+    <TextBox Classes="search"
+             Text="{Binding Search.Query, Mode=TwoWay}"
+             PlaceholderText="{x:Static loc:Strings.SearchPlaceholder}" />
+  </Border>
+
+  <!-- ===================================================================
+       Search results overlay. Sits on top of the Recent + Programs
+       content area when the user is typing — same pattern as the
+       production layouts. IsVisible binding flips on as soon as
+       Search.HasQuery returns true (one non-whitespace char in the
+       box). The inner SearchResultsList re-DataContexts to the
+       SearchViewModel so its ListBox bindings against Results /
+       Selected resolve correctly.
+       =================================================================== -->
+  <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource MintMainBg}"
+          IsVisible="{Binding Search.HasQuery}">
+    <ctrl:SearchResultsList DataContext="{Binding Search}" />
+  </Border>
+
+  </Grid>
+</UserControl>

@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:items="using:MenYou.ViewModels.Items"
+             xmlns:conv="using:MenYou.Views.Converters"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             x:Class="MenYou.Views.Controls.ProgramsTree"
+             x:Name="Root">
+    <UserControl.Resources>
+        <!-- Folder template recurses through Children with the same templates -->
+        <TreeDataTemplate x:Key="FolderTemplate"
+                          x:DataType="items:FolderItemViewModel"
+                          ItemsSource="{Binding Children}">
+            <Grid ColumnDefinitions="Auto,*">
+                <Image Grid.Column="0" Width="16" Height="16" Margin="0,0,8,0" Source="{Binding Icon}" />
+                <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+        </TreeDataTemplate>
+
+        <DataTemplate x:Key="AppTemplate" x:DataType="items:AppItemViewModel">
+            <Button Classes="menu"
+                    HorizontalAlignment="Stretch"
+                    Padding="2,2"
+                    Command="{Binding LaunchCommand}">
+                <Grid ColumnDefinitions="Auto,*">
+                    <Image Grid.Column="0" Width="16" Height="16" Margin="0,0,8,0" Source="{Binding Icon}" />
+                    <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </Button>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <TreeView ItemsSource="{Binding #Root.Items}"
+              Background="Transparent"
+              BorderThickness="0"
+              Padding="4">
+        <TreeView.DataTemplates>
+            <!-- Newly-installed indicator is a 3 px vertical accent strip
+                 in the row's left margin (IsVisible-bound to IsNew), not
+                 a full-row background. This separates the "new" cue from
+                 the hover / selection chrome the TreeViewItem paints,
+                 eliminating the priority dance between local Background
+                 values and state styles. -->
+            <TreeDataTemplate x:DataType="items:FolderItemViewModel" ItemsSource="{Binding Children}">
+                <!-- Folder rows are navigational containers — no Launch,
+                     no Pin, no RunAsAdmin verbs apply. The one verb that
+                     makes sense is opening the on-disk Start Menu
+                     directory the folder mirrors, so the context menu
+                     has exactly that. Label sourced from Windows via
+                     Strings.OpenFolderLocation (shell32.dll,-1040 =
+                     "Otwórz lokalizację folderu" / "Open folder
+                     location"), which matches what the command does:
+                     explorer.exe "folder" opens the directory.
+                     Background="Transparent" is required — without it
+                     the Grid has Background=null and Avalonia skips
+                     hit-testing on the empty space between icon and
+                     text. Right-clicks fall through to the underlying
+                     TreeViewItem chrome and the context menu silently
+                     misses. With Transparent the whole row is a hit
+                     target. -->
+                <Grid ColumnDefinitions="9,Auto,*" Background="Transparent">
+                    <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{x:Static loc:Strings.OpenFolderLocation}"
+                                      Command="{Binding OpenFolderLocationCommand}" />
+                        </ContextMenu>
+                    </Grid.ContextMenu>
+                    <Border Grid.Column="0" Classes="new-indicator"
+                            IsVisible="{Binding IsNew}" />
+                    <Image Grid.Column="1" Width="16" Height="16" Margin="0,0,8,0" Source="{Binding Icon}" />
+                    <TextBlock Grid.Column="2" Text="{Binding DisplayName}"
+                               VerticalAlignment="Center"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </TreeDataTemplate>
+            <DataTemplate x:DataType="items:AppItemViewModel">
+                <!-- App rows in All Programs get the same 4-verb context
+                     menu as the AppList rows (Pinned + Recent in the
+                     production layouts): Open + Run as administrator +
+                     Pin/Unpin + Open file location. Every header comes
+                     from a Windows shell DLL via Strings.*, so the menu
+                     reads in the user's Windows display language with
+                     no per-string localization key.
+                     Background="Transparent" makes the whole row a hit
+                     target — see the folder template above for the
+                     rationale. -->
+                <Grid ColumnDefinitions="9,Auto,*" Background="Transparent">
+                    <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{x:Static loc:Strings.Open}"
+                                      Command="{Binding LaunchCommand}" />
+                            <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}"
+                                      Command="{Binding RunAsAdministratorCommand}" />
+                            <Separator />
+                            <MenuItem Header="{Binding PinToggleLabel}"
+                                      Command="{Binding TogglePinCommand}"
+                                      IsVisible="{Binding CanModifyPin}" />
+                            <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
+                                      Command="{Binding OpenFileLocationCommand}" />
+                        </ContextMenu>
+                    </Grid.ContextMenu>
+                    <Border Grid.Column="0" Classes="new-indicator"
+                            IsVisible="{Binding IsNew}" />
+                    <Image Grid.Column="1" Width="16" Height="16" Margin="0,0,8,0" Source="{Binding Icon}" />
+                    <TextBlock Grid.Column="2" Text="{Binding DisplayName}"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" />
+                </Grid>
+            </DataTemplate>
+        </TreeView.DataTemplates>
+    </TreeView>
+</UserControl>

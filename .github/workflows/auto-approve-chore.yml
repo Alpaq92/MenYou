@@ -1,0 +1,51 @@
+# --------------------------------------------------------------------------
+# auto-approve-chore.yml — satisfies the branch ruleset's "approval
+# required" rule for trusted-author chore/ci/docs/refactor PRs.
+#
+# A solo-maintainer repo still benefits from a "Require approval" rule
+# for external contributors. But that rule blocks every bot- and
+# owner-driven non-feature PR (release-please's release PR, Dependabot
+# bumps, the owner's own docs/ci tweaks). This workflow posts an approval
+# under github-actions[bot] for that allowlisted set, leaving feat/fix
+# PRs to a real review (human or CodeRabbit).
+#
+# Requires repo setting "Allow GitHub Actions to create and approve pull
+# requests" to be ON.
+# --------------------------------------------------------------------------
+name: Auto-approve trusted non-feature PRs
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review, synchronize]
+    branches: [main]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  approve:
+    name: Auto-approve non-feature PR from trusted author
+    if: >
+      !github.event.pull_request.draft &&
+      (startsWith(github.event.pull_request.title, 'chore') ||
+       startsWith(github.event.pull_request.title, 'ci') ||
+       startsWith(github.event.pull_request.title, 'docs') ||
+       startsWith(github.event.pull_request.title, 'refactor') ||
+       startsWith(github.event.pull_request.title, 'build') ||
+       startsWith(github.event.pull_request.title, 'i18n')) &&
+      contains(fromJson('["Alpaq92", "github-actions[bot]", "dependabot[bot]", "crowdin-bot"]'), github.event.pull_request.user.login)
+    runs-on: ubuntu-latest
+    steps:
+      - name: gh pr review --approve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          echo "Approving PR #$PR_NUMBER ($TITLE) by $AUTHOR"
+          gh pr review "$PR_NUMBER" \
+            --repo "$GITHUB_REPOSITORY" \
+            --approve \
+            --body "Auto-approved by .github/workflows/auto-approve-chore.yml — non-feature PR from trusted author."

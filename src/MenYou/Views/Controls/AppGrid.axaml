@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:items="using:MenYou.ViewModels.Items"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             xmlns:conv="using:MenYou.Views.Converters"
+             x:Class="MenYou.Views.Controls.AppGrid"
+             x:Name="Root">
+    <!-- Horizontal scrolling strip — tiles stay on one row and the
+         user scrolls right when the pin list outgrows the panel. The
+         inner ItemsControl uses a horizontal StackPanel so tiles take
+         their natural width rather than UniformGrid's 25 %-each.
+         Scrollbar placement: MenYou's custom ScrollViewer template
+         (Styles/Scrollbar.axaml) pins the slim horizontal bar to the
+         ScrollViewer's BOTTOM edge, so the bar sits wherever the
+         ScrollViewer ends. The MinHeight binding reserves room below the
+         tiles ONLY when the content overflows horizontally (i.e. a bar is
+         actually shown): the converter returns 90 px when
+         Extent.Width > Viewport.Width and 0 otherwise. With the tiles
+         top-aligned, that drops the bar a fixed gap below the labels when
+         it's present, and lets the strip collapse back to the bare tile
+         height when it isn't — so no dead space when nothing overflows. -->
+    <ScrollViewer x:Name="Scroller"
+                  HorizontalScrollBarVisibility="Auto"
+                  VerticalScrollBarVisibility="Disabled"
+                  Margin="6,4,6,0"
+                  PointerWheelChanged="OnPointerWheel">
+        <ScrollViewer.MinHeight>
+            <MultiBinding Converter="{x:Static conv:ScrollbarReserveHeightConverter.Instance}">
+                <Binding Path="Extent" RelativeSource="{RelativeSource Self}" />
+                <Binding Path="Viewport" RelativeSource="{RelativeSource Self}" />
+            </MultiBinding>
+        </ScrollViewer.MinHeight>
+        <ItemsControl ItemsSource="{Binding #Root.Items}"
+                      VerticalAlignment="Top">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="items:AppItemViewModel">
+                    <!-- Tile width chosen so exactly four pinned tiles
+                         fit the left column without horizontal scroll
+                         at the default 720 px menu width:
+                           left column = 720 − 260 = 460
+                           ScrollViewer margin 6+6 = 12 ⇒ 448 usable
+                           per-tile box = 108 + (2+2 Margin) = 112
+                           4 × 112 = 448 ✓
+                         Beyond four pins the horizontal scrollbar
+                         kicks in. -->
+                    <Button Classes="menu"
+                            Padding="6"
+                            Margin="2"
+                            Width="108"
+                            HorizontalContentAlignment="Center"
+                            Background="{Binding IsNew, Converter={x:Static conv:NewItemHighlightConverter.Instance}}"
+                            Command="{Binding LaunchCommand}">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{Binding PinToggleLabel}"
+                                          Command="{Binding TogglePinCommand}"
+                                          IsVisible="{Binding CanModifyPin}" />
+                                <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
+                                          Command="{Binding OpenFileLocationCommand}" />
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                        <StackPanel HorizontalAlignment="Center" Spacing="4">
+                            <Image Width="32" Height="32" Source="{Binding Icon}" />
+                            <TextBlock Text="{Binding DisplayName}"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       TextWrapping="NoWrap"
+                                       TextTrimming="CharacterEllipsis"
+                                       MaxWidth="96"
+                                       FontSize="12" />
+                        </StackPanel>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </ScrollViewer>
+</UserControl>

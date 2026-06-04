@@ -1,0 +1,65 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:media="using:Avalonia.Media">
+
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Dark">
+            <Color x:Key="MenuBackground">#1A1A1A</Color>
+            <Color x:Key="MenuBackgroundAlt">#202020</Color>
+            <Color x:Key="MenuBorder">#3D3D3D</Color>
+            <Color x:Key="MenuForeground">#FFFFFF</Color>
+            <Color x:Key="MenuForegroundMuted">#BFBFBF</Color>
+            <Color x:Key="MenuAccent">#4CC2FF</Color>
+            <Color x:Key="MenuAccentHover">#3FAEEC</Color>
+            <Color x:Key="MenuHover">#2D2D2D</Color>
+            <Color x:Key="MenuHighlight">#3A3A3A</Color>
+            <Color x:Key="MenuSeparator">#3D3D3D</Color>
+            <Color x:Key="PowerDanger">#FF6B6B</Color>
+            <Color x:Key="SearchBoxBackground">#2B2B2B</Color>
+            <Color x:Key="SearchBoxBorder">#4A4A4A</Color>
+            <Color x:Key="UserHeaderGradientStart">#0078D4</Color>
+            <Color x:Key="UserHeaderGradientEnd">#005A9E</Color>
+            <Color x:Key="AvatarOrbBackground">#4A4A4A</Color>
+            <Color x:Key="SectionHeader">#F3F3F3</Color>
+            <Color x:Key="ScrollBarThumbRest">#555555</Color>
+            <Color x:Key="ScrollBarThumbHover">#606060</Color>
+            <!-- Soft accent wash used to flash newly-added Pinned / Recent
+                 items. Same hue as MenuAccent at ~25% alpha so it sits
+                 distinctly above the selection-highlight grey without
+                 competing with the focus accent itself. -->
+            <Color x:Key="AccentSubtle">#804CC2FF</Color>
+            <!-- Right-pane shortcut weight. Same Normal in both themes
+                 per user preference; the resource is theme-variant-keyed
+                 only so adjusting one without touching the other stays
+                 a one-line change. -->
+            <media:FontWeight x:Key="ShortcutFontWeight">Normal</media:FontWeight>
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="MenuBackground">#FAFAFA</Color>
+            <Color x:Key="MenuBackgroundAlt">#F0F0F0</Color>
+            <Color x:Key="MenuBorder">#D1D1D1</Color>
+            <Color x:Key="MenuForeground">#1F1F1F</Color>
+            <Color x:Key="MenuForegroundMuted">#5C5C5C</Color>
+            <Color x:Key="MenuAccent">#0078D4</Color>
+            <Color x:Key="MenuAccentHover">#106EBE</Color>
+            <Color x:Key="MenuHover">#E5E5E5</Color>
+            <Color x:Key="MenuHighlight">#D5E6F5</Color>
+            <Color x:Key="MenuSeparator">#D1D1D1</Color>
+            <Color x:Key="PowerDanger">#C42B1C</Color>
+            <Color x:Key="SearchBoxBackground">#FCFCFC</Color>
+            <Color x:Key="SearchBoxBorder">#D1D1D1</Color>
+            <Color x:Key="UserHeaderGradientStart">#0078D4</Color>
+            <Color x:Key="UserHeaderGradientEnd">#005A9E</Color>
+            <Color x:Key="AvatarOrbBackground">#DCDCDC</Color>
+            <Color x:Key="SectionHeader">#5C5C5C</Color>
+            <Color x:Key="ScrollBarThumbRest">#E2E2E2</Color>
+            <Color x:Key="ScrollBarThumbHover">#CECECE</Color>
+            <Color x:Key="AccentSubtle">#800078D4</Color>
+            <media:FontWeight x:Key="ShortcutFontWeight">Normal</media:FontWeight>
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

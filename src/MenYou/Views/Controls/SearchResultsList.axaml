@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MenYou.ViewModels"
+             xmlns:items="using:MenYou.ViewModels.Items"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             x:Class="MenYou.Views.Controls.SearchResultsList"
+             x:DataType="vm:SearchViewModel">
+    <Grid RowDefinitions="Auto,Auto,*">
+        <TextBlock Grid.Row="0"
+                   Classes="section"
+                   Text="{x:Static loc:Strings.Results}" />
+        <!-- Thin indeterminate stripe shown while the search debounce +
+             thread-pool work resolve. Without it the panel reads as a
+             frozen blank for the first keystroke. -->
+        <ProgressBar Grid.Row="1"
+                     IsIndeterminate="True"
+                     Height="2"
+                     Margin="14,0,14,4"
+                     Background="Transparent"
+                     IsVisible="{Binding IsSearching}" />
+        <ListBox Grid.Row="2"
+                 Classes="transparent"
+                 ItemsSource="{Binding Results}"
+                 SelectedItem="{Binding Selected, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="items:SearchResultViewModel">
+                    <!-- Background="Transparent" makes the whole row a
+                         right-click hit target — without it the Grid's
+                         empty gaps have Background=null and Avalonia skips
+                         hit-testing there, so right-clicks between the
+                         icon and text would miss the context menu (same
+                         fix as ProgramsTree's rows). The per-item verbs
+                         live on SearchResultViewModel and delegate to the
+                         owning SearchViewModel, so no row needs to be
+                         Selected first for the menu to act on it. -->
+                    <Grid ColumnDefinitions="Auto,*" Margin="0,2" Background="Transparent">
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{x:Static loc:Strings.Open}"
+                                          Command="{Binding LaunchCommand}" />
+                                <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}"
+                                          Command="{Binding RunAsAdministratorCommand}"
+                                          IsVisible="{Binding CanRunAsAdmin}" />
+                                <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
+                                          Command="{Binding OpenFileLocationCommand}"
+                                          IsVisible="{Binding CanOpenFileLocation}" />
+                            </ContextMenu>
+                        </Grid.ContextMenu>
+                        <Panel Grid.Column="0"
+                               Width="32" Height="32"
+                               Margin="0,0,10,0">
+                            <!-- Letter avatar shows until the real icon
+                                 loads (and stays visible if extraction
+                                 returns null, e.g. for Control Panel
+                                 deep-links without an IconPath). -->
+                            <Border Background="{DynamicResource MenuBackgroundAltBrush}"
+                                    CornerRadius="4"
+                                    IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNull}}">
+                                <TextBlock Text="{Binding TitleInitial}"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource MenuForegroundBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                            </Border>
+                            <Image Source="{Binding Icon}"
+                                   IsVisible="{Binding Icon, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </Panel>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Title}"
+                                       Foreground="{DynamicResource MenuForegroundBrush}"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Subtitle}"
+                                       Foreground="{DynamicResource MenuForegroundMutedBrush}"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis"
+                                       IsVisible="{Binding Subtitle, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

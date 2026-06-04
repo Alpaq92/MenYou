@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MenYou.ViewModels"
+             xmlns:ctrl="using:MenYou.Views.Controls"
+             xmlns:loc="using:MenYou.Platform.Windows"
+             x:Class="MenYou.Views.Layouts.Classic1Layout"
+             x:DataType="vm:StartMenuViewModel">
+
+    <!-- Single narrow column inspired by Windows 2000 / 9x.
+         Pinned and Recent inline, then cascading "Programs ▸",
+         shell shortcuts inline, search and power at the bottom. -->
+    <Grid RowDefinitions="Auto,*,Auto" Width="320" Height="560">
+
+        <Border Grid.Row="0"
+                Background="{DynamicResource UserHeaderBrush}"
+                Padding="0">
+            <!-- Whole header is a clickable button — opens
+                 ms-settings:yourinfo, same destination as clicking the
+                 avatar in the Windows Start menu. Padding moved off the
+                 outer Border onto the Button so the entire colored bar
+                 is the hit target, with the same 14,10 inner padding. -->
+            <Button Classes="user-tile"
+                    Command="{Binding OpenAccountSettingsCommand}"
+                    Padding="14,10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                <!-- Bitmap-based user avatar, same pattern as Win7Layout:
+                     real account photo when one exists, falls back to the
+                     standard Windows silhouette via UserAvatarService when
+                     it doesn't. Initial-letter fallback only fires when
+                     Avatar is null (no photo + no silhouette readable). -->
+                <Panel Width="32" Height="32" VerticalAlignment="Center">
+                    <Border Background="#33FFFFFF" CornerRadius="16"
+                            IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
+                        <TextBlock Text="{Binding UserName[0]}"
+                                   Foreground="White" FontSize="16" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
+                             RenderOptions.BitmapInterpolationMode="HighQuality">
+                        <Ellipse.Fill>
+                            <ImageBrush Source="{Binding Avatar}" Stretch="UniformToFill" />
+                        </Ellipse.Fill>
+                    </Ellipse>
+                </Panel>
+                <TextBlock Text="{Binding UserName}"
+                           Foreground="White" FontSize="13" FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="0,4">
+
+                <TextBlock Classes="section" Text="{x:Static loc:Strings.Pinned}" />
+                <ctrl:AppList Items="{Binding Pinned}" />
+
+                <Separator Classes="menu" />
+
+                <TextBlock Classes="section" Text="{x:Static loc:Strings.Recent}" />
+                <ctrl:AppList Items="{Binding Recent}" />
+
+                <Separator Classes="menu" />
+
+                <!-- Match Win7Layout: inline TreeView with the standard
+                     Avalonia chevron toggle for folder expand/collapse,
+                     instead of a MenuFlyout cascade that could pop off-
+                     screen when the cascade button is at the bottom of an
+                     already-scrolled list. Section header sits above the
+                     tree the same way Pinned/Recent above do, so the All
+                     Programs entry visibly matches the rest of the menu's
+                     layout idiom. -->
+                <TextBlock Classes="section" Text="{x:Static loc:Strings.AllPrograms}" />
+                <ctrl:ProgramsTree Items="{Binding Programs.Items}" />
+
+                <Separator Classes="menu" />
+
+                <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}" Margin="6,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RightPanelViewModel+ShellShortcut">
+                            <Button Classes="menu"
+                                    HorizontalAlignment="Stretch"
+                                    Command="{Binding $parent[ItemsControl].((vm:StartMenuViewModel)DataContext).RightPanel.OpenCommand}"
+                                    CommandParameter="{Binding}">
+                                <TextBlock Text="{Binding Title}" />
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2"
+                Background="{DynamicResource MenuBackgroundAltBrush}"
+                BorderBrush="{DynamicResource MenuBorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="8">
+            <!-- Flat single Grid with both rows AND columns declared. The
+                 previous nested-Grid pattern (Grid rows → inner Grid
+                 cols) wasn't visibly applying for reasons I couldn't
+                 pin down — probably the inner Grid's column measure
+                 wasn't getting the outer Grid's row width during the
+                 first measure pass. Folding the two into one Grid
+                 eliminates the nesting: TextBox spans columns 0-2 of
+                 the top row, the buttons sit in column 1 of the bottom
+                 row. The *,Auto,* split forces geometric centering. -->
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnDefinitions="*,Auto,*"
+                  RowSpacing="6">
+                <TextBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3"
+                         Classes="search"
+                         PlaceholderText="{x:Static loc:Strings.SearchPlaceholder}"
+                         Text="{Binding Search.Query, Mode=TwoWay}" />
+                <StackPanel Grid.Row="1" Grid.Column="1"
+                            Orientation="Horizontal"
+                            Spacing="4">
+                    <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}"
+                            Command="{Binding OpenSettingsCommand}">
+                        <TextBlock Classes="power-glyph" Text="&#xE713;" />
+                    </Button>
+                    <!-- Phone Link (CellPhone glyph E8EA) — app launcher,
+                         grouped with the cog before the separator. -->
+                    <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.PhoneLinkTooltip}"
+                            Command="{Binding OpenPhoneLinkCommand}">
+                        <TextBlock Classes="power-glyph" Text="&#xE8EA;" />
+                    </Button>
+                    <Border Width="1" Margin="4,6" Background="{DynamicResource MenuSeparatorBrush}" />
+                    <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.LockTooltip}"
+                            Command="{Binding Power.LockCommand}">
+                        <TextBlock Classes="power-glyph" Text="&#xE72E;" />
+                    </Button>
+                    <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}"
+                            Command="{Binding Power.SleepCommand}">
+                        <TextBlock Classes="power-glyph" Text="&#xE708;" />
+                    </Button>
+                    <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.RestartTooltip}"
+                            Command="{Binding Power.RestartCommand}">
+                        <TextBlock Classes="power-glyph" Text="&#xE777;" />
+                    </Button>
+                    <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
+                            Foreground="{DynamicResource PowerDangerBrush}"
+                            Command="{Binding Power.ShutdownCommand}">
+                        <TextBlock Classes="power-glyph" Text="&#xE7E8;" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="0" Grid.RowSpan="2"
+                Background="{DynamicResource MenuBackgroundBrush}"
+                IsVisible="{Binding Search.HasQuery}">
+            <ctrl:SearchResultsList DataContext="{Binding Search}" />
+        </Border>
+    </Grid>
+</UserControl>

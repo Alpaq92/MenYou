@@ -1,0 +1,47 @@
+# CodeRabbit configuration — https://docs.coderabbit.ai/reference/configuration
+#
+# Tuned for a solo .NET 10 / Avalonia desktop app:
+#   - Review every PR (humans, Dependabot, release-please) so the
+#     branch ruleset's "approval required" gate is always satisfied by
+#     either CodeRabbit OR a human.
+#   - chill profile — fewer nits, focuses on bugs / security / API misuse.
+#   - request_changes_workflow on — CodeRabbit submits real APPROVED /
+#     CHANGES_REQUESTED reviews instead of comments-only. The
+#     auto-merge workflow keys off these reviews.
+#   - Skip vendored / generated / native build artifacts and language
+#     JSON files (machine-translated; not worth reviewing per-string).
+
+language: en-US
+
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+
+  # Don't review these — vendored or generated content adds noise and
+  # burns review budget on things humans don't author.
+  path_filters:
+    - "!openshell_research/**"          # vendored Open-Shell upstream snapshot
+    - "!**/*.g.cs"                      # build-time generated (CommunityToolkit.Mvvm partial methods)
+    - "!**/bin/**"
+    - "!**/obj/**"
+    - "!src/MenYou/Languages/*.json"    # machine-translated string bundles
+    - "!docs/AUTOMATION.md"             # static reference doc
+    - "!CHANGELOG.md"                   # release-please regenerates this
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+
+    # Review EVERY PR including trusted authors. CodeRabbit's approval
+    # satisfies the "Require approval of most recent reviewable push"
+    # branch rule (CodeRabbit reviews under its own bot identity,
+    # distinct from the human/PAT that pushed). The auto-merge workflow
+    # then applies the 7-day soak window for non-Dependabot PRs and
+    # ships once CI + CodeQL + Security are green.
+    ignore_usernames: []

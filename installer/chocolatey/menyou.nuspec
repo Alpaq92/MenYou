@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Chocolatey package metadata for MenYou.
+
+  The version + download URL + installer SHA256 are filled in by the
+  release workflow on tag push. Outside CI this file holds @@VERSION@@
+  as a sentinel — `choco pack` will fail on the literal placeholder,
+  which is the desired guardrail (don't pack from a dev checkout).
+-->
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>menyou</id>
+    <version>@@VERSION@@</version>
+    <packageSourceUrl>https://github.com/Alpaq92/MenYou</packageSourceUrl>
+    <owners>Alpaq</owners>
+    <title>MenYou</title>
+    <authors>Alpaq</authors>
+    <projectUrl>https://github.com/Alpaq92/MenYou</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/Alpaq92/MenYou/main/icon_v2.png</iconUrl>
+    <licenseUrl>https://github.com/Alpaq92/MenYou/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <projectSourceUrl>https://github.com/Alpaq92/MenYou</projectSourceUrl>
+    <docsUrl>https://github.com/Alpaq92/MenYou/blob/main/docs/overview.md</docsUrl>
+    <bugTrackerUrl>https://github.com/Alpaq92/MenYou/issues</bugTrackerUrl>
+    <tags>menyou start-menu windows shell replacement avalonia</tags>
+    <summary>Windows Start-menu replacement (Avalonia / .NET).</summary>
+    <description><![CDATA[
+MenYou is a Windows Start-menu replacement written in C# / Avalonia.
+
+It mirrors the Windows 7 + XP + 9x layouts on top of modern Windows
+shell metadata (localized labels, account picture, taskbar pins, Start
+mirror, JumpLists) rather than reinventing them.
+
+**Activation:** Press **Shift+Win** to toggle the menu after install.
+**Updates:** `choco upgrade menyou`, or the in-app Check for Updates
+button in Settings (downloads and runs the latest installer).
+
+See https://github.com/Alpaq92/MenYou for full details.
+]]></description>
+    <releaseNotes>https://github.com/Alpaq92/MenYou/releases/tag/v@@VERSION@@</releaseNotes>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

@@ -1,0 +1,29 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="{DynamicResource MenuBackground}" />
+    <SolidColorBrush x:Key="MenuBackgroundAltBrush" Color="{DynamicResource MenuBackgroundAlt}" />
+    <SolidColorBrush x:Key="MenuBorderBrush" Color="{DynamicResource MenuBorder}" />
+    <SolidColorBrush x:Key="MenuForegroundBrush" Color="{DynamicResource MenuForeground}" />
+    <SolidColorBrush x:Key="MenuForegroundMutedBrush" Color="{DynamicResource MenuForegroundMuted}" />
+    <SolidColorBrush x:Key="MenuAccentBrush" Color="{DynamicResource MenuAccent}" />
+    <SolidColorBrush x:Key="MenuAccentHoverBrush" Color="{DynamicResource MenuAccentHover}" />
+    <SolidColorBrush x:Key="MenuHoverBrush" Color="{DynamicResource MenuHover}" />
+    <SolidColorBrush x:Key="MenuHighlightBrush" Color="{DynamicResource MenuHighlight}" />
+    <SolidColorBrush x:Key="MenuSeparatorBrush" Color="{DynamicResource MenuSeparator}" />
+    <SolidColorBrush x:Key="PowerDangerBrush" Color="{DynamicResource PowerDanger}" />
+    <SolidColorBrush x:Key="SearchBoxBackgroundBrush" Color="{DynamicResource SearchBoxBackground}" />
+    <SolidColorBrush x:Key="SearchBoxBorderBrush" Color="{DynamicResource SearchBoxBorder}" />
+    <SolidColorBrush x:Key="AvatarOrbBrush" Color="{DynamicResource AvatarOrbBackground}" />
+    <SolidColorBrush x:Key="SectionHeaderBrush" Color="{DynamicResource SectionHeader}" />
+    <SolidColorBrush x:Key="ScrollBarThumbRestBrush" Color="{DynamicResource ScrollBarThumbRest}" />
+    <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="{DynamicResource ScrollBarThumbHover}" />
+    <SolidColorBrush x:Key="AccentSubtleBrush" Color="{DynamicResource AccentSubtle}" />
+    <CornerRadius x:Key="ScrollBarThumbCornerRadius">15</CornerRadius>
+
+    <LinearGradientBrush x:Key="UserHeaderBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Color="{DynamicResource UserHeaderGradientStart}" Offset="0" />
+        <GradientStop Color="{DynamicResource UserHeaderGradientEnd}" Offset="1" />
+    </LinearGradientBrush>
+
+</ResourceDictionary>

@@ -1,0 +1,13 @@
+# Code owners for MenYou.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-security/customizing-your-repository/about-code-owners
+#
+# Every file owned by @Alpaq92. The auto-merge workflow
+# (.github/workflows/auto-merge.yml) reads this file to identify
+# eligible approvers — a PR needs an APPROVED review from a
+# code-owner here, a repo collaborator, or coderabbitai[bot] before
+# the 7-day soak clock starts.
+#
+# Add per-path overrides below if delegating specific areas to
+# collaborators (e.g. `src/MenYou.Bridge/** @some-cpp-expert`).
+
+* @Alpaq92

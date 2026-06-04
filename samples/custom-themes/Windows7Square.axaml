@@ -1,0 +1,359 @@
+<!--
+  Windows7Square.axaml: a custom-theme clone of MenYou's built-in
+  "Modern (Windows 7)" layout, but with every corner squared off — no
+  rounded tiles, buttons, search box, power glyphs, or avatar. Drop it
+  on Settings → Custom → Load… to use it.
+
+  Same three-band structure as the production Win7 layout:
+    • TOP    — pinned tile grid (left) + clickable user header (right)
+    • MIDDLE — scrollable Recent + All Programs (left) and the shell
+               shortcuts list / search context panel (right)
+    • BOTTOM — search box (left) + the six power glyphs (right)
+
+  How the "pointy edges" are achieved: the built-in layout inherits its
+  rounded corners from MenYou's app-level control styles (Button.menu
+  CornerRadius=8, the circular 36×36 power buttons, the rounded search
+  box, rounded list-item highlights, the round avatar). This file
+  re-declares those selectors in its own Grid.Styles with
+  CornerRadius=0. Styles attached to this Grid sit closer in the tree
+  than the application styles, so they win — including inside the
+  ctrl:AppGrid / AppList / ProgramsTree controls, whose tiles use the
+  same Button.menu class. The avatar is rebuilt as a square Border +
+  Image instead of the round Ellipse the production layout uses.
+
+  Bindings (reflection, against StartMenuViewModel — no x:DataType, no
+  compiled-binding casts, so it parses through the runtime loader):
+    Pinned / Recent / Programs.Items   — the app + folder collections
+    RightPanel.Shortcuts + OpenCommand — right-column shell links
+    Search.Query / HasQuery / Selected — search box + results overlay
+    Power.*Command / OpenSettingsCommand / OpenAccountSettingsCommand
+
+  Custom controls (resolved against the loaded MenYou assembly):
+    ctrl:AppGrid  ctrl:AppList  ctrl:ProgramsTree  ctrl:SearchResultsList
+
+  Note: the menu window's own chrome squares its corners automatically
+  whenever a custom theme is active (StartMenuWindow binds its corner
+  radius to UseCustomTheme), so the outer edges are square too — a
+  custom theme owns its full edge treatment.
+-->
+<Grid xmlns="https://github.com/avaloniaui"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ctrl="using:MenYou.Views.Controls"
+      xmlns:loc="using:MenYou.Platform.Windows"
+      Width="720" Height="620"
+      RowDefinitions="Auto,*,Auto">
+
+  <!-- Square-corner overrides. Each selector mirrors an app-level style
+       that would otherwise paint a rounded corner; CornerRadius=0 here
+       wins because this Styles collection is nearer the controls than
+       the application's. -->
+  <Grid.Styles>
+    <Style Selector="Button.menu">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.recent-item">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.shortcut">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.user-tile">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.power">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="Button.search-inner">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="TextBox.search">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="ListBox.transparent ListBoxItem">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+    <Style Selector="TreeViewItem">
+      <Setter Property="CornerRadius" Value="0" />
+    </Style>
+  </Grid.Styles>
+
+  <!-- ===================================================================
+       TOP: pinned tiles on the left, user header on the right.
+       =================================================================== -->
+  <Border Grid.Row="0">
+    <Grid ColumnDefinitions="*,260">
+      <Border Grid.Column="0" Background="{DynamicResource MenuBackgroundBrush}">
+        <!-- DockPanel (not "Auto,*" Grid): a * row nested under the
+             Auto-sized top-section row collapses to content height and
+             never re-expands, so the AppGrid wouldn't fill the section
+             and its scrollbar parked under the labels with the leftover
+             height leaking out as a gap above Recent. DockPanel fills
+             its last child at arrange, so the AppGrid reaches the section
+             bottom and its bottom-anchored scrollbar sits below the tiles
+             AND flush above Recent. -->
+        <DockPanel Margin="0,4,0,0">
+          <TextBlock DockPanel.Dock="Top" Classes="section" Text="{x:Static loc:Strings.Pinned}" />
+          <ctrl:AppGrid Items="{Binding Pinned}" />
+        </DockPanel>
+      </Border>
+      <Border Grid.Column="1"
+              Background="{DynamicResource MenuBackgroundAltBrush}"
+              BorderBrush="{DynamicResource MenuBorderBrush}"
+              BorderThickness="1,0,0,0"
+              Padding="0">
+        <!-- Whole avatar tile is a clickable button — opens
+             ms-settings:yourinfo, same as the real Windows Start menu.
+             Square avatar (Border + Image) instead of the round Ellipse
+             the production layout uses. -->
+        <Button Classes="user-tile"
+                Command="{Binding OpenAccountSettingsCommand}"
+                Padding="16,12">
+          <StackPanel Orientation="Vertical" Spacing="8"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+            <Panel Width="64" Height="64" HorizontalAlignment="Center">
+              <Border Background="{DynamicResource AvatarOrbBrush}"
+                      IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
+                <TextBlock Text="{Binding UserName[0]}"
+                           Foreground="#FFFFFF"
+                           FontSize="28" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <Image IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
+                     Source="{Binding Avatar}"
+                     Stretch="UniformToFill"
+                     RenderOptions.BitmapInterpolationMode="HighQuality" />
+            </Panel>
+            <TextBlock Text="{Binding UserName}"
+                       FontSize="14" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Border>
+    </Grid>
+  </Border>
+
+  <!-- ===================================================================
+       MIDDLE: scrollable Recent + All Programs (left), shell shortcuts
+       / search context panel (right).
+       =================================================================== -->
+  <Grid Grid.Row="1" ColumnDefinitions="*,260">
+    <Panel Grid.Column="0">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="0,4">
+          <TextBlock Classes="section" Text="{x:Static loc:Strings.Recent}" />
+          <ctrl:AppList Items="{Binding Recent}" />
+          <Separator Classes="menu" />
+          <TextBlock Classes="section" Text="{x:Static loc:Strings.AllPrograms}" />
+          <ctrl:ProgramsTree Items="{Binding Programs.Items}" />
+        </StackPanel>
+      </ScrollViewer>
+      <!-- Search results overlay the scrollable area only; the search
+           box at the bottom stays visible while results show. -->
+      <Border Background="{DynamicResource MenuBackgroundBrush}"
+              IsVisible="{Binding Search.HasQuery}">
+        <ctrl:SearchResultsList DataContext="{Binding Search}" />
+      </Border>
+    </Panel>
+
+    <Border Grid.Column="1"
+            Background="{DynamicResource MenuBackgroundAltBrush}"
+            BorderBrush="{DynamicResource MenuBorderBrush}"
+            BorderThickness="1,0,0,0">
+      <Panel>
+        <!-- Default: shell shortcuts. Swaps to the context panel only
+             once a search result is actually Selected. -->
+        <ScrollViewer IsVisible="{Binding Search.Selected, Converter={x:Static ObjectConverters.IsNull}}">
+          <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}" Margin="6">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Classes="menu shortcut"
+                        HorizontalAlignment="Stretch"
+                        Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                        CommandParameter="{Binding}">
+                  <TextBlock Text="{Binding Title}"
+                             FontFamily="Segoe UI Variable, Segoe UI"
+                             FontSize="14"
+                             FontWeight="{DynamicResource ShortcutFontWeight}" />
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+
+        <!-- Active search: context panel for the selected result. -->
+        <Grid DataContext="{Binding Search}"
+              IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
+              RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+              Margin="0,16">
+          <Border Grid.Row="0"
+                  Width="80" Height="80"
+                  Margin="0,8,0,12"
+                  HorizontalAlignment="Center">
+            <Image Source="{Binding Selected.LargeIcon}"
+                   Stretch="Uniform"
+                   RenderOptions.BitmapInterpolationMode="HighQuality" />
+          </Border>
+          <TextBlock Grid.Row="1"
+                     Text="{Binding Selected.Title}"
+                     FontSize="16" FontWeight="SemiBold"
+                     HorizontalAlignment="Center"
+                     TextAlignment="Center"
+                     TextWrapping="Wrap"
+                     Margin="12,0" />
+          <TextBlock Grid.Row="2"
+                     Text="{Binding Selected.Subtitle}"
+                     Foreground="{DynamicResource MenuForegroundMutedBrush}"
+                     FontSize="12"
+                     HorizontalAlignment="Center"
+                     TextAlignment="Center"
+                     TextWrapping="NoWrap"
+                     TextTrimming="CharacterEllipsis"
+                     Margin="12,2,12,16"
+                     MaxWidth="230"
+                     IsVisible="{Binding Selected.Subtitle, Converter={x:Static ObjectConverters.IsNotNull}}" />
+          <StackPanel Grid.Row="3" Spacing="2" Margin="6,0">
+            <Button Classes="menu"
+                    HorizontalAlignment="Stretch"
+                    Command="{Binding LaunchSelectedCommand}">
+              <TextBlock Text="{x:Static loc:Strings.Open}" />
+            </Button>
+            <Button Classes="menu"
+                    HorizontalAlignment="Stretch"
+                    IsVisible="{Binding CanRunAsAdmin}"
+                    Command="{Binding OpenSelectedAsAdminCommand}">
+              <TextBlock Text="{x:Static loc:Strings.RunAsAdmin}" />
+            </Button>
+            <Button Classes="menu"
+                    HorizontalAlignment="Stretch"
+                    IsVisible="{Binding CanOpenFileLocation}"
+                    Command="{Binding OpenSelectedFileLocationCommand}">
+              <TextBlock Text="{x:Static loc:Strings.OpenFileLocation}" />
+            </Button>
+
+            <!-- App-published JumpList Tasks (e.g. Firefox's
+                 "New private window"). -->
+            <Separator Classes="menu"
+                       IsVisible="{Binding Selected.Tasks.Count}" />
+            <ItemsControl ItemsSource="{Binding Selected.Tasks}"
+                          IsVisible="{Binding Selected.Tasks.Count}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Classes="recent-item"
+                          HorizontalAlignment="Stretch"
+                          Command="{Binding $parent[ItemsControl].DataContext.OpenTaskCommand}"
+                          CommandParameter="{Binding}">
+                    <TextBlock Text="{Binding Title}"
+                               TextTrimming="CharacterEllipsis" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <!-- Per-app Recent destinations from the Windows JumpList. -->
+          <TextBlock Grid.Row="4"
+                     Classes="section"
+                     Text="{x:Static loc:Strings.Recent}"
+                     Margin="14,16,14,6"
+                     IsVisible="{Binding Selected.Recent.Count}" />
+          <ListBox Grid.Row="5"
+                   Classes="transparent"
+                   IsVisible="{Binding Selected.Recent.Count}"
+                   ItemsSource="{Binding Selected.Recent}"
+                   SelectedItem="{Binding SelectedRecent, Mode=TwoWay}"
+                   Margin="6,0">
+            <ListBox.KeyBindings>
+              <KeyBinding Gesture="Enter"
+                          Command="{Binding OpenRecentCommand}"
+                          CommandParameter="{Binding SelectedRecent}" />
+            </ListBox.KeyBindings>
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="Auto,*"
+                      ToolTip.Tip="{Binding Path}">
+                  <Image Grid.Column="0"
+                         Width="16" Height="16"
+                         Margin="0,0,8,0"
+                         VerticalAlignment="Center"
+                         Source="{Binding Icon}"
+                         RenderOptions.BitmapInterpolationMode="HighQuality" />
+                  <TextBlock Grid.Column="1"
+                             Text="{Binding DisplayName}"
+                             VerticalAlignment="Center"
+                             TextTrimming="CharacterEllipsis" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+      </Panel>
+    </Border>
+  </Grid>
+
+  <!-- ===================================================================
+       BOTTOM: search box (left) + power glyphs (right).
+       =================================================================== -->
+  <Border Grid.Row="2">
+    <Grid ColumnDefinitions="*,260">
+      <Border Grid.Column="0"
+              Background="{DynamicResource MenuBackgroundBrush}"
+              Padding="10">
+        <TextBox Classes="search"
+                 PlaceholderText="{x:Static loc:Strings.Search}"
+                 Text="{Binding Search.Query, Mode=TwoWay}">
+          <TextBox.InnerRightContent>
+            <Button Classes="search-inner"
+                    ToolTip.Tip="{x:Static loc:Strings.Search}"
+                    Command="{Binding Search.LaunchSelectedCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xE721;" />
+            </Button>
+          </TextBox.InnerRightContent>
+        </TextBox>
+      </Border>
+      <Border Grid.Column="1"
+              Background="{DynamicResource MenuBackgroundAltBrush}"
+              BorderBrush="{DynamicResource MenuBorderBrush}"
+              BorderThickness="1,0,0,0"
+              Padding="10">
+        <Grid ColumnDefinitions="*,Auto,*">
+          <StackPanel Grid.Column="1"
+                      Orientation="Horizontal"
+                      Spacing="2"
+                      VerticalAlignment="Center">
+            <!-- Fluent Icons: settings=E713, lock=E72E, sign-out=F3B1,
+                 sleep=E708, restart=E777, shutdown=E7E8. -->
+            <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}"
+                    Command="{Binding OpenSettingsCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xE713;" />
+            </Button>
+            <Border Width="1" Margin="4,6"
+                    Background="{DynamicResource MenuSeparatorBrush}" />
+            <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.LockTooltip}"
+                    Command="{Binding Power.LockCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xE72E;" />
+            </Button>
+            <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}"
+                    Command="{Binding Power.SignOutCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+            </Button>
+            <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}"
+                    Command="{Binding Power.SleepCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xE708;" />
+            </Button>
+            <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.RestartTooltip}"
+                    Command="{Binding Power.RestartCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xE777;" />
+            </Button>
+            <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
+                    Foreground="{DynamicResource PowerDangerBrush}"
+                    Command="{Binding Power.ShutdownCommand}">
+              <TextBlock Classes="power-glyph" Text="&#xE7E8;" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+
+</Grid>

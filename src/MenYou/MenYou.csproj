@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\icon_v2.ico</ApplicationIcon>
+    <RootNamespace>MenYou</RootNamespace>
+    <AssemblyName>MenYou</AssemblyName>
+    <UseWindowsForms>false</UseWindowsForms>
+    <UseWPF>false</UseWPF>
+    <EnableDefaultAvaloniaItems>true</EnableDefaultAvaloniaItems>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Markup.Xaml.Loader" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Fluid.Avalonia" Version="1.1.1" />
+    <PackageReference Include="Jeek.Avalonia.Localization" Version="12.0.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
+    <PackageReference Include="System.Drawing.Common" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <!-- Localization JSON files load via AssetLoader from
+         avares://MenYou/Languages/<lang>.json — see
+         Services\AvaloniaResourceLocalizer.cs. Bundling them as
+         AvaloniaResource keeps the .exe self-contained. -->
+    <AvaloniaResource Include="Languages\**" />
+  </ItemGroup>
+
+  <!--
+    Build the native bridge DLL before the managed build so it lands next to
+    MenYou.exe. Delegates to build-bridge.ps1 at the repo root, which locates
+    VS msbuild via vswhere. If MSVC isn't installed the script exits 0 and
+    MenYou falls back to the WinEvent monitor at runtime.
+  -->
+  <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\build-bridge.ps1&quot; -Configuration $(Configuration)" ContinueOnError="true" IgnoreExitCode="true" />
+  </Target>
+</Project>
