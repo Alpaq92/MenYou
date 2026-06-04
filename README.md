@@ -9,7 +9,7 @@ JumpLists) rather than reinventing them.
 > [!TIP]
 > Press **Shift+Win** to toggle the menu.
 
-## Why
+## Why?
 
 This started with a debloated Windows 11
 ([Tiny11](https://github.com/ntdevlabs/tiny11builder)). Stripping the
