@@ -6,7 +6,8 @@ Classic XP and Classic 9x — rendered on top of modern Windows shell
 metadata (localized labels, account picture, taskbar pins, Start mirror,
 JumpLists) rather than reinventing them.
 
-![Press Shift+Win to toggle](docs/overview.md)
+> [!TIP]
+> Press **Shift+Win** to toggle the menu.
 
 ## Install
 
