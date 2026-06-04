@@ -59,7 +59,11 @@ jobs:
           # Upload happens on push to main (en.json changed) or when
           # the manual trigger says "upload". Otherwise download.
           upload_sources: ${{ github.event_name == 'push' || inputs.direction == 'upload' }}
-          upload_translations: false
+          # Sources push on every en.json change. Translations push ONLY on a
+          # manual `upload` run — use it once at setup to seed Crowdin with the
+          # locale files already in the repo, so the first download doesn't
+          # blank them. After that Crowdin is the source of truth for them.
+          upload_translations: ${{ inputs.direction == 'upload' }}
           download_translations: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.direction == 'download') }}
           create_pull_request: true
           localization_branch_name: i18n/crowdin-sync
