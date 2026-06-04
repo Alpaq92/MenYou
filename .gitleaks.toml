@@ -1,0 +1,18 @@
+# gitleaks configuration for MenYou.
+#
+# Extends the default gitleaks ruleset, then allowlists Avalonia XAML
+# (.axaml) markup. gitleaks' entropy-based `generic-api-key` rule treats
+# XAML resource-key names (e.g. `<SolidColorBrush x:Key="...">`) and long
+# `Path` / geometry data as "secrets" — they're UI markup, never
+# credentials. Real secrets live in code / config / workflows, which stay
+# fully scanned by the default ruleset.
+title = "MenYou gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Avalonia XAML markup is UI, not secrets"
+paths = [
+  '''.*\.axaml$''',
+]
