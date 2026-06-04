@@ -121,7 +121,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 
 [Code]
 var
-  SetupTypePage: TInputOptionPage;
+  SetupTypePage: TInputOptionWizardPage;
 
 { Setup Type page, shown after the license page: Default vs Custom.
   Default installs with the recommended settings and skips the directory /
