@@ -227,13 +227,13 @@ jobs:
           {
             echo "## MenYou v$version"
             echo
+            # GitHub renders a single newline in release notes as a hard line
+            # break, so each paragraph must be ONE echo (one line) or it wraps
+            # mid-sentence. Keep banners as single lines.
             if [ "$signed" = "true" ]; then
               echo "**Signed:** ✅ Authenticode signature via SignPath Foundation."
             else
-              echo "**Signed:** ⚠ This build is **unsigned**. Windows SmartScreen will display"
-              echo "a 'protected your PC' warning on first run — click *More info → Run anyway*."
-              echo "(Signing is configured but no SignPath secrets were available in CI for this"
-              echo "release; the next signed build will be reported here in green.)"
+              echo "**Signed:** ⚠ This build is **unsigned**. Windows SmartScreen will display a 'protected your PC' warning on first run — click *More info → Run anyway*. (Signing is configured but no SignPath secrets were available in CI for this release; the next signed build will be reported here in green.)"
             fi
             echo
             echo "### Install"
