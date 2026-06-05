@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.5.6](https://github.com/Alpaq92/MenYou/compare/v0.5.5...v0.5.6) (2026-06-05)
+
+
+### Features
+
+* theme showcase gallery, layout polish, and settings cleanup ([#17](https://github.com/Alpaq92/MenYou/issues/17)) ([e655698](https://github.com/Alpaq92/MenYou/commit/e655698a49efa72aa54c2d145adff7db585830d6))
+
 ## [0.5.5](https://github.com/Alpaq92/MenYou/compare/v0.5.0...v0.5.5) (2026-06-05)
 
 
