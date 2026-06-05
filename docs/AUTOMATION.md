@@ -22,8 +22,8 @@ open a PR
            queues it for auto-merge; on merge pushes tag vX.Y.Z
               │
         tag vX.Y.Z → release.yml
-              ├─ publish (win-x64, self-contained) → Inno installer → optional SignPath signing
-              ├─ GitHub Release (installer asset + signed/unsigned banner)
+              ├─ publish (win-x64, self-contained) → Inno installer
+              ├─ GitHub Release (installer asset + SHA-256, unsigned)
               └─ fan-out: winget · Scoop · Chocolatey  (each continue-on-error)
 ```
 
@@ -65,7 +65,7 @@ Push to `main` + `workflow_dispatch`. Reads Conventional Commits since the last 
 Cron `0 6 1 * *` (1st of each month) + `workflow_dispatch`. Upgrades NuGet packages to their latest **minor/patch** (`dotnet outdated --upgrade --version-lock Major`; majors are left to deliberate review), opens a `fix(deps): monthly dependency refresh` PR, and enables auto-merge. The `fix(deps):` commit then drives release-please to cut a patch release — a maintained, re-released build every month. It also runs the **Crowdin two-way sync** (pull translations into the same PR, push `en.json` sources at the end — see Translations below). Needs `RELEASE_PLEASE_PAT` to run the PR's CI and the merge/release unattended (a `GITHUB_TOKEN`-created PR doesn't trigger workflows); the Crowdin steps additionally need the `CROWDIN_*` secrets and skip without them.
 
 ### `release.yml`
-Tag push `v*.*.*` + `workflow_dispatch`. Publishes the self-contained x64 build **with ReadyToRun** (`-p:PublishReadyToRun=true`) — crossgen2 AOT-compiles the app + Avalonia to native images so startup skips JITing those paths (measured ~halved framework startup; ~16 MB larger). The JIT stays as a fallback, so the runtime-XAML custom-theme feature is unaffected (unlike NativeAOT, which would break it). Then it compiles the Inno installer, **optionally** signs it via SignPath, creates the GitHub Release, and fans out to winget / Scoop / Chocolatey (each `continue-on-error`, so one channel's flake doesn't block the rest). Signing is optional: with SignPath secrets absent, the release still ships and the body gets a `⚠ Unsigned build` banner.
+Tag push `v*.*.*` + `workflow_dispatch`. Publishes the self-contained x64 build **with ReadyToRun** (`-p:PublishReadyToRun=true`) — crossgen2 AOT-compiles the app + Avalonia to native images so startup skips JITing those paths (measured ~halved framework startup; ~16 MB larger). The JIT stays as a fallback, so the runtime-XAML custom-theme feature is unaffected (unlike NativeAOT, which would break it). Then it compiles the Inno installer, creates the GitHub Release (with the installer's SHA-256 in the body), and fans out to winget / Scoop / Chocolatey (each `continue-on-error`, so one channel's flake doesn't block the rest). Builds ship **unsigned** — see Code signing below.
 
 ### Translations (Crowdin)
 Community translation runs on [Crowdin](https://crowdin.com/project/menyou). There's **no standalone workflow** — the sync is folded into `monthly-maintenance.yml`, keyed off the repo-root `crowdin.yml` (source `src/MenYou/Languages/en.json`, targets `%two_letters_code%.json`). Each month it:
@@ -88,16 +88,7 @@ Append `!` for breaking changes. Pre-1.0, breaking changes bump the **minor** ve
 
 ## Code signing
 
-Unsigned `.exe`s hit SmartScreen ("Windows protected your PC") and show "Unknown publisher" in UAC. Signing gives a real publisher name, calms AV heuristics, satisfies corporate policies, and accrues SmartScreen reputation over time. Only **EV** certs skip the reputation wait, and they're expensive + hardware-token-bound — out of scope for a free project.
-
-| Option | Cost | Type | Notes |
-|---|---|---|---|
-| **SignPath Foundation** (what the pipeline targets) | free for OSS | OV, HSM-backed | Keys never leave SignPath; CI uploads the unsigned artifact and gets the signed one back. ~1–3 week onboarding queue. |
-| **Certum Open Source** | ~€25/yr | OV | Cheapest legitimate cert; OSS-maintainers only. Realistic fallback. |
-| **Azure Trusted Signing** | ~$10/mo | short-lived MS certs | Faster SmartScreen reputation; needs Azure + identity validation. |
-| **Self-signed / Sigstore** | — | — | Not Authenticode-trusted by clients; don't satisfy SmartScreen. |
-
-The pipeline keys signing off `SIGNPATH_*` secrets; when they're absent the sign step self-skips and the release ships unsigned.
+MenYou ships **unsigned**. No free Authenticode path clears the Windows SmartScreen "unrecognized app" warning for an app like this — EV certificates stopped bypassing SmartScreen in 2024, and the only $0 routes (a sponsored OSS signer, or the Microsoft Store) don't fit a low-level shell-integration app. So the release notes publish the installer's **SHA-256** for integrity instead, and the SmartScreen prompt is documented for users.
 
 ## Distribution (all free)
 
@@ -115,7 +106,6 @@ The pipeline keys signing off `SIGNPATH_*` secrets; when they're absent the sign
 | `SCOOP_PAT` | PAT for the `Alpaq92/scoop-menyou` bucket repo. | for Scoop |
 | `CHOCO_API_KEY` | chocolatey.org API key. | for Chocolatey |
 | `CROWDIN_PROJECT_ID` / `CROWDIN_PERSONAL_TOKEN` | Crowdin numeric project ID + personal token (Projects scope). Enable the monthly translation sync. | for translations |
-| `SIGNPATH_API_TOKEN` / `SIGNPATH_ORG_ID` / `SIGNPATH_PROJECT_SLUG` / `SIGNPATH_SIGNING_POLICY_SLUG` | SignPath signing (last one defaults to `release-signing`). | optional |
 
 ## Required GitHub settings
 
@@ -142,5 +132,4 @@ git push origin v0.2.0
 1. Set the secrets above (at minimum `RELEASE_PLEASE_PAT`).
 2. Create the `Alpaq92/scoop-menyou` bucket repo (a `bucket/` folder; the workflow seeds it).
 3. Register at chocolatey.org and copy the API key into `CHOCO_API_KEY` (first publish is manually moderated, 1–7 days).
-4. Apply to SignPath Foundation early — the review queue is the slow part.
-5. Keep these stable across releases so Authenticode reputation accrues cleanly: `AssemblyName` / product / company / copyright in `MenYou.csproj`, the `app.manifest` compatibility + DPI declarations, deterministic-build flags, and the `Alpaq` publisher identity.
+4. Keep build identity stable across releases (for winget + reproducible builds): `AssemblyName` / product / company / copyright in `MenYou.csproj`, the `app.manifest` compatibility + DPI declarations, deterministic-build flags, and the `Alpaq` publisher identity.

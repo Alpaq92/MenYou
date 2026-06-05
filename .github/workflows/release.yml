@@ -7,26 +7,22 @@
 # Stages:
 #   1. publish      — `dotnet publish` self-contained win-x64.
 #   2. pack         — Inno Setup (iscc) → dist\MenYou-Setup-<ver>.exe.
-#   3. sign         — optional. If SIGNPATH_API_TOKEN + SIGNPATH_ORG_ID +
-#                     SIGNPATH_PROJECT_SLUG are all present in repository
-#                     secrets the SignPath GitHub Action signs the
-#                     Setup.exe. Missing secrets → step is skipped, NOT
-#                     a failure; the release body gets a "⚠ Unsigned
-#                     build" notice instead.
-#   4. release      — upload the signed installer to a fresh GitHub
-#                     Release for the tag, with a body that embeds the
-#                     recent commits and the signing status.
-#   5. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
+#   3. release      — upload the installer to a fresh GitHub Release for the
+#                     tag, with a body carrying the unsigned-build note,
+#                     install instructions, the SHA-256, and a CHANGELOG link.
+#   4. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
 #                     Chocolatey using each platform's official-ish
 #                     GitHub Action. Each is `continue-on-error: true`
 #                     so a flake on one channel doesn't gate the others.
 #
-# Required secrets (set under Repo Settings → Secrets → Actions):
+# Builds are NOT Authenticode-signed — no free signing path clears Windows
+# SmartScreen for an app like this, so MenYou ships unsigned and publishes the
+# installer SHA-256 for integrity instead.
 #
-#   SIGNPATH_API_TOKEN        — SignPath personal API token (optional)
-#   SIGNPATH_ORG_ID           — SignPath organization ID    (optional)
-#   SIGNPATH_PROJECT_SLUG     — SignPath project slug       (optional)
-#   SIGNPATH_SIGNING_POLICY_SLUG — usually "release-signing" (optional)
+# Secrets (set under Repo Settings → Secrets → Actions) — all optional. The
+# package-publish jobs are continue-on-error, and the Scoop / Chocolatey jobs
+# short-circuit cleanly when their secret is absent, so a missing secret skips
+# only that channel and never gates the release:
 #
 #   WINGET_PAT     — GitHub PAT with public_repo scope for the winget
 #                    submission (winget-releaser opens a PR against the
@@ -36,7 +32,8 @@
 #                    the (separate) scoop bucket repo. Without it the
 #                    scoop step is skipped.
 #
-#   CHOCO_API_KEY  — Chocolatey community feed API key.
+#   CHOCO_API_KEY  — Chocolatey community feed API key. Without it the
+#                    Chocolatey step is skipped.
 #
 # --------------------------------------------------------------------------
 name: release
@@ -56,11 +53,10 @@ permissions:
 
 jobs:
   build:
-    name: Build + package + (optional) sign
+    name: Build + package
     runs-on: windows-latest
     outputs:
       version: ${{ steps.resolve_version.outputs.version }}
-      signed:  ${{ steps.mark_signed.outputs.signed }}
 
     steps:
       - name: Checkout
@@ -125,72 +121,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
           Get-ChildItem dist
 
-      # --- Optional signing -----------------------------------------------
-      # SignPath issues OV certs for free to qualifying open-source projects.
-      # The action pulls a named GH-Actions artifact, ships it to SignPath
-      # HSM-backed signing, polls until signed, and writes the signed file
-      # back into a configured directory. If the required secrets aren't
-      # configured this step short-circuits (step.if=false) and we mark
-      # the build as unsigned for the release body.
-      #
-      # Ordering: we upload the unsigned installer FIRST so SignPath has
-      # an artifact handle to download — the action will not accept a
-      # local file path. After signing, the working-tree copy in
-      # dist/ is the signed file, which we then re-upload under the
-      # canonical name menyou-installer for the release job to consume.
-      - name: Detect SignPath configuration
-        id: signpath_config
-        shell: pwsh
-        run: |
-          $hasToken = -not [string]::IsNullOrEmpty($env:SIGNPATH_API_TOKEN)
-          $hasOrg   = -not [string]::IsNullOrEmpty($env:SIGNPATH_ORG_ID)
-          $hasProj  = -not [string]::IsNullOrEmpty($env:SIGNPATH_PROJECT_SLUG)
-          $ok = $hasToken -and $hasOrg -and $hasProj
-          echo "configured=$ok" >> $env:GITHUB_OUTPUT
-          if ($ok) { echo "SignPath secrets present — signing enabled." }
-          else     { echo "SignPath secrets missing — release will be unsigned." }
-        env:
-          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-          SIGNPATH_ORG_ID:    ${{ secrets.SIGNPATH_ORG_ID }}
-          SIGNPATH_PROJECT_SLUG: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
-
-      - name: Upload unsigned installer (SignPath input handle)
-        if: steps.signpath_config.outputs.configured == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: menyou-installer-unsigned
-          path: |
-            dist/MenYou-Setup-*.exe
-          if-no-files-found: error
-
-      - name: Sign installer via SignPath
-        id: sign
-        if: steps.signpath_config.outputs.configured == 'true'
-        uses: signpath/github-action-submit-signing-request@v2
-        with:
-          api-token:               ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id:         ${{ secrets.SIGNPATH_ORG_ID }}
-          project-slug:            ${{ secrets.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug:     ${{ secrets.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
-          github-artifact-name:    menyou-installer-unsigned
-          wait-for-completion:     true
-          output-artifact-directory: dist
-
-      # Set the `signed` job output to "true" only when both:
-      #   - the SignPath secrets were present, AND
-      #   - the SignPath step's outcome is success.
-      # This way a misconfigured policy slug or transient SignPath outage
-      # produces a clearly unsigned release (with the warning in the body)
-      # rather than a release that claims signed but isn't.
-      - name: Mark signed flag
-        id: mark_signed
-        shell: pwsh
-        run: |
-          $configured = '${{ steps.signpath_config.outputs.configured }}'
-          $signSuccess = '${{ steps.sign.outcome }}' -eq 'success'
-          $signed = ($configured -eq 'True' -or $configured -eq 'true') -and $signSuccess
-          echo "signed=$($signed.ToString().ToLower())" >> $env:GITHUB_OUTPUT
-
       - name: Upload installer (canonical)
         uses: actions/upload-artifact@v7
         with:
@@ -218,23 +148,15 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.build.outputs.version }}"
-          signed="${{ needs.build.outputs.signed }}"
-          # Hash the very installer we're about to attach to the release, so
-          # direct-download users can verify integrity. This is NOT a code
-          # signature (see the Signed banner) — just a tamper/corruption check.
+          # Hash the installer we're about to attach so direct-download users
+          # can verify integrity (not a code signature — see the note below).
           installer=$(ls dist/MenYou-Setup-*.exe | head -n1)
           sha256=$(sha256sum "$installer" | awk '{print toupper($1)}')
           {
             echo "## MenYou v$version"
             echo
-            # GitHub renders a single newline in release notes as a hard line
-            # break, so each paragraph must be ONE echo (one line) or it wraps
-            # mid-sentence. Keep banners as single lines.
-            if [ "$signed" = "true" ]; then
-              echo "**Signed:** ✅ Authenticode signature via SignPath Foundation."
-            else
-              echo "**Signed:** ⚠ This build is **unsigned**. Windows SmartScreen will display a 'protected your PC' warning on first run — click *More info → Run anyway*. (Signing is configured but no SignPath secrets were available in CI for this release; the next signed build will be reported here in green.)"
-            fi
+            # One echo per paragraph — GitHub renders a newline as a hard break.
+            echo "**Unsigned build.** Windows SmartScreen shows a 'protected your PC' warning on first run — click *More info → Run anyway*. No free Authenticode option clears SmartScreen, so MenYou ships unsigned; verify the SHA-256 below."
             echo
             echo "### Install"
             echo
