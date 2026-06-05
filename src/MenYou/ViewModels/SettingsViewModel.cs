@@ -413,6 +413,18 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
     }
 
+    /// App version string shown next to the About button (e.g. "v0.5.0").
+    /// Sourced from the assembly version, which the csproj <Version> sets and
+    /// release-please bumps each release, so it matches the installed build.
+    public string Version
+    {
+        get
+        {
+            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            return v is null ? string.Empty : $"v{v.Major}.{v.Minor}.{v.Build}";
+        }
+    }
+
     /// Opens MenYou's GitHub project page in the user's default browser.
     /// UseShellExecute=true hands the https URL to the shell so it resolves
     /// through the registered browser; best-effort, so a missing handler

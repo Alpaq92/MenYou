@@ -5,6 +5,11 @@ parses it through `AvaloniaRuntimeXamlLoader` on every keystroke, and
 renders the result in a live preview pane next to the editor. This guide
 covers the bundled sample, how loading works, and how to author your own.
 
+> **Why this rules out NativeAOT.** Parsing a theme at runtime needs the
+> JIT, which NativeAOT strips out — so as long as MenYou supports custom
+> themes it can't be published with NativeAOT. It ships with ReadyToRun
+> instead, which keeps the speed *and* this feature.
+
 The example files under
 [`samples/custom-themes/`](../samples/custom-themes/) are **full working
 themes wired to MenYou's live data**, not standalone mockups: each binds to

@@ -177,10 +177,11 @@ public static class Strings
     public static string UseDiscoveryCacheDescription => Resolve("UseDiscoveryCacheDescription");
     public static string ImmediateReveal              => Resolve("ImmediateReveal");
     public static string ImmediateRevealDescription   => Resolve("ImmediateRevealDescription");
-    // DiagnosticLogging: comres.dll,-2860 = "Rejestrowanie" / "Logging" — the
-    // COM+ services "Logging" label, the cleanest system-localized word for
-    // the toggle. The "diagnostic" nuance lives in the description below.
-    public static string DiagnosticLogging            => Resolve("DiagnosticLogging", $@"@{Sys}\comres.dll,-2860");
+    // DiagnosticLogging: JSON-only. comres.dll,-2860 ("Rejestrowanie" /
+    // "Logging") was the system term, but the toggle now carries MenYou's own
+    // "Diagnostic logging" / "Logi diagnostyczne" wording — clearer than the
+    // bare COM+ "Logging" label — so it resolves straight from the JSON bundle.
+    public static string DiagnosticLogging            => Resolve("DiagnosticLogging");
     public static string DiagnosticLoggingDescription => Resolve("DiagnosticLoggingDescription");
     // MaxLogSize: shell32.dll,-8978 = "Rozmiar" / "Size" (the file-properties
     // Size label) + an explicit "(MB)" unit. No single shell string carries

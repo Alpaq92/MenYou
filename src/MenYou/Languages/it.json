@@ -27,11 +27,11 @@
   "SelectUploadedTheme": "Seleziona un tema caricato",
   "Places": "Risorse",
   "Developer": "Sviluppatore",
-  "UseDiscoveryCache": "Cache elenco app",
-  "UseDiscoveryCacheDescription": "Disegna il menu istantaneamente da uno snapshot salvato all'avvio a freddo, poi lo aggiorna in background. Un rapido controllo dei file garantisce che un elenco di app modificato non venga mai mostrato obsoleto.",
-  "ImmediateReveal": "Apri immediatamente",
-  "ImmediateRevealDescription": "Mostra il menu nell'istante in cui lo apri e riempie i riquadri man mano che le app vengono trovate, invece di attendere il completamento della scansione. Riguarda solo l'avvio a freddo: con la cache calda il menu è già popolato.",
-  "DiagnosticLogging": "Registrazione",
-  "DiagnosticLoggingDescription": "Scrive una traccia diagnostica in %TEMP%\\menyou-hooks.log per la risoluzione dei problemi di avvio e hook. Disattivato per impostazione predefinita; il log viene cancellato all'avvio quando supera la dimensione indicata sotto.",
+  "UseDiscoveryCache": "Cache delle app",
+  "UseDiscoveryCacheDescription": "Velocizza l'avvio a freddo caricando l'elenco delle app da una cache aggiornata regolarmente.",
+  "ImmediateReveal": "Apertura fluida",
+  "ImmediateRevealDescription": "Mostra il menu il più rapidamente possibile e riempie i riquadri man mano che vengono caricati. Riguarda solo l'avvio a freddo: con la cache pronta il menu è già popolato.",
+  "DiagnosticLogging": "Registro di diagnostica",
+  "DiagnosticLoggingDescription": "Scrive i registri di diagnostica in %TEMP%\\menyou-hooks.log per la risoluzione dei problemi di avvio e hook. Disattivato per impostazione predefinita; il registro viene cancellato all'avvio quando supera la dimensione indicata sotto.",
   "LogSize": "Dimensione"
 }
