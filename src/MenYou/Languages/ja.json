@@ -9,8 +9,6 @@
   "ShowRecent": "最近使ったものを表示",
   "ShowSearch": "検索ボックスを表示",
   "MaxRecentItems": "最近使ったものの最大数",
-  "MenuWidth": "メニューの幅",
-  "MenuHeight": "メニューの高さ",
   "ReplaceStart": "スタートを置換：タスクバーのクリック + Shift+Win",
   "ReplaceStartDescription": "Win キー単独はシステム メニューを開きます (Microsoft は Windows 11 24H2 で検出器を DirectComposition の背後に移動しました — Open-Shell も同じ壁にぶつかり Shift+Win を推奨)。",
   "HideOnFocusLost": "フォーカスを失ったら非表示",
@@ -43,5 +41,6 @@
   "ImmediateRevealDescription": "メニューをできるだけ早く表示し、読み込みながらタイルを埋めていきます。コールドスタートのみに影響します。キャッシュが準備できていれば、メニューはすでに表示されています。",
   "DiagnosticLogging": "診断ログ",
   "DiagnosticLoggingDescription": "起動とフックのトラブルシューティング用に、診断ログを %TEMP%\\menyou-hooks.log に書き込みます。既定ではオフです。ログは起動時に、下記のサイズを超えると削除されます。",
-  "LogSize": "サイズ"
+  "LogSize": "サイズ",
+  "Preview": "プレビュー"
 }

@@ -8,8 +8,6 @@
   "ShowRecent": "Recente items tonen",
   "ShowSearch": "Zoekvak tonen",
   "MaxRecentItems": "Max. aantal recente items",
-  "MenuWidth": "Menubreedte",
-  "MenuHeight": "Menuhoogte",
   "ReplaceStart": "Start vervangen: taakbalkklik + Shift+Win",
   "HideOnFocusLost": "Verbergen wanneer focus verloren gaat",
   "CheckForUpdates": "Controleren op updates",
@@ -30,5 +28,6 @@
   "ImmediateRevealDescription": "Toont het menu zo snel mogelijk en vult de tegels aan terwijl ze laden. Heeft alleen invloed op een koude start — met een warme cache is het menu al gevuld.",
   "DiagnosticLogging": "Diagnostische logboeken",
   "DiagnosticLoggingDescription": "Schrijft diagnostische logboeken naar %TEMP%\\menyou-hooks.log voor het oplossen van problemen met opstarten en hooks. Standaard uit; het logboek wordt bij het opstarten gewist zodra het groter wordt dan de hieronder opgegeven grootte.",
-  "LogSize": "Grootte"
+  "LogSize": "Grootte",
+  "Preview": "Voorbeeld"
 }

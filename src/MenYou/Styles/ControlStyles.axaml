@@ -27,6 +27,10 @@
         <Setter Property="Padding" Value="10,6" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="MinHeight" Value="32" />
+        <!-- Center the watermark + text vertically. Without this they align to
+             the top, which reads as floating high when InnerRightContent (the
+             magnifier button) makes the box taller than MinHeight. -->
+        <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
     <!-- Pin the search box to its rest-state palette across pointer-over
          and focus. Avalonia's Fluent TextBox brightens the background and

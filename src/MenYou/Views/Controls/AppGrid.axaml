@@ -39,13 +39,16 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="items:AppItemViewModel">
-                    <!-- Tile width chosen so exactly four pinned tiles
-                         fit the left column without horizontal scroll
-                         at the default 720 px menu width:
-                           left column = 720 − 260 = 460
-                           ScrollViewer margin 6+6 = 12 ⇒ 448 usable
+                    <!-- Tile width chosen so four pinned tiles fit the
+                         Modern (Win7) left column without horizontal
+                         scroll:
+                           left column = 800 − 320 = 480
+                           ScrollViewer margin 6+6 = 12 ⇒ 468 usable
                            per-tile box = 108 + (2+2 Margin) = 112
-                           4 × 112 = 448 ✓
+                           4 × 112 = 448  (≤ 468, ~20 px slack)
+                         At the old 460 px column the strip was exactly
+                         448 px — zero slack — so Auto tripped the scroll
+                         bar on rounding; the 20 px slack fixes that.
                          Beyond four pins the horizontal scrollbar
                          kicks in. -->
                     <Button Classes="menu"

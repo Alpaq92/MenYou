@@ -107,6 +107,8 @@ public static class Strings
     public static string Results                 => Resolve("Results", $@"@{Sys}\themecpl.dll,-1107");
     public static string SearchPlaceholder       => Resolve("SearchPlaceholder");
     public static string OpenMenYou              => Resolve("OpenMenYou");
+    // Custom-theme empty-state preview placeholder label. JSON-only.
+    public static string Preview                 => Resolve("Preview");
     // Skin: shell32.dll,-51729 = "Motyw" / "Theme" — same ID as
     // Strings.Theme. The user explicitly merged the two visually (Skin
     // tray-submenu and Theme settings label both read "Motyw"); the
@@ -145,8 +147,6 @@ public static class Strings
     public static string ShowRecent              => Resolve("ShowRecent");
     public static string ShowSearch              => Resolve("ShowSearch");
     public static string MaxRecentItems          => Resolve("MaxRecentItems");
-    public static string MenuWidth               => Resolve("MenuWidth");
-    public static string MenuHeight              => Resolve("MenuHeight");
     // Behavior: per user, repurposed to display "Advanced" instead of
     // a literal "Behavior" verb (no standalone "Zachowanie" exists in
     // any shell DLL). comres.dll,-2739 = "Zaawansowane" / "Advanced"

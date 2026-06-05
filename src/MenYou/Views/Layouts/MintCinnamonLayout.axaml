@@ -22,9 +22,9 @@
              xmlns:loc="using:MenYou.Platform.Windows"
              x:Class="MenYou.Views.Layouts.MintCinnamonLayout"
              x:CompileBindings="False">
-  <Grid Width="640" Height="480"
+  <Grid Width="680" Height="480"
         RowDefinitions="*,56"
-        ColumnDefinitions="220,*">
+        ColumnDefinitions="260,*">
 
   <!-- Theme-aware brushes. Dark mode keeps the exact shades the user
        signed off on (#2B / #3A backgrounds, #3D / #4A dividers); light
@@ -49,6 +49,10 @@
                with MenuHoverBrush (a gray), making the tile blend
                into the sidebar on hover. -->
           <SolidColorBrush x:Key="MintShutdownHover"  Color="#E25B4F" />
+          <!-- Rest red for the shutdown tile. Decoupled from PowerDangerBrush,
+               whose dark-theme value (#FF6B6B) is a pale salmon that washes out
+               the white glyph; a strong red keeps it readable in dark mode. -->
+          <SolidColorBrush x:Key="MintShutdownRest"   Color="#D43429" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="MintSidebarBg"      Color="#E4E4E4" />
@@ -57,6 +61,7 @@
           <SolidColorBrush x:Key="MintMainDivider"    Color="#D1D1D1" />
           <SolidColorBrush x:Key="MintAvatarOrb"      Color="#5A6B82" />
           <SolidColorBrush x:Key="MintShutdownHover"  Color="#D43429" />
+          <SolidColorBrush x:Key="MintShutdownRest"   Color="#C42B1C" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
     </ResourceDictionary>
@@ -69,13 +74,13 @@
        emphasis stays readable when the user mouses over it. -->
   <Grid.Styles>
     <Style Selector="Button.shutdown /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PowerDangerBrush}" />
+      <Setter Property="Background" Value="{DynamicResource MintShutdownRest}" />
     </Style>
     <Style Selector="Button.shutdown:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource MintShutdownHover}" />
     </Style>
     <Style Selector="Button.shutdown:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource PowerDangerBrush}" />
+      <Setter Property="Background" Value="{DynamicResource MintShutdownRest}" />
     </Style>
   </Grid.Styles>
 
@@ -130,8 +135,14 @@
            row dispatches AppItemViewModel.LaunchCommand which goes
            through IShellLauncher.Launch → MenYou auto-hides via the
            Launched event hook in App.cs. -->
+      <!-- Negative left margin pulls Pinned (and Places, matched below) ~7 px
+           left so the icons sit ~22 px from the sidebar edge — under the
+           centered power glyphs at the bottom. The icon's base inset is fixed
+           by the shared ctrl:AppList (Button.menu padding + the 9 px IsNew
+           column) and can't move without shifting the Win7 / Classic layouts,
+           so the nudge happens on this Cinnamon-only container instead. -->
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled"
-                    Padding="4,4,4,0">
+                    Padding="0,4,4,0" Margin="-3,0,0,0">
         <ctrl:AppList Items="{Binding Pinned}" />
       </ScrollViewer>
 
@@ -147,13 +158,10 @@
            Panel. Each row dispatches RightPanel.OpenCommand with the
            ShellShortcut as parameter — same path the built-in layouts
            use for their right-hand shell-link column. -->
-      <!-- StackPanel.Margin="4,0,4,0" matches the Pinned ScrollViewer's
-           Padding="4,4,4,0" left/right values, so Places rows left-
-           align with Pinned rows down to the pixel. Without it the
-           StackPanel was flush against the sidebar's left edge while
-           Pinned was inset by 4 px, producing the misalignment the
-           user spotted. -->
-      <StackPanel Grid.Row="2" Margin="4,0,4,0">
+      <!-- Left margin -3 matches the Pinned ScrollViewer's net left (-3) so
+           Places rows stay icon-aligned with Pinned rows down to the pixel.
+           Right margin 4 keeps the right gutter. -->
+      <StackPanel Grid.Row="2" Margin="-3,0,4,0">
         <!-- Divider between Pinned and Places. 1 px line slightly
              lighter than the sidebar background. Margin 8,4 leaves
              roughly the same left/right gutter the AppList rows use
@@ -220,9 +228,10 @@
            separator, then the four power verbs (Lock, Sleep, Restart,
            Shutdown) — the same split the Win7 / Win11 layouts use, since
            the cog is conceptually distinct from the destructive power
-           actions. Centered in the sidebar's bottom row. The separator
-           uses the sidebar divider brush; Shutdown keeps the red tile
-           via Classes="power shutdown". -->
+           actions. Centered in the sidebar's bottom row; the Pinned / Places
+           lists above are nudged left so their icons line up under these
+           glyphs. The separator uses the sidebar divider brush; Shutdown
+           keeps the red tile via Classes="power shutdown". -->
       <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="2"
                   HorizontalAlignment="Center" VerticalAlignment="Center">
         <Button Classes="power"

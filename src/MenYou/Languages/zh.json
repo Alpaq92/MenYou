@@ -9,8 +9,6 @@
   "ShowRecent": "显示最近使用",
   "ShowSearch": "显示搜索框",
   "MaxRecentItems": "最近项最大数量",
-  "MenuWidth": "菜单宽度",
-  "MenuHeight": "菜单高度",
   "ReplaceStart": "替换开始：任务栏开始点击 + Shift+Win",
   "ReplaceStartDescription": "单独按 Win 键仍会打开系统菜单（Microsoft 在 Windows 11 24H2 把检测器移到 DirectComposition 之后 — Open-Shell 也撞墙后推荐 Shift+Win）。",
   "HideOnFocusLost": "失去焦点时隐藏",
@@ -43,5 +41,6 @@
   "ImmediateRevealDescription": "尽快显示菜单，并在加载时逐步填充磁贴。仅影响冷启动——缓存就绪时菜单已填充完毕。",
   "DiagnosticLogging": "诊断日志",
   "DiagnosticLoggingDescription": "将诊断日志写入 %TEMP%\\menyou-hooks.log，用于排查启动和挂钩问题。默认关闭；当日志超过下方指定的大小时，会在启动时清除。",
-  "LogSize": "大小"
+  "LogSize": "大小",
+  "Preview": "预览"
 }

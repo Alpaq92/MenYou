@@ -138,6 +138,7 @@
                             Command="{Binding Power.RestartCommand}">
                         <TextBlock Classes="power-glyph" Text="&#xE777;" />
                     </Button>
+                    <Border Width="1" Margin="4,6" Background="{DynamicResource MenuSeparatorBrush}" />
                     <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
                             Foreground="{DynamicResource PowerDangerBrush}"
                             Command="{Binding Power.ShutdownCommand}">

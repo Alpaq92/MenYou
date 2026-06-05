@@ -11,8 +11,6 @@
   "ShowRecent": "Show recent items",
   "ShowSearch": "Show search box",
   "MaxRecentItems": "Max recent items",
-  "MenuWidth": "Menu width",
-  "MenuHeight": "Menu height",
   "ReplaceStart": "Replace Start: capture taskbar Start click + Shift+Win shortcut",
   "ReplaceStartDescription": "Lone Win key still opens the system menu (Microsoft moved its detector behind DirectComposition on Win 11 24H2 — Open-Shell hit the same wall and recommends Shift+Win).",
   "HideOnFocusLost": "Hide menu when it loses focus",
@@ -50,5 +48,6 @@
   "ImmediateRevealDescription": "Shows the menu as fast as possible and fills in the tiles as they load. Only affects a cold start — with the cache warm the menu is already populated.",
   "DiagnosticLogging": "Diagnostic logging",
   "DiagnosticLoggingDescription": "Write diagnostic logs to %TEMP%\\menyou-hooks.log for troubleshooting startup and hooks. Off by default; the log is cleared on startup once it grows past the size below.",
-  "LogSize": "Size"
+  "LogSize": "Size",
+  "Preview": "Preview"
 }

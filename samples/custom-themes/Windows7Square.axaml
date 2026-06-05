@@ -40,7 +40,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ctrl="using:MenYou.Views.Controls"
       xmlns:loc="using:MenYou.Platform.Windows"
-      Width="720" Height="620"
+      Width="770" Height="620"
       RowDefinitions="Auto,*,Auto">
 
   <!-- Square-corner overrides. Each selector mirrors an app-level style
@@ -81,7 +81,7 @@
        TOP: pinned tiles on the left, user header on the right.
        =================================================================== -->
   <Border Grid.Row="0">
-    <Grid ColumnDefinitions="*,260">
+    <Grid ColumnDefinitions="*,290">
       <Border Grid.Column="0" Background="{DynamicResource MenuBackgroundBrush}">
         <!-- DockPanel (not "Auto,*" Grid): a * row nested under the
              Auto-sized top-section row collapses to content height and
@@ -111,18 +111,29 @@
           <StackPanel Orientation="Vertical" Spacing="8"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center">
+            <!-- Round avatar (Ellipse clip). A square Image showed the Windows
+                 account picture's gray photo-frame corners as an ugly border
+                 around the circular user orb; clipping to a circle (as the
+                 production layouts do) crops them off. The avatar is the one
+                 element kept round in this otherwise-squared theme. -->
             <Panel Width="64" Height="64" HorizontalAlignment="Center">
               <Border Background="{DynamicResource AvatarOrbBrush}"
+                      CornerRadius="32"
                       IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
                 <TextBlock Text="{Binding UserName[0]}"
                            Foreground="#FFFFFF"
                            FontSize="28" FontWeight="SemiBold"
                            HorizontalAlignment="Center" VerticalAlignment="Center" />
               </Border>
-              <Image IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
-                     Source="{Binding Avatar}"
-                     Stretch="UniformToFill"
-                     RenderOptions.BitmapInterpolationMode="HighQuality" />
+              <!-- Same Image element as the original square avatar (so the
+                   layout/position is unchanged), just clipped to a circle via
+                   a rounded Border instead of swapping to an Ellipse. -->
+              <Border CornerRadius="32" ClipToBounds="True"
+                      IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <Image Source="{Binding Avatar}"
+                       Stretch="UniformToFill"
+                       RenderOptions.BitmapInterpolationMode="HighQuality" />
+              </Border>
             </Panel>
             <TextBlock Text="{Binding UserName}"
                        FontSize="14" FontWeight="SemiBold"
@@ -137,7 +148,7 @@
        MIDDLE: scrollable Recent + All Programs (left), shell shortcuts
        / search context panel (right).
        =================================================================== -->
-  <Grid Grid.Row="1" ColumnDefinitions="*,260">
+  <Grid Grid.Row="1" ColumnDefinitions="*,290">
     <Panel Grid.Column="0">
       <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="0,4">
@@ -295,7 +306,7 @@
        BOTTOM: search box (left) + power glyphs (right).
        =================================================================== -->
   <Border Grid.Row="2">
-    <Grid ColumnDefinitions="*,260">
+    <Grid ColumnDefinitions="*,290">
       <Border Grid.Column="0"
               Background="{DynamicResource MenuBackgroundBrush}"
               Padding="10">
@@ -345,6 +356,8 @@
                     Command="{Binding Power.RestartCommand}">
               <TextBlock Classes="power-glyph" Text="&#xE777;" />
             </Button>
+            <Border Width="1" Margin="4,6"
+                    Background="{DynamicResource MenuSeparatorBrush}" />
             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
                     Foreground="{DynamicResource PowerDangerBrush}"
                     Command="{Binding Power.ShutdownCommand}">

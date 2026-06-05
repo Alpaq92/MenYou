@@ -8,8 +8,6 @@
   "ShowRecent": "최근 항목 표시",
   "ShowSearch": "검색 표시",
   "MaxRecentItems": "최근 항목 최대",
-  "MenuWidth": "메뉴 너비",
-  "MenuHeight": "메뉴 높이",
   "ReplaceStart": "시작 대체: 작업 표시줄 클릭 + Shift+Win",
   "HideOnFocusLost": "포커스 잃으면 숨기기",
   "CheckForUpdates": "업데이트 확인",
@@ -32,5 +30,6 @@
   "ImmediateRevealDescription": "메뉴를 최대한 빨리 표시하고 로드되는 대로 타일을 채웁니다. 콜드 스타트에만 영향을 줍니다. 캐시가 준비되어 있으면 메뉴는 이미 채워져 있습니다.",
   "DiagnosticLogging": "진단 로깅",
   "DiagnosticLoggingDescription": "시작 및 후크 문제 해결을 위해 진단 로그를 %TEMP%\\menyou-hooks.log에 기록합니다. 기본적으로 꺼져 있으며, 로그가 아래 크기를 초과하면 시작 시 삭제됩니다.",
-  "LogSize": "크기"
+  "LogSize": "크기",
+  "Preview": "미리 보기"
 }
