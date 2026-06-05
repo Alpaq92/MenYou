@@ -176,26 +176,18 @@
                 <!-- Layout controls follow Appearance under the same
                      tab. Visible Separator marks the boundary so the
                      merged tab still reads as two groupings. -->
+                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MaxRecentItems}" VerticalAlignment="Center" />
+                    <NumericUpDown Grid.Row="0" Grid.Column="1"
+                                   Minimum="0" Maximum="30"
+                                   Value="{Binding MaxRecentItems, Mode=TwoWay}" />
+                </Grid>
+
                 <StackPanel Spacing="6">
                     <CheckBox Content="{x:Static loc:Strings.ShowPinned}" IsChecked="{Binding ShowPinned, Mode=TwoWay}" />
                     <CheckBox Content="{x:Static loc:Strings.ShowRecent}" IsChecked="{Binding ShowRecent, Mode=TwoWay}" />
                     <CheckBox Content="{x:Static loc:Strings.ShowSearch}" IsChecked="{Binding ShowSearch, Mode=TwoWay}" />
                 </StackPanel>
-
-                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MaxRecentItems}" VerticalAlignment="Center" />
-                    <NumericUpDown Grid.Row="0" Grid.Column="1"
-                                   Minimum="0" Maximum="30"
-                                   Value="{Binding MaxRecentItems, Mode=TwoWay}" />
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static loc:Strings.MenuWidth}" VerticalAlignment="Center" />
-                    <NumericUpDown Grid.Row="1" Grid.Column="1"
-                                   Minimum="480" Maximum="1200" Increment="20"
-                                   Value="{Binding MenuWidth, Mode=TwoWay}" />
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static loc:Strings.MenuHeight}" VerticalAlignment="Center" />
-                    <NumericUpDown Grid.Row="2" Grid.Column="1"
-                                   Minimum="400" Maximum="1000" Increment="20"
-                                   Value="{Binding MenuHeight, Mode=TwoWay}" />
-                </Grid>
                 </StackPanel>
             </TabItem>
 

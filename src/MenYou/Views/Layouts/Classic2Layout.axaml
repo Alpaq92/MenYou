@@ -21,13 +21,16 @@
          240 px gives the row 223 px of content area (≈7 px breathing
          room each side) without making the column wider than necessary
          for the shell-shortcuts list above it. Total menu width 520. -->
-    <Grid ColumnDefinitions="280,240" Width="520" Height="580">
+    <Grid RowDefinitions="56,*" Width="570" Height="580">
 
-        <Border Grid.Column="0" Grid.ColumnSpan="2"
+        <!-- Top corners rounded to 10 px to match the window's chrome
+             (CustomThemeCornerRadiusConverter). Without it the header's square
+             corners met the window's rounded 1 px border and showed a dark
+             corner notch — the "black outline" against the blue bar. -->
+        <Border Grid.Row="0"
                 Background="{DynamicResource UserHeaderBrush}"
-                Padding="0"
-                Height="56"
-                VerticalAlignment="Top">
+                CornerRadius="10,10,0,0"
+                Padding="0">
             <!-- Whole header is a clickable button — opens
                  ms-settings:yourinfo. Padding moved onto the Button so
                  the entire colored bar (full width × 56 px) is the hit
@@ -62,8 +65,13 @@
             </Button>
         </Border>
 
+        <!-- Content row: two columns below the header. Splitting the header
+             into its own Grid row (instead of a ColumnSpan overlay with a
+             56 px top margin on each column) lets the header round its top
+             corners symmetrically into the window chrome. -->
+        <Grid Grid.Row="1" ColumnDefinitions="280,290">
         <!-- LEFT -->
-        <Grid Grid.Column="0" Margin="0,56,0,0" RowDefinitions="*,Auto">
+        <Grid Grid.Column="0" RowDefinitions="*,Auto">
             <Panel Grid.Row="0">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,4">
@@ -96,7 +104,7 @@
         </Grid>
 
         <!-- RIGHT -->
-        <Border Grid.Column="1" Margin="0,56,0,0"
+        <Border Grid.Column="1"
                 Background="{DynamicResource MenuBackgroundAltBrush}"
                 BorderBrush="{DynamicResource MenuBorderBrush}"
                 BorderThickness="1,0,0,0">
@@ -249,7 +257,7 @@
                     <Grid ColumnDefinitions="*,Auto,*">
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
-                                    Spacing="4">
+                                    Spacing="2">
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}"
                                     Command="{Binding OpenSettingsCommand}">
                                 <TextBlock Classes="power-glyph" Text="&#xE713;" />
@@ -274,6 +282,7 @@
                                     Command="{Binding Power.SleepCommand}">
                                 <TextBlock Classes="power-glyph" Text="&#xE708;" />
                             </Button>
+                            <Border Width="1" Margin="4,6" Background="{DynamicResource MenuSeparatorBrush}" />
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
                                     Foreground="{DynamicResource PowerDangerBrush}"
                                     Command="{Binding Power.ShutdownCommand}">
@@ -284,6 +293,7 @@
                 </Border>
             </Grid>
         </Border>
+        </Grid>
 
     </Grid>
 </UserControl>

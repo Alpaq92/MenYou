@@ -9,8 +9,6 @@
   "ShowRecent": "Mostra elementi recenti",
   "ShowSearch": "Mostra casella di ricerca",
   "MaxRecentItems": "Numero massimo di recenti",
-  "MenuWidth": "Larghezza menu",
-  "MenuHeight": "Altezza menu",
   "ReplaceStart": "Sostituisci Start: clic sulla barra delle applicazioni + Shift+Win",
   "HideOnFocusLost": "Nascondi quando perde il focus",
   "CheckForUpdates": "Verifica aggiornamenti",
@@ -33,5 +31,6 @@
   "ImmediateRevealDescription": "Mostra il menu il più rapidamente possibile e riempie i riquadri man mano che vengono caricati. Riguarda solo l'avvio a freddo: con la cache pronta il menu è già popolato.",
   "DiagnosticLogging": "Registro di diagnostica",
   "DiagnosticLoggingDescription": "Scrive i registri di diagnostica in %TEMP%\\menyou-hooks.log per la risoluzione dei problemi di avvio e hook. Disattivato per impostazione predefinita; il registro viene cancellato all'avvio quando supera la dimensione indicata sotto.",
-  "LogSize": "Dimensione"
+  "LogSize": "Dimensione",
+  "Preview": "Anteprima"
 }

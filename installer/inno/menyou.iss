@@ -105,6 +105,12 @@ Name: "startupicon"; Description: "{cm:AutoStartProgram,{#MyAppName}}"; GroupDes
 [Files]
 ; The whole self-contained publish folder.
 Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; Custom-theme sample, shipped as an on-disk reference users can copy and
+; edit. It is NOT a built-in style and is never auto-loaded — Settings ->
+; Custom loads an .axaml the user points it at. This is just a worked
+; example of the theming format, lifted straight from the repo's samples
+; folder (path resolves against this script's dir, installer\inno).
+Source: "..\..\samples\custom-themes\Windows7Square.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

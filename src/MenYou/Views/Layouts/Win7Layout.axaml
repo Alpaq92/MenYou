@@ -24,7 +24,7 @@
         top edge could drift apart whenever their inner content heights
         differed by a few pixels.
     -->
-    <Grid Width="720" Height="620" RowDefinitions="Auto,*,Auto">
+    <Grid Width="800" Height="620" RowDefinitions="Auto,*,Auto">
 
         <!-- TOP: pinned tiles on the left, user header on the right.
              Both share the row height. The previous full-width bottom
@@ -34,7 +34,7 @@
              column plus the inherent color step where the pinned tiles
              give way to the recent/programs sections. -->
         <Border Grid.Row="0">
-            <Grid ColumnDefinitions="*,260">
+            <Grid ColumnDefinitions="*,320">
                 <Border Grid.Column="0" Background="{DynamicResource MenuBackgroundBrush}">
                     <!-- DockPanel (not "Auto,*" Grid) so the AppGrid truly
                          fills the remaining height. The top section row is
@@ -110,7 +110,7 @@
 
         <!-- MIDDLE: scrollable Recent + All Programs (left) and the
              shell shortcuts list (right). -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,260">
+        <Grid Grid.Row="1" ColumnDefinitions="*,320">
             <Panel Grid.Column="0">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Margin="0,4">
@@ -305,7 +305,7 @@
              carries no top horizontal stroke, matching the cleaner look
              requested. -->
         <Border Grid.Row="2">
-            <Grid ColumnDefinitions="*,260">
+            <Grid ColumnDefinitions="*,320">
                 <!-- Search container: matches the content-area background
                      above (MenuBackgroundBrush) so the search row blends
                      into the All Programs / Recent panel rather than
@@ -383,6 +383,8 @@
                                     Command="{Binding Power.RestartCommand}">
                                 <TextBlock Classes="power-glyph" Text="&#xE777;" />
                             </Button>
+                            <Border Width="1" Margin="4,6"
+                                    Background="{DynamicResource MenuSeparatorBrush}" />
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
                                     Foreground="{DynamicResource PowerDangerBrush}"
                                     Command="{Binding Power.ShutdownCommand}">

@@ -71,8 +71,6 @@ public sealed class UserSettings
     public bool AutostartDefaultApplied { get; set; } = false;
     public bool HideOnFocusLost { get; set; } = true;
     public int MaxRecentItems { get; set; } = 10;
-    public int MenuWidth { get; set; } = 720;
-    public int MenuHeight { get; set; } = 620;
     public List<PinnedItem> Pinned { get; set; } = new();
     public List<RecentEntry> Recent { get; set; } = new();
 

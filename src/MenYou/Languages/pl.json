@@ -11,8 +11,6 @@
   "ShowRecent": "Pokaż ostatnio używane",
   "ShowSearch": "Pokaż pole wyszukiwania",
   "MaxRecentItems": "Maksymalna liczba ostatnich",
-  "MenuWidth": "Szerokość menu",
-  "MenuHeight": "Wysokość menu",
   "ReplaceStart": "Przejmij Start: kliknięcie ikony na pasku zadań + Shift+Win",
   "ReplaceStartDescription": "Pojedynczy klawisz Win nadal otwiera menu systemowe (Microsoft schował detektor za DirectComposition w Windows 11 24H2 — Open-Shell trafił na tę samą ścianę i rekomenduje Shift+Win).",
   "HideOnFocusLost": "Ukryj menu po utracie fokusu",
@@ -50,5 +48,6 @@
   "ImmediateRevealDescription": "Pokazuje menu tak szybko jak to możliwe i uzupełnia kafelki w miarę ładowania. Dotyczy tylko zimnego startu — z uzupełnioną pamięcią podręczną menu jest już wypełnione.",
   "DiagnosticLogging": "Logi diagnostyczne",
   "DiagnosticLoggingDescription": "Zapisuje logi diagnostyczne do %TEMP%\\menyou-hooks.log w celu rozwiązywania problemów z uruchamianiem i hakami. Domyślnie wyłączone; dziennik jest czyszczony przy uruchomieniu, gdy przekroczy rozmiar podany poniżej.",
-  "LogSize": "Rozmiar"
+  "LogSize": "Rozmiar",
+  "Preview": "Podgląd"
 }

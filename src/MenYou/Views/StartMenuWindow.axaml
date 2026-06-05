@@ -37,8 +37,7 @@
     </Window.Resources>
 
     <Border CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
-            BorderThickness="1"
-            BorderBrush="{DynamicResource MenuBorderBrush}"
+            BorderThickness="0"
             Background="{DynamicResource MenuBackgroundBrush}"
             ClipToBounds="True">
         <!-- Nested rounded Border acts as the real clip mask. Without

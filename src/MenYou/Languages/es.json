@@ -9,8 +9,6 @@
   "ShowRecent": "Mostrar elementos recientes",
   "ShowSearch": "Mostrar cuadro de búsqueda",
   "MaxRecentItems": "Máximo de elementos recientes",
-  "MenuWidth": "Ancho del menú",
-  "MenuHeight": "Alto del menú",
   "ReplaceStart": "Reemplazar Inicio: clic en barra de tareas + Shift+Win",
   "ReplaceStartDescription": "La tecla Win sola sigue abriendo el menú del sistema (Microsoft movió el detector tras DirectComposition en Windows 11 24H2 — Open-Shell topó con lo mismo y recomienda Shift+Win).",
   "HideOnFocusLost": "Ocultar el menú al perder el foco",
@@ -43,5 +41,6 @@
   "ImmediateRevealDescription": "Muestra el menú lo antes posible y rellena los mosaicos a medida que se cargan. Solo afecta al arranque en frío: con la caché lista, el menú ya está completo.",
   "DiagnosticLogging": "Registro de diagnóstico",
   "DiagnosticLoggingDescription": "Escribe registros de diagnóstico en %TEMP%\\menyou-hooks.log para solucionar problemas de inicio y hooks. Desactivado de forma predeterminada; el registro se borra al inicio cuando supera el tamaño indicado abajo.",
-  "LogSize": "Tamaño"
+  "LogSize": "Tamaño",
+  "Preview": "Vista previa"
 }

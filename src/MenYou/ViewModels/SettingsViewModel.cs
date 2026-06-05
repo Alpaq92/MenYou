@@ -179,8 +179,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _hideOnFocusLost;
     [ObservableProperty] private bool _mirrorWindowsStart;
     [ObservableProperty] private int _maxRecentItems;
-    [ObservableProperty] private int _menuWidth;
-    [ObservableProperty] private int _menuHeight;
     [ObservableProperty] private string? _pushStatus;
 
     // ---- Developer tab ---------------------------------------------------
@@ -223,7 +221,18 @@ public sealed partial class SettingsViewModel : ViewModelBase
         set => Theme = value.Value;
     }
 
-    partial void OnMenuStyleChanged(MenuStyle value) => OnPropertyChanged(nameof(SelectedMenuStyle));
+    partial void OnMenuStyleChanged(MenuStyle value)
+    {
+        OnPropertyChanged(nameof(SelectedMenuStyle));
+        // Picking a built-in style from the Appearance dropdown switches OFF
+        // the custom theme — otherwise UseCustomTheme keeps overriding the menu
+        // and the freshly-picked built-in style never renders. Selecting a
+        // style is an explicit "I want this built-in look" action, so it wins.
+        // Safe on the load paths: initial load sets the _menuStyle backing
+        // field (no notification, so this never fires), and Reload re-applies
+        // the saved UseCustomTheme right after assigning MenuStyle.
+        UseCustomTheme = false;
+    }
     partial void OnThemeChanged(AppTheme value) => OnPropertyChanged(nameof(SelectedTheme));
 
     public SettingsViewModel(
@@ -261,8 +270,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _hideOnFocusLost = s.HideOnFocusLost;
         _mirrorWindowsStart = s.MirrorWindowsStart;
         _maxRecentItems = s.MaxRecentItems;
-        _menuWidth = s.MenuWidth;
-        _menuHeight = s.MenuHeight;
         _useDiscoveryCache = s.UseDiscoveryCache;
         _immediateMenuReveal = s.ImmediateMenuReveal;
         _diagnosticLogging = s.DiagnosticLogging;
@@ -297,8 +304,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         s.HideOnFocusLost = HideOnFocusLost;
         s.MirrorWindowsStart = MirrorWindowsStart;
         s.MaxRecentItems = MaxRecentItems;
-        s.MenuWidth = MenuWidth;
-        s.MenuHeight = MenuHeight;
         s.UseDiscoveryCache = UseDiscoveryCache;
         s.ImmediateMenuReveal = ImmediateMenuReveal;
         s.DiagnosticLogging = DiagnosticLogging;
@@ -373,8 +378,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         HideOnFocusLost = s.HideOnFocusLost;
         MirrorWindowsStart = s.MirrorWindowsStart;
         MaxRecentItems = s.MaxRecentItems;
-        MenuWidth = s.MenuWidth;
-        MenuHeight = s.MenuHeight;
         UseDiscoveryCache = s.UseDiscoveryCache;
         ImmediateMenuReveal = s.ImmediateMenuReveal;
         DiagnosticLogging = s.DiagnosticLogging;

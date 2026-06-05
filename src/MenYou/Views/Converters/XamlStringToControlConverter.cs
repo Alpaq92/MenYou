@@ -83,7 +83,7 @@ public sealed class XamlStringToControlConverter : IValueConverter
         };
         var label = new TextBlock
         {
-            Text = "Preview",
+            Text = MenYou.Platform.Windows.Strings.Preview,
             Foreground = brush,
             FontSize = 14,
             HorizontalAlignment = HorizontalAlignment.Center,
