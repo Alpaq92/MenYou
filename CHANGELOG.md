@@ -14,6 +14,13 @@ the merged commit log when it cuts the next release PR.
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.5.5](https://github.com/Alpaq92/MenYou/compare/v0.5.0...v0.5.5) (2026-06-05)
+
+
+### Features
+
+* app version in Settings, refined translations, release-notes checksum ([#13](https://github.com/Alpaq92/MenYou/issues/13)) ([728bea5](https://github.com/Alpaq92/MenYou/commit/728bea55bb10b3f81e359464dca7b3a7418d55bc))
+
 ## [0.5.0](https://github.com/Alpaq92/MenYou/compare/v0.2.0...v0.5.0) (2026-06-05)
 
 > **Deeply optimized release** — a from-scratch startup-performance pass: cold start now paints from a persisted snapshot instead of waiting on a live shell scan, and the binaries are AOT-compiled ahead of first run.
