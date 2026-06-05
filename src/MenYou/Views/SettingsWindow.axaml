@@ -412,6 +412,10 @@
                             IsEnabled="{Binding CanCheckForUpdates}" />
                     <Button Content="{x:Static loc:Strings.About}"
                             Command="{Binding OpenAboutCommand}" />
+                    <TextBlock Text="{Binding Version}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               Margin="8,0,0,0" />
                     <TextBlock Text="{Binding UpdateStatus}"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center"

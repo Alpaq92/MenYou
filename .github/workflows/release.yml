@@ -219,6 +219,11 @@ jobs:
           set -euo pipefail
           version="${{ needs.build.outputs.version }}"
           signed="${{ needs.build.outputs.signed }}"
+          # Hash the very installer we're about to attach to the release, so
+          # direct-download users can verify integrity. This is NOT a code
+          # signature (see the Signed banner) — just a tamper/corruption check.
+          installer=$(ls dist/MenYou-Setup-*.exe | head -n1)
+          sha256=$(sha256sum "$installer" | awk '{print toupper($1)}')
           {
             echo "## MenYou v$version"
             echo
@@ -242,6 +247,14 @@ jobs:
             echo "\`\`\`"
             echo
             echo "Direct download: \`MenYou-Setup-${version}.exe\` below."
+            echo
+            echo "**SHA-256** — verify your download is intact (an integrity check, *not* a code signature):"
+            echo
+            echo "\`\`\`"
+            echo "$sha256  MenYou-Setup-${version}.exe"
+            echo "\`\`\`"
+            echo
+            echo "Verify in PowerShell: \`(Get-FileHash MenYou-Setup-${version}.exe -Algorithm SHA256).Hash\`"
             echo
             echo "### Changes"
             echo

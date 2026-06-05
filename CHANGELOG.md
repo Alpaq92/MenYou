@@ -16,10 +16,17 @@ the merged commit log when it cuts the next release PR.
 
 ## [0.5.0](https://github.com/Alpaq92/MenYou/compare/v0.2.0...v0.5.0) (2026-06-05)
 
+> **Deeply optimized release** — a from-scratch startup-performance pass: cold start now paints from a persisted snapshot instead of waiting on a live shell scan, and the binaries are AOT-compiled ahead of first run.
+
 
 ### Features
 
 * Windows 11 default look, discovery cache, and Developer settings ([8d39ce3](https://github.com/Alpaq92/MenYou/commit/8d39ce385bde7aa64b8ca4c5da8acb0d8fa3317f))
+
+
+### Performance
+
+* **startup:** persisted app-discovery cache for instant cold paint, immediate menu reveal, ReadyToRun-compiled binaries (~halved framework startup), and a COM-free UWP fingerprint to kill the removed-app ghost ([8d39ce3](https://github.com/Alpaq92/MenYou/commit/8d39ce385bde7aa64b8ca4c5da8acb0d8fa3317f))
 
 ## [0.2.0](https://github.com/Alpaq92/MenYou/compare/v0.1.1...v0.2.0) (2026-06-04)
 

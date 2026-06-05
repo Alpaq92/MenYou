@@ -27,11 +27,11 @@
   "SelectUploadedTheme": "Selecionar um tema enviado",
   "Places": "Locais",
   "Developer": "Desenvolvedor",
-  "UseDiscoveryCache": "Cache da lista de aplicativos",
-  "UseDiscoveryCacheDescription": "Desenha o menu instantaneamente a partir de um instantâneo salvo em uma inicialização a frio e atualiza em segundo plano. Uma verificação rápida de arquivos garante que uma lista de aplicativos alterada nunca seja mostrada desatualizada.",
-  "ImmediateReveal": "Abrir imediatamente",
-  "ImmediateRevealDescription": "Mostra o menu no instante em que você o abre e preenche os blocos à medida que os aplicativos são encontrados, em vez de esperar a verificação terminar. Afeta apenas uma inicialização a frio — com o cache quente, o menu já está preenchido.",
-  "DiagnosticLogging": "Registro",
-  "DiagnosticLoggingDescription": "Grava um rastreamento de diagnóstico em %TEMP%\\menyou-hooks.log para solucionar problemas de inicialização e hooks. Desativado por padrão; o registro é apagado na inicialização quando ultrapassa o tamanho abaixo.",
+  "UseDiscoveryCache": "Cache de aplicativos",
+  "UseDiscoveryCacheDescription": "Acelera o início a frio carregando a lista de aplicativos a partir de um cache atualizado regularmente.",
+  "ImmediateReveal": "Abertura suave",
+  "ImmediateRevealDescription": "Mostra o menu o mais rápido possível e preenche os blocos à medida que carregam. Afeta apenas o início a frio — com o cache pronto, o menu já está preenchido.",
+  "DiagnosticLogging": "Registro de diagnóstico",
+  "DiagnosticLoggingDescription": "Grava registros de diagnóstico em %TEMP%\\menyou-hooks.log para solução de problemas de inicialização e hooks. Desativado por padrão; o registro é apagado na inicialização quando ultrapassa o tamanho indicado abaixo.",
   "LogSize": "Tamanho"
 }

@@ -9,7 +9,12 @@
         ".": {
             "package-name": "MenYou",
             "changelog-path": "CHANGELOG.md",
-            "extra-files": []
+            "extra-files": [
+                {
+                    "type": "generic",
+                    "path": "src/MenYou/MenYou.csproj"
+                }
+            ]
         }
     },
     "changelog-sections": [
