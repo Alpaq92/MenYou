@@ -13,8 +13,8 @@
 #
 # Merging the Release PR pushes the tag v<version>. That tag push triggers
 # the existing .github/workflows/release.yml — which publishes the GitHub
-# Release, signs the installer via SignPath, and pushes to winget / Scoop /
-# Chocolatey.
+# Release (unsigned; see that file's header for why) and pushes to
+# winget / Scoop / Chocolatey.
 #
 # IMPORTANT: this workflow needs RELEASE_PLEASE_PAT (a PAT with `repo`
 # scope) so:

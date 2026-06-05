@@ -8,7 +8,8 @@
 #   1. publish      — `dotnet publish` self-contained win-x64.
 #   2. pack         — Inno Setup (iscc) → dist\MenYou-Setup-<ver>.exe.
 #   3. release      — upload the installer to a fresh GitHub Release for the
-#                     tag, with a body carrying recent commits + the SHA-256.
+#                     tag, with a body carrying the unsigned-build note,
+#                     install instructions, the SHA-256, and a CHANGELOG link.
 #   4. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
 #                     Chocolatey using each platform's official-ish
 #                     GitHub Action. Each is `continue-on-error: true`
@@ -18,7 +19,10 @@
 # SmartScreen for an app like this, so MenYou ships unsigned and publishes the
 # installer SHA-256 for integrity instead.
 #
-# Required secrets (set under Repo Settings → Secrets → Actions):
+# Secrets (set under Repo Settings → Secrets → Actions) — all optional. The
+# package-publish jobs are continue-on-error, and the Scoop / Chocolatey jobs
+# short-circuit cleanly when their secret is absent, so a missing secret skips
+# only that channel and never gates the release:
 #
 #   WINGET_PAT     — GitHub PAT with public_repo scope for the winget
 #                    submission (winget-releaser opens a PR against the
@@ -28,7 +32,8 @@
 #                    the (separate) scoop bucket repo. Without it the
 #                    scoop step is skipped.
 #
-#   CHOCO_API_KEY  — Chocolatey community feed API key.
+#   CHOCO_API_KEY  — Chocolatey community feed API key. Without it the
+#                    Chocolatey step is skipped.
 #
 # --------------------------------------------------------------------------
 name: release
