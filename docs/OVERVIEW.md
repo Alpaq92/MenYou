@@ -4,8 +4,9 @@ MenYou is a Windows Start-menu replacement written in C# on
 [Avalonia](https://avaloniaui.net/). Instead of reinventing the shell, it
 reads Windows' own metadata — localized labels, the account picture,
 taskbar pins, the Start pin layout, and per-app JumpLists — and presents
-it through one of five swappable layouts (Modern/Windows 7, Windows 11,
-Linux Mint Cinnamon, Classic XP, Classic 9x). It is deliberately
+it through one of five swappable layouts (Windows 11 — the default —
+Modern/Windows 7, Linux Mint Cinnamon, Classic XP, Classic 9x). It is
+deliberately
 Windows-only (`[SupportedOSPlatform("windows")]` throughout), even though
 Avalonia itself is cross-platform.
 
@@ -56,13 +57,43 @@ ramp into app resources automatically.
   is the toggle (the approach Open-Shell also recommends).
 - *Foreground activation* — Win 11's focus-stealing prevention leaves a
   freshly shown window inactive, so `Win32Foreground.Bring` does the
-  `AttachThreadInput` → `SetForegroundWindow` dance. The Settings window
-  also gets a startup `WarmupSettings` pass that realizes its control tree
-  off-screen so the first open isn't slow.
+  `AttachThreadInput` → `SetForegroundWindow` dance.
 - *Window sizing re-measure* — the five layouts are stacked in one
   `SizeToContent` window gated by `IsVisible`; `ShowMenu` toggles
   `SizeToContent` after bindings resolve so the window fits only the active
   layout.
+
+**Startup performance**
+- *App-discovery cache* — `AppDiscoveryService` persists the resolved app
+  list to `%AppData%\MenYou\discovery-cache.json` (`DiscoveryCache`). On a
+  cold start it paints from that snapshot — a plain file read, no shell COM,
+  so it sidesteps the ~5× COM slowdown while Windows is still bringing up the
+  shell. Because that path is COM-free, `PreloadFromCacheAsync` runs it
+  *eagerly at the very start of startup* (≈150 ms in) instead of waiting for
+  the idle warm-up, so the menu's data is ready almost immediately. A cheap,
+  COM-free filesystem fingerprint (paths + mtimes + sizes) gates the snapshot,
+  so a changed Start Menu is never shown stale, and a background live scan
+  always runs as a backstop (after a settle delay) — swapping in and firing
+  `Refreshed` only if the list actually changed. Toggle: Settings → Developer
+  → *App-list cache*.
+- *Immediate reveal* — by default the menu reveals the instant it's opened
+  and fills tiles in as discovery resolves, instead of gating the reveal on
+  the full scan. Off = wait for data first (never an empty frame). Toggle:
+  Settings → Developer → *Open immediately*.
+- *Warm-up + pre-render* — at `ApplicationIdle` the window is built, its data
+  loaded, then the populated tree is realized once off-screen (transparent,
+  unactivated), so the first real open is instant. `LoadAsync` is
+  single-flight; the pinned/recent rebuild is diff-aware (unchanged tiles
+  keep their icons — no cog flash on repeat opens); the reveal runs at
+  `DispatcherPriority.Loaded` (≈1 frame, not starved at `Background`).
+- *Parallel discovery* — the `.lnk` walk parses shortcuts across cores
+  (`Parallel.For`) and overlaps the `shell:AppsFolder` UWP enumeration.
+
+**Diagnostics** — `HookTrace` writes an opt-in trace (hook events + load
+timings) to `%TEMP%\menyou-hooks.log`. Off by default; enable via Settings →
+Developer → *Logging* (or the `MENYOU_TRACE_HOOKS=1` env var). A background
+sweep on startup drops the log once it passes the configured size (Developer
+→ *Size (MB)*) or is a few days old.
 
 **Reading the real shell**
 - *Localized labels* — `Strings.cs` resolves `@%SystemRoot%\System32\<dll>,
@@ -147,8 +178,9 @@ Everything MenYou persists lives under `%AppData%\MenYou\`:
 
 | Path | What |
 |---|---|
-| `settings.json` | `Models/UserSettings` — mirror state, pin/exclusion lists, per-skin selection, accent override, custom-theme toggle + active XAML, the `SeenAppIds` baseline, and one-shot migration flags. |
+| `settings.json` | `Models/UserSettings` — mirror state, pin/exclusion lists, per-skin selection, accent override, custom-theme toggle + active XAML, the `SeenAppIds` baseline, the Developer-tab flags (cache / immediate-reveal / logging), and one-shot migration flags. |
 | `CustomThemes\*.axaml` | Custom-theme files imported via Settings → Custom → Load. |
+| `discovery-cache.json` | Persisted app-discovery snapshot (`DiscoveryCache`) for instant cold-start paint. Rebuilt automatically when the Start Menu changes; safe to delete. |
 
 See [`AUTOMATION.md`](AUTOMATION.md) for CI/CD, signing, and distribution,
 [`THEMING.md`](THEMING.md) for authoring custom themes, and

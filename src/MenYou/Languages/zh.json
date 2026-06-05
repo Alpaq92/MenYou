@@ -35,5 +35,13 @@
   "StyleWindows11": "Windows 11",
   "StyleWindows11Desc": "顶部搜索、磁贴网格、底栏显示账户和电源",
   "StyleMintCinnamon": "Mint Cinnamon",
-  "StyleMintCinnamonDesc": "深色侧栏含固定项和位置，程序在内容区"
+  "StyleMintCinnamonDesc": "深色侧栏含固定项和位置，程序在内容区",
+  "Developer": "开发者",
+  "UseDiscoveryCache": "应用列表缓存",
+  "UseDiscoveryCacheDescription": "冷启动时立即从已保存的快照绘制菜单，然后在后台刷新。快速的文件检查确保更改后的应用列表绝不会显示为过时。",
+  "ImmediateReveal": "立即打开",
+  "ImmediateRevealDescription": "在您打开菜单的瞬间显示它，并随着找到应用而填充磁贴，而不是等待扫描完成。仅影响冷启动——缓存预热后菜单已填充。",
+  "DiagnosticLogging": "日志记录",
+  "DiagnosticLoggingDescription": "将诊断跟踪写入 %TEMP%\\menyou-hooks.log，用于排查启动和挂钩问题。默认关闭；日志在超过下面的大小后于启动时清除。",
+  "LogSize": "大小"
 }

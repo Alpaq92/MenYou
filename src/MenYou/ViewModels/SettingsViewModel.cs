@@ -183,6 +183,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private int _menuHeight;
     [ObservableProperty] private string? _pushStatus;
 
+    // ---- Developer tab ---------------------------------------------------
+    [ObservableProperty] private bool _useDiscoveryCache;
+    [ObservableProperty] private bool _immediateMenuReveal;
+    [ObservableProperty] private bool _diagnosticLogging;
+    [ObservableProperty] private int _maxLogSizeMb;
+
     /// Status line under the "Sprawdź aktualizacje" button. null = no
     /// recent check; otherwise one of the four phrases below
     /// (Checking / UpToDate / Downloaded / Failed). Cleared on dialog
@@ -257,6 +263,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _maxRecentItems = s.MaxRecentItems;
         _menuWidth = s.MenuWidth;
         _menuHeight = s.MenuHeight;
+        _useDiscoveryCache = s.UseDiscoveryCache;
+        _immediateMenuReveal = s.ImmediateMenuReveal;
+        _diagnosticLogging = s.DiagnosticLogging;
+        _maxLogSizeMb = s.MaxLogSizeMb;
     }
 
     [RelayCommand]
@@ -289,9 +299,17 @@ public sealed partial class SettingsViewModel : ViewModelBase
         s.MaxRecentItems = MaxRecentItems;
         s.MenuWidth = MenuWidth;
         s.MenuHeight = MenuHeight;
+        s.UseDiscoveryCache = UseDiscoveryCache;
+        s.ImmediateMenuReveal = ImmediateMenuReveal;
+        s.DiagnosticLogging = DiagnosticLogging;
+        s.MaxLogSizeMb = MaxLogSizeMb;
         _settings.Save();
         _autostart.SetEnabled(StartWithWindows);
         _hotkey.ApplyBindings(s);
+        // Apply the logging toggle immediately so it takes effect without a
+        // restart (the settings.Changed subscription also covers this, but
+        // doing it here keeps the behaviour obvious).
+        HookTrace.SetEnabled(DiagnosticLogging);
     }
 
     /// Writes MenYou's pin list to the ConfigureStartPins policy and
@@ -357,6 +375,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
         MaxRecentItems = s.MaxRecentItems;
         MenuWidth = s.MenuWidth;
         MenuHeight = s.MenuHeight;
+        UseDiscoveryCache = s.UseDiscoveryCache;
+        ImmediateMenuReveal = s.ImmediateMenuReveal;
+        DiagnosticLogging = s.DiagnosticLogging;
+        MaxLogSizeMb = s.MaxLogSizeMb;
     }
 
     /// Hits the GitHub Releases feed and, if a newer version exists,

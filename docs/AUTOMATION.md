@@ -104,7 +104,12 @@ doesn't trigger workflows); the Crowdin steps additionally need the
 
 ### `release.yml`
 Tag push `v*.*.*` + `workflow_dispatch`. Publishes the self-contained x64
-build, compiles the Inno installer, **optionally** signs it via SignPath,
+build **with ReadyToRun** (`-p:PublishReadyToRun=true`) — crossgen2
+AOT-compiles the app + Avalonia to native images so startup skips JITing
+those paths (measured ~halved framework startup; ~16 MB larger). The JIT
+stays as a fallback, so the runtime-XAML custom-theme feature is unaffected
+(unlike NativeAOT, which would break it). Then it compiles the Inno
+installer, **optionally** signs it via SignPath,
 creates the GitHub Release, and fans out to winget / Scoop / Chocolatey
 (each `continue-on-error`, so one channel's flake doesn't block the rest).
 Signing is optional: with SignPath secrets absent, the release still ships

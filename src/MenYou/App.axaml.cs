@@ -38,10 +38,29 @@ public partial class App : Application
         Jeek.Avalonia.Localization.Localizer.SetLocalizer(
             new MenYou.Services.AvaloniaResourceLocalizer());
         Services = BuildServices();
+        // Eagerly warm app discovery FROM THE CACHE (file I/O only, no shell
+        // COM, so — unlike a live scan — it doesn't suffer the startup COM
+        // contention). This makes the menu's data ready almost immediately,
+        // well before the ApplicationIdle warm-up, so an early first open
+        // isn't left waiting. A cache miss is a no-op here; the warm-up does
+        // the live scan at idle.
+        _ = Services.GetRequiredService<IAppDiscoveryService>().PreloadFromCacheAsync();
         EnsureAutostartDefault();
         ApplyTheme(Services.GetRequiredService<ISettingsService>().Current.Theme);
         Services.GetRequiredService<ISettingsService>().Changed += () =>
             Dispatcher.UIThread.Post(() => ApplyTheme(Services.GetRequiredService<ISettingsService>().Current.Theme));
+
+        // Diagnostic logging: off by default, driven by the Developer-tab
+        // toggle (the MENYOU_TRACE_HOOKS env var still force-enables it for
+        // pre-settings debugging). SetEnabled just flips a flag, so no
+        // dispatcher hop is needed on change. Then sweep any old/oversized log
+        // from a prior session off the UI thread so it never blocks startup.
+        var devSettings = Services.GetRequiredService<ISettingsService>();
+        HookTrace.SetEnabled(devSettings.Current.DiagnosticLogging);
+        devSettings.Changed += () => HookTrace.SetEnabled(
+            Services.GetRequiredService<ISettingsService>().Current.DiagnosticLogging);
+        var maxLogBytes = (long)Math.Max(1, devSettings.Current.MaxLogSizeMb) * 1024 * 1024;
+        _ = Task.Run(() => HookTrace.Cleanup(maxLogBytes, TimeSpan.FromDays(7)));
         if (PlatformSettings is not null)
         {
             PlatformSettings.ColorValuesChanged += (_, _) =>
@@ -59,7 +78,9 @@ public partial class App : Application
         }
 
         SetupTrayIcon();
+        HookTrace.Log("Startup: tray done");
         SetupHotkey();
+        HookTrace.Log("Startup: hotkey done");
         SetupForegroundWatcher();
         SetupIpcListener();
         SetupLaunchHider();
@@ -69,6 +90,7 @@ public partial class App : Application
         _ = SeedPinnedAsync();
         _ = SetupStartMirrorAsync();
         _ = LoadFallbackIconAsync();
+        HookTrace.Log("Startup: sync init done (async tasks kicked off)");
         // React to the user toggling MirrorWindowsStart in Settings.
         Services.GetRequiredService<ISettingsService>().Changed += () =>
             Dispatcher.UIThread.Post(() => _ = ApplyMirrorStateAsync());
@@ -81,7 +103,14 @@ public partial class App : Application
         // empty menu for hundreds of ms. With it, both costs are paid
         // during idle time before the user does anything; first show is
         // instant.
-        Dispatcher.UIThread.Post(WarmupStartMenu, DispatcherPriority.ApplicationIdle);
+        // Priority matters a LOT here. ApplicationIdle / Background are starved
+        // for ~1.4 s during startup by Avalonia's continuous render-timer work,
+        // so the warm-up (build window + pre-render) didn't run until ~+2.1 s —
+        // the window wasn't ready for an early open. Input priority drains as
+        // soon as the synchronous init finishes (~+0.7 s, measured), and the UI
+        // thread is genuinely free by then (the heavy async tasks are
+        // off-thread), so the window is realized ~1.5 s sooner.
+        Dispatcher.UIThread.Post(WarmupStartMenu, DispatcherPriority.Input);
         // NOTE: there is deliberately no Settings-window warm-up. It used to
         // Show() a throwaway off-screen, Opacity=0 SettingsWindow during idle
         // to pre-realize its control tree — but at a cold first launch (just
@@ -128,6 +157,7 @@ public partial class App : Application
                 if (folder is not null)
                     ViewModels.Items.MenuItemViewModel.FolderFallbackIcon = folder;
             });
+            HookTrace.Log("Startup: fallback icons loaded");
         }
         catch
         {
@@ -140,9 +170,19 @@ public partial class App : Application
     {
         try
         {
+            // Defer the heavy initial sync. _startMirror.StartAsync runs
+            // Export-StartLayout (PowerShell) which takes ~1.9 s and saturates
+            // the UI thread — running it during the first couple seconds blocks
+            // the window warm-up (ApplicationIdle) and any early open. The
+            // Pinned section already shows the seeded/cached pins; the mirror
+            // only keeps it live-synced, so it can start a beat later. The
+            // delay runs off the UI thread so it parks nothing on it.
+            await Task.Delay(2500).ConfigureAwait(false);
             _startMirror = Services.GetRequiredService<IWin11StartMirror>();
             _startMirror.StatusChanged += OnMirrorStatusChanged;
+            HookTrace.Log("Startup: StartMirror.StartAsync begin");
             await _startMirror.StartAsync();
+            HookTrace.Log("Startup: StartMirror.StartAsync done");
         }
         catch
         {
@@ -212,6 +252,7 @@ public partial class App : Application
             var pin = Services.GetRequiredService<IPinService>();
             var discovery = Services.GetRequiredService<IAppDiscoveryService>();
             await pin.EnsureSeededAsync(discovery);
+            HookTrace.Log("Startup: pin seed done");
         }
         catch
         {
@@ -253,7 +294,12 @@ public partial class App : Application
                 if (_startMenu is { IsVisible: true, IsSettling: false } &&
                     Services.GetRequiredService<ISettingsService>().Current.HideOnFocusLost)
                 {
+                    HookTrace.Log("App.ForegroundWatcher: foreground left our process -> HideMenu");
                     _startMenu.HideMenu();
+                }
+                else if (_startMenu is { IsVisible: true } menu)
+                {
+                    HookTrace.Log($"App.ForegroundWatcher: foreground left but skipped (settling={menu.IsSettling})");
                 }
             });
     }
@@ -508,9 +554,11 @@ public partial class App : Application
     {
         if (_startMenu is { IsVisible: true })
         {
+            HookTrace.Log("App.ToggleStartMenu: visible -> HideMenu");
             _startMenu.HideMenu();
             return;
         }
+        HookTrace.Log("App.ToggleStartMenu: hidden -> ShowMenu");
         EnsureStartMenu();
         _startMenu!.ShowMenu();
     }
@@ -540,13 +588,16 @@ public partial class App : Application
     private void EnsureStartMenu()
     {
         if (_startMenu is not null) return;
+        HookTrace.Log("EnsureStartMenu: resolving StartMenuViewModel");
         var vm = Services.GetRequiredService<StartMenuViewModel>();
+        HookTrace.Log("EnsureStartMenu: VM resolved; constructing window");
         vm.OpenSettingsRequested = () =>
         {
             _startMenu?.HideMenu();
             ShowSettings();
         };
         _startMenu = new StartMenuWindow { DataContext = vm };
+        HookTrace.Log("EnsureStartMenu: window object built");
     }
 
     /// One-shot warm-up scheduled at app startup. Builds the menu
@@ -555,7 +606,9 @@ public partial class App : Application
     /// first Shift+Win press has nothing to wait for.
     private void WarmupStartMenu()
     {
+        HookTrace.Log("WarmupStartMenu: called (about to construct window)");
         EnsureStartMenu();
+        HookTrace.Log("WarmupStartMenu: window constructed");
         if (_startMenu?.DataContext is StartMenuViewModel vm)
             _ = WarmupSequenceAsync(vm);
     }
@@ -572,8 +625,10 @@ public partial class App : Application
     /// populated layout; this sequence moves that into idle time.
     private async Task WarmupSequenceAsync(StartMenuViewModel vm)
     {
+        HookTrace.Log("Warmup: begin (ApplicationIdle fired)");
         await vm.LoadAsync();
         vm.MarkWarmLoaded();
+        HookTrace.Log("Warmup: data loaded, pre-rendering window");
         _startMenu?.PreRender();
     }
 

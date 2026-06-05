@@ -35,5 +35,13 @@
   "StyleWindows11": "Windows 11",
   "StyleWindows11Desc": "Búsqueda arriba, cuadrícula de iconos, cuenta y energía en la barra inferior",
   "StyleMintCinnamon": "Mint Cinnamon",
-  "StyleMintCinnamonDesc": "Barra lateral oscura con anclados y ubicaciones, programas en el panel"
+  "StyleMintCinnamonDesc": "Barra lateral oscura con anclados y ubicaciones, programas en el panel",
+  "Developer": "Desarrollador",
+  "UseDiscoveryCache": "Caché de lista de aplicaciones",
+  "UseDiscoveryCacheDescription": "Dibuja el menú al instante desde una instantánea guardada en un inicio en frío y luego se actualiza en segundo plano. Una comprobación rápida de archivos garantiza que una lista de aplicaciones modificada nunca se muestre desactualizada.",
+  "ImmediateReveal": "Abrir inmediatamente",
+  "ImmediateRevealDescription": "Muestra el menú en el instante en que lo abres y rellena los mosaicos a medida que se encuentran aplicaciones, en lugar de esperar a que termine el análisis. Solo afecta a un inicio en frío: con la caché en caliente el menú ya está poblado.",
+  "DiagnosticLogging": "Registro",
+  "DiagnosticLoggingDescription": "Escribe un seguimiento de diagnóstico en %TEMP%\\menyou-hooks.log para solucionar problemas de inicio y hooks. Desactivado de forma predeterminada; el registro se borra al iniciar una vez que supera el tamaño indicado abajo.",
+  "LogSize": "Tamaño"
 }

@@ -35,5 +35,13 @@
   "StyleWindows11": "Windows 11",
   "StyleWindows11Desc": "上部に検索、タイル グリッド、下部バーにアカウントと電源",
   "StyleMintCinnamon": "Mint Cinnamon",
-  "StyleMintCinnamonDesc": "ピン留めと場所のダーク サイドバー、プログラムはコンテンツ ペインに"
+  "StyleMintCinnamonDesc": "ピン留めと場所のダーク サイドバー、プログラムはコンテンツ ペインに",
+  "Developer": "開発者",
+  "UseDiscoveryCache": "アプリ一覧キャッシュ",
+  "UseDiscoveryCacheDescription": "コールドスタート時に保存済みスナップショットからメニューを即座に表示し、バックグラウンドで更新します。高速なファイル確認により、変更されたアプリ一覧が古いまま表示されることはありません。",
+  "ImmediateReveal": "すぐに開く",
+  "ImmediateRevealDescription": "スキャンの完了を待たずに、開いた瞬間にメニューを表示し、アプリが見つかるごとにタイルを埋めます。コールドスタートにのみ影響します。キャッシュが温まっている場合、メニューはすでに表示されています。",
+  "DiagnosticLogging": "ログ記録",
+  "DiagnosticLoggingDescription": "起動とフックのトラブルシューティング用に、診断トレースを %TEMP%\\menyou-hooks.log に書き込みます。既定ではオフです。ログは下記のサイズを超えると起動時に消去されます。",
+  "LogSize": "サイズ"
 }

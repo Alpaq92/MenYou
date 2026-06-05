@@ -25,5 +25,13 @@
   "Forget": "Esquecer",
   "UseCustomTheme": "Usar tema personalizado",
   "SelectUploadedTheme": "Selecionar um tema enviado",
-  "Places": "Locais"
+  "Places": "Locais",
+  "Developer": "Desenvolvedor",
+  "UseDiscoveryCache": "Cache da lista de aplicativos",
+  "UseDiscoveryCacheDescription": "Desenha o menu instantaneamente a partir de um instantâneo salvo em uma inicialização a frio e atualiza em segundo plano. Uma verificação rápida de arquivos garante que uma lista de aplicativos alterada nunca seja mostrada desatualizada.",
+  "ImmediateReveal": "Abrir imediatamente",
+  "ImmediateRevealDescription": "Mostra o menu no instante em que você o abre e preenche os blocos à medida que os aplicativos são encontrados, em vez de esperar a verificação terminar. Afeta apenas uma inicialização a frio — com o cache quente, o menu já está preenchido.",
+  "DiagnosticLogging": "Registro",
+  "DiagnosticLoggingDescription": "Grava um rastreamento de diagnóstico em %TEMP%\\menyou-hooks.log para solucionar problemas de inicialização e hooks. Desativado por padrão; o registro é apagado na inicialização quando ultrapassa o tamanho abaixo.",
+  "LogSize": "Tamanho"
 }

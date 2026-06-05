@@ -53,11 +53,18 @@
                      "Use custom theme" toggle is off (the default). When
                      UseCustomTheme flips on at Apply, this entire group
                      hides and the ContentControl below takes over. -->
+                <!-- Built-in layouts. Visible only when the master
+                     "Use custom theme" toggle is off (the default). When
+                     UseCustomTheme flips on at Apply, this entire group
+                     hides and the ContentControl below takes over. -->
                 <Grid IsVisible="{Binding !UseCustomTheme}">
-                    <layouts:Win7Layout
-                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Win7}" />
+                    <!-- Windows 11 first: it's the default style (see
+                         UserSettings.MenuStyle), so it's the layout the
+                         post-login warm-up renders on the common path. -->
                     <layouts:Windows11Layout
                         IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Windows11}" />
+                    <layouts:Win7Layout
+                        IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=Win7}" />
                     <layouts:MintCinnamonLayout
                         IsVisible="{Binding MenuStyle, Converter={StaticResource EnumEquals}, ConverterParameter=MintCinnamon}" />
                     <layouts:Classic1Layout

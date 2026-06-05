@@ -24,5 +24,13 @@
   "Forget": "삭제",
   "UseCustomTheme": "사용자 지정 테마 사용",
   "SelectUploadedTheme": "업로드한 테마 선택",
-  "Places": "위치"
+  "Places": "위치",
+  "Developer": "개발자",
+  "UseDiscoveryCache": "앱 목록 캐시",
+  "UseDiscoveryCacheDescription": "콜드 스타트 시 저장된 스냅샷에서 메뉴를 즉시 표시한 다음 백그라운드에서 새로 고칩니다. 빠른 파일 확인으로 변경된 앱 목록이 오래된 상태로 표시되지 않습니다.",
+  "ImmediateReveal": "즉시 열기",
+  "ImmediateRevealDescription": "스캔이 끝나기를 기다리지 않고 메뉴를 여는 즉시 표시하고 앱이 발견되는 대로 타일을 채웁니다. 콜드 스타트에만 영향을 미칩니다. 캐시가 준비된 경우 메뉴는 이미 채워져 있습니다.",
+  "DiagnosticLogging": "로깅",
+  "DiagnosticLoggingDescription": "시작 및 후크 문제 해결을 위해 진단 추적을 %TEMP%\\menyou-hooks.log에 기록합니다. 기본적으로 꺼져 있습니다. 로그는 아래 크기를 초과하면 시작 시 지워집니다.",
+  "LogSize": "크기"
 }

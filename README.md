@@ -1,10 +1,10 @@
 # MenYou
 
 A Windows Start-menu replacement written in C# / Avalonia. Ships five
-built-in looks — Modern (Windows 7), Windows 11, Linux Mint Cinnamon,
-Classic XP and Classic 9x — rendered on top of modern Windows shell
-metadata (localized labels, account picture, taskbar pins, Start mirror,
-JumpLists) rather than reinventing them.
+built-in looks — Windows 11 (the default), Modern (Windows 7), Linux Mint
+Cinnamon, Classic XP and Classic 9x — rendered on top of modern Windows
+shell metadata (localized labels, account picture, taskbar pins, Start
+mirror, JumpLists) rather than reinventing them.
 
 > [!TIP]
 > Press **Shift+Win** to toggle the menu.

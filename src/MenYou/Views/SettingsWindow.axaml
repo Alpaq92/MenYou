@@ -75,21 +75,32 @@
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="Margin" Value="0,2,0,4" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="MaxWidth" Value="660" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Border.help-flush">
             <Setter Property="Background" Value="{DynamicResource MenuBackgroundAltBrush}" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="12,8" />
             <Setter Property="Margin" Value="0,2,0,4" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="MaxWidth" Value="660" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
         <Style Selector="Border.help > TextBlock, Border.help-flush > TextBlock">
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Foreground" Value="{DynamicResource MenuForegroundMutedBrush}" />
             <Setter Property="FontSize" Value="11" />
+        </Style>
+
+        <!-- Smaller tab headers so all five tabs (Appearance, Advanced,
+             Synchronization, Custom, Developer) fit on a single line at the
+             720 px window width instead of wrapping to two. MinHeight is set
+             to a middle value: the Fluent default (~48) leaves the active-tab
+             underline too far below the now-smaller 14 px label, while 0
+             squashes it against the text — ~34 keeps the indicator a normal
+             gap below the label. -->
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="MinHeight" Value="34" />
+            <Setter Property="Padding" Value="10,4" />
         </Style>
     </Window.Styles>
 
@@ -340,6 +351,38 @@
                                 <ContentControl Content="{Binding CustomThemeXaml, Converter={x:Static conv:XamlStringToControlConverter.Instance}}" />
                             </Viewbox>
                         </Border>
+                    </Grid>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="{x:Static loc:Strings.Developer}">
+                <StackPanel Spacing="6">
+                    <CheckBox Content="{x:Static loc:Strings.UseDiscoveryCache}"
+                              IsChecked="{Binding UseDiscoveryCache, Mode=TwoWay}" />
+                    <Border Classes="help">
+                        <TextBlock Text="{x:Static loc:Strings.UseDiscoveryCacheDescription}" />
+                    </Border>
+                    <CheckBox Content="{x:Static loc:Strings.ImmediateReveal}"
+                              IsChecked="{Binding ImmediateMenuReveal, Mode=TwoWay}" />
+                    <Border Classes="help">
+                        <TextBlock Text="{x:Static loc:Strings.ImmediateRevealDescription}" />
+                    </Border>
+                    <CheckBox Content="{x:Static loc:Strings.DiagnosticLogging}"
+                              IsChecked="{Binding DiagnosticLogging, Mode=TwoWay}" />
+                    <Border Classes="help">
+                        <TextBlock Text="{x:Static loc:Strings.DiagnosticLoggingDescription}" />
+                    </Border>
+                    <!-- Match the Appearance tab's labeled-control grid:
+                         220 px label column + a stretching control column, so
+                         the NumericUpDown is full-width and aligned like the
+                         menu-width/height fields, not a tiny right-aligned box. -->
+                    <Grid ColumnDefinitions="220,*" ColumnSpacing="12" Margin="0,6,0,0">
+                        <TextBlock Grid.Column="0"
+                                   Text="{x:Static loc:Strings.MaxLogSizeMb}"
+                                   VerticalAlignment="Center" />
+                        <NumericUpDown Grid.Column="1"
+                                       Minimum="1" Maximum="100" Increment="1"
+                                       Value="{Binding MaxLogSizeMb, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>
             </TabItem>

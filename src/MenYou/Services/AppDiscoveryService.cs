@@ -15,6 +15,9 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly List<FileSystemWatcher> _watchers = new();
     private Timer? _invalidateDebounce;
+    private readonly ISettingsService _settings;
+
+    public event Action? Refreshed;
 
     private static readonly string[] StartMenuRoots =
     {
@@ -22,8 +25,10 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu),
     };
 
-    public AppDiscoveryService()
+    public AppDiscoveryService(ISettingsService settings)
     {
+        _settings = settings;
+
         // Watch both Start Menu roots so newly installed apps (Windows
         // installers drop a .lnk into one of these) appear without a
         // MenYou restart. Changes are debounced because installers
@@ -83,6 +88,38 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
 
     public AppEntry? FindById(string id) => _byId.GetValueOrDefault(id);
 
+    public async Task PreloadFromCacheAsync()
+    {
+        if (!_settings.Current.UseDiscoveryCache) return;
+        if (_root is not null && _flat is not null) return;
+
+        // Fingerprint walk + JSON load run on the thread pool. CRITICAL:
+        // ConfigureAwait(false) keeps the continuation OFF the UI thread —
+        // otherwise it queues behind the ~1.5 s of UI-thread startup work and
+        // doesn't resume until ApplicationIdle, by which point the warm-up has
+        // already loaded the data and this early-returns (i.e. the preload
+        // gives no benefit at all). None of this touches UI state, so off-thread
+        // is correct: Apply mutates plain data under the lock.
+        var fingerprint = await Task.Run(ComputeFingerprint).ConfigureAwait(false);
+        var cached = await Task.Run(DiscoveryCache.TryLoad).ConfigureAwait(false);
+        if (cached is null || cached.Fingerprint != fingerprint) return;
+
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_root is not null && _flat is not null) return;
+            Apply(cached.Root, cached.Flat);
+            HookTrace.Log($"Discovery: eager cache preload ({cached.Flat.Count} apps, {cached.Root.Folders.Count} folders)");
+            // Run the live backstop, but after a settle delay so its COM work
+            // doesn't fight the rest of startup (the menu already has data).
+            _ = RefreshLiveInBackgroundAsync(settleDelayMs: 2500);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     private async Task EnsureLoadedAsync(CancellationToken ct)
     {
         if (_root is not null && _flat is not null) return;
@@ -90,36 +127,189 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         try
         {
             if (_root is not null && _flat is not null) return;
-            var root = new MenuFolder { Name = "Programs", Path = "<merged>" };
-            var flat = new List<AppEntry>(256);
 
-            // .lnk discovery (filesystem walk + per-item shell-localization)
-            // and the shell:AppsFolder UWP enumeration run in parallel — both
-            // are COM-heavy, so overlapping them roughly halves the wall time.
-            var uwpTask = UwpAppEnumerator.EnumerateAsync(ct);
-            foreach (var dir in StartMenuRoots.Where(Directory.Exists).Select(p => Path.Combine(p, "Programs")))
+            // Cache path: if enabled and the on-disk snapshot's fingerprint
+            // still matches the live Start Menu (a fast, COM-free filesystem
+            // signature), serve it for an instant cold paint — then run a
+            // background live scan as a backstop for changes the .lnk
+            // fingerprint can't see (e.g. a Store app with no shortcut).
+            if (_settings.Current.UseDiscoveryCache)
             {
-                if (!Directory.Exists(dir)) continue;
-                await Task.Run(() => Merge(root, dir, flat), ct);
+                var fingerprint = await Task.Run(ComputeFingerprint, ct);
+                var cached = DiscoveryCache.TryLoad();
+                if (cached is not null && cached.Fingerprint == fingerprint)
+                {
+                    Apply(cached.Root, cached.Flat);
+                    HookTrace.Log($"Discovery: cache hit ({cached.Flat.Count} apps, {cached.Root.Folders.Count} folders)");
+                    _ = RefreshLiveInBackgroundAsync();
+                    return;
+                }
             }
-            var uwp = await uwpTask;
 
-            // Deduplicate by id, keep first
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            flat = flat.Where(a => seen.Add(a.Id)).ToList();
-
-            MergeUwp(root, flat, uwp);
-
-            SortRecursive(root);
-            _byId.Clear();
-            foreach (var a in flat) _byId[a.Id] = a;
-            _root = root;
-            _flat = flat;
+            var (root, flat) = await DiscoverLiveAsync(ct);
+            Apply(root, flat);
+            if (_settings.Current.UseDiscoveryCache)
+                await Task.Run(() => DiscoveryCache.Save(root, flat, ComputeFingerprint()), ct);
         }
         finally
         {
             _lock.Release();
         }
+    }
+
+    /// Runs the full live scan: the filesystem .lnk walk (per-item shell
+    /// localization) and the shell:AppsFolder UWP enumeration in parallel —
+    /// both COM-heavy, so overlapping them roughly halves the wall time.
+    /// Builds entirely local state, so it's safe to call WITHOUT the lock;
+    /// the caller commits the result via <see cref="Apply"/>.
+    private async Task<(MenuFolder Root, List<AppEntry> Flat)> DiscoverLiveAsync(CancellationToken ct)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var root = new MenuFolder { Name = "Programs", Path = "<merged>" };
+        var flat = new List<AppEntry>(256);
+
+        var uwpTask = UwpAppEnumerator.EnumerateAsync(ct);
+        foreach (var dir in StartMenuRoots.Where(Directory.Exists).Select(p => Path.Combine(p, "Programs")))
+        {
+            if (!Directory.Exists(dir)) continue;
+            await Task.Run(() => Merge(root, dir, flat), ct);
+        }
+        var lnkMs = sw.ElapsedMilliseconds;
+        var uwp = await uwpTask;
+        var uwpMs = sw.ElapsedMilliseconds;
+
+        // Deduplicate by id, keep first
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        flat = flat.Where(a => seen.Add(a.Id)).ToList();
+
+        MergeUwp(root, flat, uwp);
+        SortRecursive(root);
+
+        HookTrace.Log($"Discovery: lnk={lnkMs}ms uwp-join={uwpMs}ms total={sw.ElapsedMilliseconds}ms " +
+                      $"({flat.Count} apps, {uwp.Count} uwp)");
+        return (root, flat);
+    }
+
+    /// Commits a discovered tree as the active data set. Caller must hold
+    /// <see cref="_lock"/>.
+    private void Apply(MenuFolder root, List<AppEntry> flat)
+    {
+        _byId.Clear();
+        foreach (var a in flat) _byId[a.Id] = a;
+        _root = root;
+        _flat = flat;
+    }
+
+    /// Backstop after a cache hit: run the live scan off-thread, and if it
+    /// differs from what we painted, swap it in, rewrite the cache, and raise
+    /// <see cref="Refreshed"/> so the menu rebuilds. The .lnk fingerprint
+    /// already catches almost everything up front; this covers the rest
+    /// (UWP-only installs/removals) within ~half a second.
+    private async Task RefreshLiveInBackgroundAsync(int settleDelayMs = 0)
+    {
+        try
+        {
+            // When kicked off by the eager preload, wait for the startup storm
+            // to pass so the COM-heavy live scan runs fast and doesn't contend.
+            if (settleDelayMs > 0) await Task.Delay(settleDelayMs);
+            var (root, flat) = await DiscoverLiveAsync(CancellationToken.None);
+            bool changed;
+            await _lock.WaitAsync();
+            try
+            {
+                changed = _flat is null || !SameApps(_flat, flat);
+                Apply(root, flat);
+            }
+            finally
+            {
+                _lock.Release();
+            }
+            // Only rewrite the cache when the app list actually changed. A
+            // matching backstop — the common case — leaves the existing file
+            // untouched, so the cache is written just on first run and on real
+            // Start-Menu changes, not on every launch. Recompute the
+            // fingerprint so it reflects the state that produced this scan.
+            if (changed)
+            {
+                DiscoveryCache.Save(root, flat, ComputeFingerprint());
+                HookTrace.Log("Discovery: background refresh updated the app list + cache");
+                Refreshed?.Invoke();
+            }
+        }
+        catch
+        {
+            // Background best-effort; the cached data already painted.
+        }
+    }
+
+    private static bool SameApps(List<AppEntry> a, List<AppEntry> b)
+    {
+        if (a.Count != b.Count) return false;
+        var ids = new HashSet<string>(b.Select(e => e.Id), StringComparer.OrdinalIgnoreCase);
+        return a.All(e => ids.Contains(e.Id));
+    }
+
+    /// Cheap, COM-free signature of the app inventory — every Start-Menu entry's
+    /// path + last-write time + size, PLUS the top-level UWP package folders. If
+    /// this matches the fingerprint stored with the cache, the expensive
+    /// shell-resolved data behind it is still valid, so we can reuse it without
+    /// re-running any COM.
+    private static string ComputeFingerprint()
+    {
+        var sb = new StringBuilder(8192);
+        foreach (var root in StartMenuRoots.Where(Directory.Exists))
+        {
+            var programs = Path.Combine(root, "Programs");
+            if (!Directory.Exists(programs)) continue;
+            try
+            {
+                foreach (var path in Directory
+                             .EnumerateFileSystemEntries(programs, "*", SearchOption.AllDirectories)
+                             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+                {
+                    sb.Append(path).Append('|');
+                    try
+                    {
+                        var info = new FileInfo(path);
+                        sb.Append(info.LastWriteTimeUtc.Ticks);
+                        if ((info.Attributes & FileAttributes.Directory) == 0)
+                            sb.Append('|').Append(info.Length);
+                    }
+                    catch { /* entry vanished mid-walk; skip its metadata */ }
+                    sb.Append('\n');
+                }
+            }
+            catch { /* unreadable root; skip */ }
+        }
+
+        // UWP signal — the top-level package folders under %LOCALAPPDATA%\Packages
+        // (one per packaged app). Pure filesystem, NO shell COM (that's the slow
+        // AppsFolder walk we cache to avoid): just the folder names + mtimes. A
+        // Store-app install/uninstall adds/removes a folder, flipping the
+        // fingerprint so the cache invalidates — without this, an uninstalled
+        // UWP app could survive in the cache (no .lnk change to catch it) and
+        // ghost on the next launch. Day-to-day app usage doesn't touch these
+        // top-level folder mtimes (it writes a level deeper, e.g. LocalState),
+        // so this only invalidates on real install/uninstall/first-run.
+        var packages = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Packages");
+        if (Directory.Exists(packages))
+        {
+            try
+            {
+                foreach (var dir in Directory.EnumerateDirectories(packages)
+                             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+                {
+                    sb.Append(dir).Append('|');
+                    try { sb.Append(Directory.GetLastWriteTimeUtc(dir).Ticks); }
+                    catch { /* folder vanished mid-walk */ }
+                    sb.Append('\n');
+                }
+            }
+            catch { /* unreadable; skip */ }
+        }
+
+        return Convert.ToHexString(SHA1.HashData(Encoding.UTF8.GetBytes(sb.ToString())));
     }
 
     /// Merges UWP / packaged apps from Get-StartApps into the discovered

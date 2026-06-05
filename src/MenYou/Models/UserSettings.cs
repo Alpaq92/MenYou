@@ -18,7 +18,12 @@ public enum AppTheme
 
 public sealed class UserSettings
 {
-    public MenuStyle MenuStyle { get; set; } = MenuStyle.Win7;
+    // Windows 11 is the default look — it's the layout new users expect on a
+    // modern machine, so first-run (no settings.json yet) opens to it. The
+    // post-login warm-up and first-paint follow this automatically: the window
+    // renders whichever layout MenuStyle selects. Existing settings.json files
+    // keep their saved value untouched.
+    public MenuStyle MenuStyle { get; set; } = MenuStyle.Windows11;
     public AppTheme Theme { get; set; } = AppTheme.System;
     /// When true, the user-supplied <see cref="CustomThemeXaml"/> is
     /// parsed at runtime via AvaloniaRuntimeXamlLoader and the resulting
@@ -111,4 +116,32 @@ public sealed class UserSettings
     /// off) the Pinned list is authoritative, but ManualPins is still
     /// maintained so the pins carry over if mirroring is later turned on.
     public List<string> ManualPins { get; set; } = new();
+
+    // ---- Developer / advanced -------------------------------------------
+
+    /// When true (default), app discovery is served from a persisted
+    /// snapshot at <c>%AppData%\MenYou\discovery-cache.json</c> on launch —
+    /// a plain file read with no shell COM, so the menu paints instantly on
+    /// a cold start. The live scan still runs in the background and swaps in
+    /// if anything changed. A fast filesystem fingerprint guards against a
+    /// stale snapshot ever being shown. Off = always do the live scan.
+    public bool UseDiscoveryCache { get; set; } = true;
+
+    /// When true (default), the Start menu reveals immediately on open and
+    /// fills its tiles in as discovery resolves, rather than waiting for the
+    /// full scan before showing. Only matters on a cold cache miss; with the
+    /// cache warm the data is already there. Off = wait for data before
+    /// revealing (never shows an empty frame).
+    public bool ImmediateMenuReveal { get; set; } = true;
+
+    /// When true, MenYou writes its opt-in hook/timing trace to
+    /// <c>%TEMP%\menyou-hooks.log</c>. Off by default — this is a developer
+    /// diagnostic. (The <c>MENYOU_TRACE_HOOKS=1</c> environment variable
+    /// force-enables it regardless, for debugging before settings load.)
+    public bool DiagnosticLogging { get; set; } = false;
+
+    /// Cap for the diagnostic log file in megabytes. On startup a background
+    /// sweep deletes the log if it exceeds this size (or is older than a few
+    /// days), so it can never grow unbounded. Default 5 MB.
+    public int MaxLogSizeMb { get; set; } = 5;
 }

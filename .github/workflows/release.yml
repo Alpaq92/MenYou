@@ -90,12 +90,19 @@ jobs:
       - name: Restore
         run: dotnet restore src/MenYou/MenYou.csproj
 
+      # PublishReadyToRun: crossgen2 AOT-compiles the app + Avalonia to native
+      # images (the framework is already R2R in the self-contained runtime
+      # pack), so startup skips JITing those paths — measured ~165 ms faster to
+      # first activity, for ~16 MB extra. The JIT stays in the image as a
+      # fallback, so the runtime-XAML custom-theme feature is unaffected (unlike
+      # NativeAOT, which would break it).
       - name: Publish (Release, win-x64, self-contained)
         run: >
           dotnet publish src/MenYou/MenYou.csproj
           -c Release -r win-x64 --self-contained
           -p:Version=${{ steps.resolve_version.outputs.version }}
           -p:PublishSingleFile=false
+          -p:PublishReadyToRun=true
           -p:DebugType=embedded
           -o publish/win-x64
 

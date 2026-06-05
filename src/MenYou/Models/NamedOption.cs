@@ -19,10 +19,13 @@ public static class NamedOptions
     // JIT picks an unexpected init order. Properties are evaluated lazily
     // on every access and the JIT inlines them at the call site, so the
     // ordering hazard disappears with no measurable cost.
+    // Order = picker/tray display order. Windows 11 leads because it's the
+    // default look (see UserSettings.MenuStyle); the rest descend from modern
+    // to classic.
     public static IReadOnlyList<NamedOption<MenuStyle>> MenuStyles => new[]
     {
-        new NamedOption<MenuStyle>(MenuStyle.Win7,         Strings.StyleWin7,         Strings.StyleWin7Desc),
         new NamedOption<MenuStyle>(MenuStyle.Windows11,    Strings.StyleWindows11,    Strings.StyleWindows11Desc),
+        new NamedOption<MenuStyle>(MenuStyle.Win7,         Strings.StyleWin7,         Strings.StyleWin7Desc),
         new NamedOption<MenuStyle>(MenuStyle.MintCinnamon, Strings.StyleMintCinnamon, Strings.StyleMintCinnamonDesc),
         new NamedOption<MenuStyle>(MenuStyle.Classic2,     Strings.StyleClassic2,     Strings.StyleClassic2Desc),
         new NamedOption<MenuStyle>(MenuStyle.Classic1,     Strings.StyleClassic1,     Strings.StyleClassic1Desc),

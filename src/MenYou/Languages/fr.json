@@ -35,5 +35,13 @@
   "StyleWindows11": "Windows 11",
   "StyleWindows11Desc": "Recherche en haut, grille de tuiles, compte et alimentation en bas",
   "StyleMintCinnamon": "Mint Cinnamon",
-  "StyleMintCinnamonDesc": "Barre latérale sombre avec épinglés et emplacements, programmes dans le volet"
+  "StyleMintCinnamonDesc": "Barre latérale sombre avec épinglés et emplacements, programmes dans le volet",
+  "Developer": "Développeur",
+  "UseDiscoveryCache": "Cache de la liste d'applications",
+  "UseDiscoveryCacheDescription": "Affiche le menu instantanément à partir d'un instantané enregistré lors d'un démarrage à froid, puis l'actualise en arrière-plan. Une vérification rapide des fichiers garantit qu'une liste d'applications modifiée n'est jamais affichée de manière obsolète.",
+  "ImmediateReveal": "Ouvrir immédiatement",
+  "ImmediateRevealDescription": "Affiche le menu dès que vous l'ouvrez et remplit les tuiles à mesure que les applications sont trouvées, au lieu d'attendre la fin de l'analyse. N'affecte qu'un démarrage à froid — avec le cache chaud, le menu est déjà rempli.",
+  "DiagnosticLogging": "Journalisation",
+  "DiagnosticLoggingDescription": "Écrit une trace de diagnostic dans %TEMP%\\menyou-hooks.log pour résoudre les problèmes de démarrage et de hooks. Désactivé par défaut ; le journal est effacé au démarrage dès qu'il dépasse la taille ci-dessous.",
+  "LogSize": "Taille"
 }

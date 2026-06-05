@@ -162,6 +162,31 @@ public static class Strings
     // and reads natively in every Windows locale.
     public static string StartWithWindows        => Resolve("StartWithWindows", $@"@{Sys}\shell32.dll,-21787");
     public static string HideOnFocusLost         => Resolve("HideOnFocusLost");
+
+    // ---- Developer tab ---------------------------------------------------
+    // Developer: a deep SHLoadIndirectString probe over shell32 / twinui /
+    // comres / themecpl / windows.storage / twinui.pcshell found no clean
+    // standalone "Developer" / "Deweloper" resource (the only matches were
+    // unrelated — font caches, "Maximize"), so the tab title comes from the
+    // JSON bundle.
+    public static string Developer               => Resolve("Developer");
+    // Cache + Immediate: no shell-DLL match for a user-facing "cache" noun
+    // (every hit was an internal font/COM cache) or an "open immediately"
+    // phrase, so these are JSON-only.
+    public static string UseDiscoveryCache            => Resolve("UseDiscoveryCache");
+    public static string UseDiscoveryCacheDescription => Resolve("UseDiscoveryCacheDescription");
+    public static string ImmediateReveal              => Resolve("ImmediateReveal");
+    public static string ImmediateRevealDescription   => Resolve("ImmediateRevealDescription");
+    // DiagnosticLogging: comres.dll,-2860 = "Rejestrowanie" / "Logging" — the
+    // COM+ services "Logging" label, the cleanest system-localized word for
+    // the toggle. The "diagnostic" nuance lives in the description below.
+    public static string DiagnosticLogging            => Resolve("DiagnosticLogging", $@"@{Sys}\comres.dll,-2860");
+    public static string DiagnosticLoggingDescription => Resolve("DiagnosticLoggingDescription");
+    // MaxLogSize: shell32.dll,-8978 = "Rozmiar" / "Size" (the file-properties
+    // Size label) + an explicit "(MB)" unit. No single shell string carries
+    // "max log size", so the field label is the system "Size" word with the
+    // unit appended; the description spells out that it's the log cap.
+    public static string MaxLogSizeMb            => $"{Resolve("LogSize", $@"@{Sys}\shell32.dll,-8978")} (MB)";
     // Synchronization: comres.dll,-2027 is the canonical COM-services
     // "Synchronization" string used across Windows sync UIs.
     public static string Synchronization         => Resolve("Synchronization", $@"@{Sys}\comres.dll,-2027");

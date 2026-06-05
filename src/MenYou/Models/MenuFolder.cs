@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MenYou.Models;
 
 /// A folder node in the All Programs tree, mirroring the on-disk Start Menu
@@ -17,8 +19,13 @@ public sealed class MenuFolder
     /// and the other doesn't.
     public string RawName { get; init; } = string.Empty;
 
-    public List<MenuFolder> Folders { get; } = new();
-    public List<AppEntry> Apps { get; } = new();
+    // Settable (not get-only) so System.Text.Json repopulates them when the
+    // discovery cache is deserialized — get-only collection properties are
+    // skipped by the serializer's default object-creation handling, which
+    // otherwise leaves the cached All-Programs tree empty until a live rescan.
+    public List<MenuFolder> Folders { get; set; } = new();
+    public List<AppEntry> Apps { get; set; } = new();
 
+    [JsonIgnore]
     public bool IsEmpty => Folders.Count == 0 && Apps.Count == 0;
 }

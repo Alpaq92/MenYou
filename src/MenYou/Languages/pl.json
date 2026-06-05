@@ -42,5 +42,13 @@
   "Yes": "Tak",
   "No": "Nie",
   "ConfirmEmptyThemeTitle": "Zastosować pusty motyw niestandardowy?",
-  "ConfirmEmptyThemeBody": "„Użyj niestandardowego motywu” jest włączone, ale edytor jest pusty — menu będzie puste. Zastosować mimo to?"
+  "ConfirmEmptyThemeBody": "„Użyj niestandardowego motywu” jest włączone, ale edytor jest pusty — menu będzie puste. Zastosować mimo to?",
+  "Developer": "Deweloper",
+  "UseDiscoveryCache": "Pamięć podręczna listy aplikacji",
+  "UseDiscoveryCacheDescription": "Rysuje menu natychmiast z zapisanej migawki przy zimnym starcie, a następnie odświeża je w tle. Szybkie sprawdzenie plików gwarantuje, że zmieniona lista aplikacji nigdy nie zostanie pokazana jako nieaktualna.",
+  "ImmediateReveal": "Otwieraj natychmiast",
+  "ImmediateRevealDescription": "Pokazuje menu w chwili otwarcia i wypełnia kafelki w miarę znajdowania aplikacji, zamiast czekać na zakończenie skanowania. Dotyczy tylko zimnego startu — przy rozgrzanej pamięci podręcznej menu jest już wypełnione.",
+  "DiagnosticLogging": "Rejestrowanie",
+  "DiagnosticLoggingDescription": "Zapisuje ślad diagnostyczny do %TEMP%\\menyou-hooks.log w celu rozwiązywania problemów z uruchamianiem i hakami. Domyślnie wyłączone; dziennik jest czyszczony przy uruchomieniu, gdy przekroczy rozmiar podany poniżej.",
+  "LogSize": "Rozmiar"
 }

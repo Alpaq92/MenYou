@@ -108,12 +108,19 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         MenuStyle = settings.Current.MenuStyle;
         UseCustomTheme = settings.Current.UseCustomTheme;
         CustomThemeXaml = settings.Current.CustomThemeXaml;
+        ImmediateReveal = settings.Current.ImmediateMenuReveal;
         settings.Changed += () =>
         {
             MenuStyle = settings.Current.MenuStyle;
             UseCustomTheme = settings.Current.UseCustomTheme;
             CustomThemeXaml = settings.Current.CustomThemeXaml;
+            ImmediateReveal = settings.Current.ImmediateMenuReveal;
         };
+        // When the discovery cache's background backstop swaps in a fresher
+        // app list, rebuild the surfaces (single-flight + diff-aware, so it's
+        // cheap and only the genuinely-changed tiles move).
+        discovery.Refreshed += () =>
+            Dispatcher.UIThread.Post(() => _ = LoadAsync());
         // The avatar bitmap is the same instance across theme flips, but the
         // dark-mode invert converter needs the binding to re-run when the
         // active theme changes. Re-emit the Avatar property so the converter
@@ -183,6 +190,12 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// at least once this session.
     public bool HasLoaded => _hasLoaded;
 
+    /// Mirrors <see cref="UserSettings.ImmediateMenuReveal"/>. Read by
+    /// <see cref="Views.StartMenuWindow.ShowMenu"/> to decide whether to reveal
+    /// the window instantly (and fill tiles as discovery resolves) or wait for
+    /// the first load to finish before showing.
+    public bool ImmediateReveal { get; private set; }
+
     /// Builds (or refreshes) the menu's pinned / recent / programs surfaces.
     /// Called from <see cref="Views.StartMenuWindow.OnOpened"/> and the
     /// warm-up. SINGLE-FLIGHT: concurrent callers — classically the post-login
@@ -199,20 +212,25 @@ public sealed partial class StartMenuViewModel : ViewModelBase
 
     private async Task RunLoadAsync()
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             await Programs.LoadAsync();
+            var progMs = sw.ElapsedMilliseconds;
             // EnsureSeededAsync also runs at app startup (see App.SeedPinnedAsync);
             // calling here again is a cheap idempotent no-op once seeded, but
             // it covers the edge case where the user opens the menu before
             // startup seeding finishes.
             await _pin.EnsureSeededAsync(_discovery);
             await ComputeNewlyInstalledAsync();
+            var scanMs = sw.ElapsedMilliseconds;
             RebuildPinned();
             RebuildRecent();
             Programs.MarkNew(_newlyInstalledIds);
             _hasLoaded = true;
             _ = Task.Run(LoadIconsAsync);
+            Platform.Windows.HookTrace.Log(
+                $"RunLoadAsync: programs={progMs}ms +scan={scanMs}ms +rebuild={sw.ElapsedMilliseconds}ms");
         }
         finally
         {

@@ -22,5 +22,13 @@
   "Forget": "Vergeten",
   "UseCustomTheme": "Aangepast thema gebruiken",
   "SelectUploadedTheme": "Selecteer een geüpload thema",
-  "Places": "Locaties"
+  "Places": "Locaties",
+  "Developer": "Ontwikkelaar",
+  "UseDiscoveryCache": "App-lijstcache",
+  "UseDiscoveryCacheDescription": "Tekent het menu direct vanuit een opgeslagen momentopname bij een koude start en vernieuwt het daarna op de achtergrond. Een snelle bestandscontrole zorgt ervoor dat een gewijzigde app-lijst nooit verouderd wordt getoond.",
+  "ImmediateReveal": "Direct openen",
+  "ImmediateRevealDescription": "Toont het menu zodra je het opent en vult de tegels in zodra apps worden gevonden, in plaats van te wachten tot de scan klaar is. Heeft alleen invloed op een koude start — met een warme cache is het menu al gevuld.",
+  "DiagnosticLogging": "Logboekregistratie",
+  "DiagnosticLoggingDescription": "Schrijft een diagnostisch spoor naar %TEMP%\\menyou-hooks.log voor het oplossen van opstart- en hookproblemen. Standaard uit; het logboek wordt bij het opstarten gewist zodra het groter wordt dan de onderstaande grootte.",
+  "LogSize": "Grootte"
 }

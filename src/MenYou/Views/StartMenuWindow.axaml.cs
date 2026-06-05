@@ -65,6 +65,7 @@ public partial class StartMenuWindow : Window
 
     public void ShowMenu()
     {
+        HookTrace.Log($"StartMenuWindow: ShowMenu (wasVisible={IsVisible})");
         _revealing = true;
         _settlingUntilUtc = DateTime.UtcNow + SettleWindow;
 
@@ -101,7 +102,11 @@ public partial class StartMenuWindow : Window
                 // anyway if discovery is unusually slow so the window can't get
                 // stuck invisible. Warm opens resolve instantly (data already
                 // built), so this adds no delay.
-                if (DataContext is StartMenuViewModel vm && !vm.HasLoaded)
+                // Immediate mode (default): reveal now and let the tiles fill
+                // in as discovery resolves. Off: wait for the first load so the
+                // window never shows an empty frame. Either way a warm cache
+                // makes HasLoaded already true, so there's nothing to wait for.
+                if (DataContext is StartMenuViewModel vm && !vm.HasLoaded && !vm.ImmediateReveal)
                     await Task.WhenAny(vm.EnsureLoadedAsync(), Task.Delay(RevealDataTimeout));
 
                 // Re-run SizeToContent now that the layout IsVisible bindings
@@ -166,6 +171,7 @@ public partial class StartMenuWindow : Window
 
     public void HideMenu()
     {
+        HookTrace.Log("StartMenuWindow: HideMenu");
         // Cancel any in-flight cold-start reveal: clearing _revealing lifts the
         // auto-hide suppression, and the deferred reveal post bails when it
         // sees the window is no longer visible.
@@ -222,6 +228,7 @@ public partial class StartMenuWindow : Window
         Show();
         Dispatcher.UIThread.Post(() =>
         {
+            HookTrace.Log("PreRender: window realized off-screen (first paint paid; first real open is now instant)");
             Hide();
             // Restore normal activation for real opens (ShowMenu relies on
             // the Show()+ForceForeground path taking foreground).
