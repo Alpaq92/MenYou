@@ -14,6 +14,13 @@ the merged commit log when it cuts the next release PR.
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.5.0](https://github.com/Alpaq92/MenYou/compare/v0.2.0...v0.5.0) (2026-06-05)
+
+
+### Features
+
+* Windows 11 default look, discovery cache, and Developer settings ([8d39ce3](https://github.com/Alpaq92/MenYou/commit/8d39ce385bde7aa64b8ca4c5da8acb0d8fa3317f))
+
 ## [0.2.0](https://github.com/Alpaq92/MenYou/compare/v0.1.1...v0.2.0) (2026-06-04)
 
 
