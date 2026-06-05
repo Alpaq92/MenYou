@@ -19,8 +19,9 @@
       * GitHub alert markers ( > [!NOTE] etc. stay on their own line )
       * blank lines (count preserved) and blockquote '>' structure
 
-    Per-file encoding (UTF-8, no BOM added), newline style and trailing
-    newline are preserved.
+    Per-file encoding (UTF-8 / UTF-16 / UTF-32, including any byte-order
+    mark), newline style (LF/CRLF) and the trailing newline are preserved —
+    each file is written back with the same encoding it was read with.
 
 .PARAMETER Paths
     Explicit files. If omitted, every *.md under the repo root is processed,
@@ -53,7 +54,20 @@ function Test-HardStructural([string]$t) {
 }
 $listRe = '^\s*([-*+]|\d+[.)])(\s|$)'
 
+# Detect a file's encoding from its byte-order mark so it can be written back
+# unchanged. .NET's ReadAllText already auto-detects the BOM when decoding;
+# this mirrors that choice for the write side. No BOM => UTF-8 without BOM.
+function Get-FileEncoding([string]$path) {
+  $b = [System.IO.File]::ReadAllBytes($path)
+  if ($b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF) { return (New-Object System.Text.UTF8Encoding($true)) }            # UTF-8 BOM
+  if ($b.Length -ge 4 -and $b[0] -eq 0xFF -and $b[1] -eq 0xFE -and $b[2] -eq 0x00 -and $b[3] -eq 0x00) { return ([System.Text.Encoding]::UTF32) }    # UTF-32 LE (check before UTF-16 LE)
+  if ($b.Length -ge 2 -and $b[0] -eq 0xFF -and $b[1] -eq 0xFE) { return ([System.Text.Encoding]::Unicode) }                                          # UTF-16 LE
+  if ($b.Length -ge 2 -and $b[0] -eq 0xFE -and $b[1] -eq 0xFF) { return ([System.Text.Encoding]::BigEndianUnicode) }                                 # UTF-16 BE
+  return (New-Object System.Text.UTF8Encoding($false))                                                                                                # UTF-8, no BOM
+}
+
 foreach ($path in $Paths) {
+  $enc   = Get-FileEncoding $path
   $raw   = [System.IO.File]::ReadAllText($path)
   $crlf  = $raw.Contains("`r`n")
   $lines = [regex]::Split($raw, "`r`n|`n")
@@ -113,6 +127,6 @@ foreach ($path in $Paths) {
   if ($null -ne $qbuf) { $out.Add('> ' + $qbuf) }
 
   $nl   = if ($crlf) { "`r`n" } else { "`n" }
-  [System.IO.File]::WriteAllText($path, [string]::Join($nl, $out), (New-Object System.Text.UTF8Encoding($false)))
+  [System.IO.File]::WriteAllText($path, [string]::Join($nl, $out), $enc)
   "{0,-40} {1,4} -> {2,4} lines" -f $path.Replace("$root\", ''), $lines.Count, $out.Count
 }
