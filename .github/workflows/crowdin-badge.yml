@@ -1,0 +1,91 @@
+name: crowdin-badge
+
+# Publishes a dynamic localization-percentage badge sourced from the LIVE
+# Crowdin project.
+#
+# Why this exists: Crowdin's own badge (badges.crowdin.net/<project>/localized.svg)
+# only renders for PUBLIC projects that have Settings -> General -> Badges ->
+# "Display badges" enabled. This workflow is the alternative that works
+# regardless of project visibility, reusing the same CROWDIN_* secrets as the
+# monthly translation sync.
+#
+# It fetches per-language progress from the Crowdin API, computes the
+# words-weighted overall translated % (the same metric Crowdin's "localized"
+# badge uses), and force-pushes a shields.io "endpoint" JSON to an orphan
+# `badges` branch. The README points at:
+#   https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/<owner>/<repo>/badges/crowdin-localization.json
+#
+# The branch is orphan + force-pushed every run, so it never accumulates history.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'        # daily; translation % drifts slowly
+  workflow_dispatch:
+
+permissions:
+  contents: write              # to force-push the orphan `badges` branch
+
+concurrency:
+  group: crowdin-badge
+  cancel-in-progress: true
+
+jobs:
+  badge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute localization % from Crowdin
+        id: calc
+        env:
+          PID: ${{ secrets.CROWDIN_PROJECT_ID }}
+          TOK: ${{ secrets.CROWDIN_PERSONAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PID}" ] || [ -z "${TOK}" ]; then
+            echo "CROWDIN_* secrets absent - skipping (no badge update)."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          resp=$(curl -fsS \
+            "https://api.crowdin.com/api/v2/projects/${PID}/languages/progress?limit=500" \
+            -H "Authorization: Bearer ${TOK}")
+          # Crowdin v2 wraps each list item as data[].data; words has total/translated.
+          pct=$(printf '%s' "$resp" | jq -r '
+            [.data[].data.words]
+            | (map(.translated) | add) as $t
+            | (map(.total)      | add) as $a
+            | if ($a // 0) > 0 then ($t * 100 / $a) else 0 end
+            | floor')
+          if ! printf '%s' "$pct" | grep -Eq "^[0-9]+$"; then
+            echo "::error::Unexpected Crowdin API response shape; raw body follows:"
+            printf '%s\n' "$resp" | head -c 2000
+            exit 1
+          fi
+          echo "Localization: ${pct}%"
+          echo "pct=${pct}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish badge JSON to the `badges` branch
+        if: steps.calc.outputs.skip != '1'
+        env:
+          PCT: ${{ steps.calc.outputs.pct }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          color=red
+          [ "$PCT" -ge 40 ] && color=orange
+          [ "$PCT" -ge 60 ] && color=yellow
+          [ "$PCT" -ge 80 ] && color=yellowgreen
+          [ "$PCT" -ge 95 ] && color=brightgreen
+          work="$(mktemp -d)"
+          cat > "${work}/crowdin-localization.json" <<JSON
+          {"schemaVersion":1,"label":"localization","message":"${PCT}%","color":"${color}"}
+          JSON
+          cd "${work}"
+          git init -q
+          git checkout -q -b badges
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add crowdin-localization.json
+          git commit -q -m "chore(badge): localization ${PCT}%"
+          git push -f \
+            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
+            badges

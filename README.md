@@ -1,5 +1,14 @@
 # MenYou
 
+<!--
+  Localization badge. Crowdin's native badge (below) renders only for a PUBLIC
+  project with Settings -> General -> Badges -> "Display badges" enabled; until
+  then it 403s. If your project is private (or you want custom label/color), the
+  `crowdin-badge.yml` workflow publishes an equivalent dynamic badge from the
+  Crowdin API to an orphan `badges` branch -- swap the line below for:
+  [![Localization](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Alpaq92/MenYou/badges/crowdin-localization.json)](https://crowdin.com/project/menyou)
+  See docs/AUTOMATION.md > Translations.
+-->
 [![Localization](https://badges.crowdin.net/menyou/localized.svg)](https://crowdin.com/project/menyou)
 [![Latest release](https://img.shields.io/github/v/release/Alpaq92/MenYou?label=release)](https://github.com/Alpaq92/MenYou/releases/latest)
 
