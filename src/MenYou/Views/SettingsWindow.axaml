@@ -9,7 +9,26 @@
         Icon="avares://MenYou/Assets/icon_v2.ico"
         Width="720" Height="560"
         MinWidth="600" MinHeight="420"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Opacity="0">
+
+    <!-- Fade-in reveal (the "shine"). The window is created Opacity=0 and the
+         code-behind sets Opacity=1 once it's centered + painted (Loaded
+         priority); this transition turns that step into a smooth ~160 ms fade
+         instead of a hard pop — and replaces the old transparent-blink-then-
+         snap entirely. Mirrors Open-Shell's reveal (Src/.../MenuPaint.cpp,
+         CMenuContainer::AnimateMenu): it ramps the menu window's alpha 0->255
+         over ~200 ms via SetLayeredWindowAttributes after positioning it
+         unactivated, then drops the layered style so the settled window is
+         crisp — which is exactly what Avalonia's Opacity transition does here
+         (composited only while animating, opaque at rest). Only ever animates
+         0->1 because the window is freshly constructed per open, so there's no
+         reverse/reset frame to leak. -->
+    <Window.Transitions>
+        <Transitions>
+            <DoubleTransition Property="Opacity" Duration="0:0:0.16" Easing="CubicEaseOut" />
+        </Transitions>
+    </Window.Transitions>
 
     <Window.Styles>
         <!-- The Fluid.Avalonia theme is applied app-wide in App.axaml, so

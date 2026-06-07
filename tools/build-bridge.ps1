@@ -30,7 +30,8 @@ if (-not $msbuild -or -not (Test-Path $msbuild)) {
     exit 0
 }
 
-$proj = Join-Path $PSScriptRoot "src\MenYou.Bridge\MenYou.Bridge.vcxproj"
+# This script lives in tools/, so the bridge project is one level up, under src/.
+$proj = Join-Path $PSScriptRoot "..\src\MenYou.Bridge\MenYou.Bridge.vcxproj"
 if (-not (Test-Path $proj)) {
     Write-Host "MenYou.Bridge: project file not found at $proj"
     exit 0

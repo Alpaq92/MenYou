@@ -69,6 +69,14 @@ public sealed class UserSettings
     // future migration is enough to opt out — the user's manual toggle
     // in Settings persists normally afterwards.
     public bool AutostartDefaultApplied { get; set; } = false;
+    // One-shot migration flag: profiles created before MenYou moved its
+    // autostart from the HKCU\Run value to a logon-triggered scheduled task
+    // (Run-key apps are deliberately throttled ~10-16 s after sign-in by
+    // Windows; the task fires promptly). App startup checks this and, if false,
+    // re-applies StartWithWindows through Win32AutostartService — creating the
+    // task and clearing the legacy Run value — then sets the flag so it never
+    // re-runs. See [[Win32AutostartService]].
+    public bool AutostartTaskMigrated { get; set; } = false;
     public bool HideOnFocusLost { get; set; } = true;
     public int MaxRecentItems { get; set; } = 10;
     public List<PinnedItem> Pinned { get; set; } = new();

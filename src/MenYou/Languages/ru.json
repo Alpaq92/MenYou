@@ -1,4 +1,6 @@
 {
+  "ReadyTitle": "MenYou готов",
+  "ReadyBody": "Нажмите Shift+Win, чтобы открыть меню «Пуск».",
   "SearchPlaceholder": "Поиск приложений и команд...",
   "OpenMenYou": "Открыть MenYou",
   "MirrorWinStart": "Зеркалить закреплённые из меню Пуск Windows",

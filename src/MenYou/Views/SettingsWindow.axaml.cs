@@ -28,6 +28,17 @@ public partial class SettingsWindow : Window
 
     private void OnOpenedHandler(object? sender, EventArgs e)
     {
+        // Reveal only after the first layout pass has positioned (CenterScreen)
+        // and painted the window. The Window starts Opacity=0 — baked into the
+        // XAML so the very first composited frame is already invisible — so the
+        // user never sees the unpositioned/unpainted first frame, which showed
+        // up as a transparent window blinking in the top-left corner before it
+        // snapped to center. Posted FIRST, before the early-returns below, so a
+        // missing service can never leave the window stuck invisible. Loaded
+        // priority runs after layout/positioning (same reveal the StartMenu
+        // uses), so by the time Opacity goes to 1 the window is centered.
+        Dispatcher.UIThread.Post(() => Opacity = 1, DispatcherPriority.Loaded);
+
         if (App.Services is null) return;
         _settings = App.Services.GetService(typeof(ISettingsService)) as ISettingsService;
         if (_settings is null) return;

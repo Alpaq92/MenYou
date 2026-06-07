@@ -100,11 +100,22 @@ Name: "polish";  MessagesFile: "compiler:Languages\Polish.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startupicon"; Description: "{cm:AutoStartProgram,{#MyAppName}}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+; NOTE: no "startupicon" task. Autostart is owned entirely by the app now —
+; StartWithWindows defaults on and Win32AutostartService registers a
+; logon-triggered scheduled task (Run-key/Startup-folder autostarts are
+; throttled ~10-16 s after sign-in by Windows; the task fires promptly). An
+; installer-time Startup-folder shortcut would be a second, throttled autostart
+; that double-launches MenYou alongside the task, so it's intentionally gone.
 
 [Files]
-; The whole self-contained publish folder.
-Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+; The whole self-contained publish folder, minus *.pdb. The native SkiaSharp
+; + HarfBuzz symbol files (libSkiaSharp.pdb ~80 MB, libHarfBuzzSharp.pdb
+; ~20 MB) are ~100 MB / ~44% of the payload yet are NEVER loaded at runtime —
+; they only exist for native crash symbolication. Excluding them shrinks the
+; install and, more importantly, removes 100 MB from Defender's first-run scan
+; surface on a fresh (unsigned) install. MenYou's own symbols are embedded
+; (DebugType=embedded), so no managed debugging is lost either.
+Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: recursesubdirs createallsubdirs ignoreversion
 ; Custom-theme sample, shipped as an on-disk reference users can copy and
 ; edit. It is NOT a built-in style and is never auto-loaded — Settings ->
 ; Custom loads an .axaml the user points it at. This is just a worked
@@ -116,9 +127,8 @@ Source: "..\..\samples\custom-themes\Windows7Square.axaml"; DestDir: "{app}\samp
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-; "Start with Windows" — a per-user Startup-folder shortcut. MenYou also
-; has its own in-app autostart toggle; this is the installer-time opt-in.
-Name: "{userstartup}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: startupicon
+; Autostart is registered by the app at runtime (logon scheduled task via
+; Win32AutostartService), not by an installer shortcut — see the [Tasks] note.
 
 [Run]
 ; Offered only on an interactive (first) install; silent updates skip it

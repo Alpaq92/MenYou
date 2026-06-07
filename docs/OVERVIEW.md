@@ -39,11 +39,13 @@ Fluid.Avalonia must live in `Application.Styles` to theme composite controls (e.
 - *Foreground activation* — Win 11's focus-stealing prevention leaves a freshly shown window inactive, so `Win32Foreground.Bring` does the `AttachThreadInput` → `SetForegroundWindow` dance.
 - *Window sizing re-measure* — the five layouts are stacked in one `SizeToContent` window gated by `IsVisible`; `ShowMenu` toggles `SizeToContent` after bindings resolve so the window fits only the active layout.
 
-**Startup performance**
+**Startup performance** — full write-up and measurements in [`OPTIMIZATION.md`](OPTIMIZATION.md).
+- *Autostart via logon task* — `Win32AutostartService` registers a per-user logon-triggered Scheduled Task (`InteractiveToken` / `LeastPrivilege`, `PT1S` delay) rather than an `HKCU\Run` value, because Windows throttles Run-key/Startup-folder autostarts ~15 s after sign-in. The task is exempt, so MenYou launches ~1 s after the desktop (a ~15 s → ~1 s cold-start win). Falls back to the Run-key (plus a zeroed `StartupDelayInMSec`) where task creation is blocked; a one-time, self-healing migration moves existing installs over and only marks itself done once autostart is verifiably in place.
 - *App-discovery cache* — `AppDiscoveryService` persists the resolved app list to `%AppData%\MenYou\discovery-cache.json` (`DiscoveryCache`). On a cold start it paints from that snapshot — a plain file read, no shell COM, so it sidesteps the ~5× COM slowdown while Windows is still bringing up the shell. Because that path is COM-free, `PreloadFromCacheAsync` runs it *eagerly at the very start of startup* (≈150 ms in) instead of waiting for the idle warm-up, so the menu's data is ready almost immediately. A cheap, COM-free filesystem fingerprint (paths + mtimes + sizes) gates the snapshot, so a changed Start Menu is never shown stale, and a background live scan always runs as a backstop (after a settle delay) — swapping in and firing `Refreshed` only if the list actually changed. Toggle: Settings → Developer → *App-list cache*.
 - *Immediate reveal* — by default the menu reveals the instant it's opened and fills tiles in as discovery resolves, instead of gating the reveal on the full scan. Off = wait for data first (never an empty frame). Toggle: Settings → Developer → *Open immediately*.
-- *Warm-up + pre-render* — at `ApplicationIdle` the window is built, its data loaded, then the populated tree is realized once off-screen (transparent, unactivated), so the first real open is instant. `LoadAsync` is single-flight; the pinned/recent rebuild is diff-aware (unchanged tiles keep their icons — no cog flash on repeat opens); the reveal runs at `DispatcherPriority.Loaded` (≈1 frame, not starved at `Background`).
+- *Warm-up + pre-render* — the window is built, its data loaded, then the populated tree is realized once off-screen (transparent, unactivated), so the first real open is instant. `ScheduleWarmup` runs it immediately at Input priority on a warm launch, but *holds* it ~20 s on a cold boot so the heavy build doesn't pile onto the post-login storm. `LoadAsync` is single-flight; the pinned/recent rebuild is diff-aware (unchanged tiles keep their icons — no cog flash on repeat opens); the reveal runs at `DispatcherPriority.Loaded` (≈1 frame, not starved at `Background`).
 - *Parallel discovery* — the `.lnk` walk parses shortcuts across cores (`Parallel.For`) and overlaps the `shell:AppsFolder` UWP enumeration.
+- *First-run splash* — `NativeSplash`, a Win32/GDI splash on its own thread, covers the one-time cold first-install load (Defender scanning the fresh unsigned payload). It's shown from `Program.Main` *before* Avalonia loads so it can paint while the UI thread is still cold-loading; theme-aware, with a one-time "MenYou is ready" tray balloon when startup finishes.
 
 **Diagnostics** — `HookTrace` writes an opt-in trace (hook events + load timings) to `%TEMP%\menyou-hooks.log`. Off by default; enable via Settings → Developer → *Logging* (or the `MENYOU_TRACE_HOOKS=1` env var). A background sweep on startup drops the log once it passes the configured size (Developer → *Size (MB)*) or is a few days old.
 
@@ -72,7 +74,7 @@ dotnet build src/MenYou/MenYou.csproj
 src/MenYou/bin/Debug/net10.0-windows/MenYou.exe
 ```
 
-The `BuildNativeBridge` MSBuild target runs `build-bridge.ps1` first; it locates VS's `msbuild` via `vswhere` and exits 0 if MSVC is missing (MenYou then runs without the start-button hook). A tray icon appears on launch — press **Shift+Win** to toggle the menu.
+The `BuildNativeBridge` MSBuild target runs `tools/build-bridge.ps1` first; it locates VS's `msbuild` via `vswhere` and exits 0 if MSVC is missing (MenYou then runs without the start-button hook). A tray icon appears on launch — press **Shift+Win** to toggle the menu.
 
 ## Branding
 

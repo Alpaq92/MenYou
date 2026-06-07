@@ -1,4 +1,6 @@
 {
+  "ReadyTitle": "O MenYou está pronto",
+  "ReadyBody": "Pressione Shift+Win para abrir o menu Iniciar.",
   "SearchPlaceholder": "Pesquisar aplicativos e comandos...",
   "OpenMenYou": "Abrir MenYou",
   "MirrorWinStart": "Espelhar fixados do menu Iniciar do Windows",

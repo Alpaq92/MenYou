@@ -5,6 +5,8 @@
   "PushToWinStart": "Push pins to Windows Start",
   "MirrorUnavailableTitle": "MenYou — Start mirror unavailable",
   "MirrorUnavailableBody": "Windows refused Export-StartLayout on this build. MenYou will keep the last known pins.",
+  "ReadyTitle": "MenYou is ready",
+  "ReadyBody": "Press Shift+Win to open your Start menu.",
   "FollowWindowsAccent": "Follow Windows accent",
   "FollowWindowsTheme": "Follow Windows theme",
   "ShowPinned": "Show pinned section",

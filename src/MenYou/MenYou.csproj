@@ -13,7 +13,7 @@
     <!-- Baked into the assembly so the app can self-report its version (shown
          next to the About button). release-please bumps this on each release
          via the generic updater in release-please-config.json. -->
-    <Version>0.5.6</Version> <!-- x-release-please-version -->
+    <Version>0.7.0</Version> <!-- x-release-please-version -->
     <UseWindowsForms>false</UseWindowsForms>
     <UseWPF>false</UseWPF>
     <EnableDefaultAvaloniaItems>true</EnableDefaultAvaloniaItems>
@@ -45,11 +45,11 @@
 
   <!--
     Build the native bridge DLL before the managed build so it lands next to
-    MenYou.exe. Delegates to build-bridge.ps1 at the repo root, which locates
+    MenYou.exe. Delegates to tools\build-bridge.ps1, which locates
     VS msbuild via vswhere. If MSVC isn't installed the script exits 0 and
     MenYou falls back to the WinEvent monitor at runtime.
   -->
   <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild">
-    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\build-bridge.ps1&quot; -Configuration $(Configuration)" ContinueOnError="true" IgnoreExitCode="true" />
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\build-bridge.ps1&quot; -Configuration $(Configuration)" ContinueOnError="true" IgnoreExitCode="true" />
   </Target>
 </Project>
