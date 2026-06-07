@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.7.0](https://github.com/Alpaq92/MenYou/compare/v0.5.7...v0.7.0) (2026-06-07)
+
+
+### Documentation
+
+* **changelog:** reframe 0.5.0 as a starting point; release as 0.7.0 ([#21](https://github.com/Alpaq92/MenYou/issues/21)) ([e6591c0](https://github.com/Alpaq92/MenYou/commit/e6591c091aa4c1ed3acc9455d21789faea81ae6a))
+
 ## [0.5.7](https://github.com/Alpaq92/MenYou/compare/v0.5.6...v0.5.7) (2026-06-07)
 
 
