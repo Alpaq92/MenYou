@@ -21,6 +21,7 @@ public partial class App : Application
 
     private TrayIcon? _trayIcon;
     private StartMenuWindow? _startMenu;
+    private bool _isFirstRun;
     private SettingsWindow? _settingsWindow;
     private IHotkeyService? _hotkey;
     private ForegroundWatcher? _foregroundWatcher;
@@ -37,6 +38,12 @@ public partial class App : Application
         // pull those properties — so the localizer has to exist first.
         Jeek.Avalonia.Localization.Localizer.SetLocalizer(
             new MenYou.Services.AvaloniaResourceLocalizer());
+        // The first-run splash is shown earlier, in Program.Main (before
+        // Avalonia loads, so it appears ASAP). Here we just re-capture the same
+        // first-run signal (no settings.json yet) to gate AnnounceReady, which
+        // dismisses that splash and shows the one-time "ready" balloon once the
+        // tray + hotkey are up.
+        _isFirstRun = !File.Exists(SettingsFilePath);
         Services = BuildServices();
         // Eagerly warm app discovery FROM THE CACHE (file I/O only, no shell
         // COM, so — unlike a live scan — it doesn't suffer the startup COM
@@ -91,26 +98,31 @@ public partial class App : Application
         _ = SetupStartMirrorAsync();
         _ = LoadFallbackIconAsync();
         HookTrace.Log("Startup: sync init done (async tasks kicked off)");
+        // First run only: tray + hotkey are live now, so dismiss the splash and
+        // surface a one-time balloon confirming MenYou is up + the Shift+Win
+        // hint. One-shot — next launch settings.json exists, so _isFirstRun is
+        // false and neither the splash nor the balloon appear.
+        if (_isFirstRun) AnnounceReady();
         // React to the user toggling MirrorWindowsStart in Settings.
         Services.GetRequiredService<ISettingsService>().Changed += () =>
             Dispatcher.UIThread.Post(() => _ = ApplyMirrorStateAsync());
 
-        // Warm up the StartMenuWindow + its ViewModel at ApplicationIdle
-        // priority, AFTER the rest of app startup finishes. Without this
-        // the first Shift+Win after launch pays the cost of constructing
-        // the window AND awaiting LoadAsync (programs tree build, pin
-        // seed, newly-installed scan, icon batch) — the user sees an
-        // empty menu for hundreds of ms. With it, both costs are paid
-        // during idle time before the user does anything; first show is
-        // instant.
-        // Priority matters a LOT here. ApplicationIdle / Background are starved
-        // for ~1.4 s during startup by Avalonia's continuous render-timer work,
-        // so the warm-up (build window + pre-render) didn't run until ~+2.1 s —
-        // the window wasn't ready for an early open. Input priority drains as
-        // soon as the synchronous init finishes (~+0.7 s, measured), and the UI
-        // thread is genuinely free by then (the heavy async tasks are
-        // off-thread), so the window is realized ~1.5 s sooner.
-        Dispatcher.UIThread.Post(WarmupStartMenu, DispatcherPriority.Input);
+        // Warm up the StartMenuWindow + its ViewModel AFTER the rest of app
+        // startup finishes. Without this the first Shift+Win pays the cost of
+        // constructing the window AND awaiting LoadAsync (programs tree, pin
+        // seed, newly-installed scan, icon batch) — the user sees an empty menu
+        // for hundreds of ms. With it, both costs are paid before the user does
+        // anything; first show is instant.
+        //
+        // WHEN we warm depends on how MenYou launched (see ScheduleWarmup):
+        //  • Warm launch (machine already up) — Input priority, drains ~+0.7 s
+        //    after sync init; the window is realized ~1.5 s sooner than the
+        //    render-timer-starved Background path would manage.
+        //  • Cold boot (autostart firing into the post-login storm) — HOLD the
+        //    warm-up so the heavy window build + off-screen first-paint don't
+        //    pile onto the disk/CPU thrash of login (the #1 reason the first
+        //    open feels slow right after a reboot). Warm once the boot settles.
+        ScheduleWarmup();
         // NOTE: there is deliberately no Settings-window warm-up. It used to
         // Show() a throwaway off-screen, Opacity=0 SettingsWindow during idle
         // to pre-realize its control tree — but at a cold first launch (just
@@ -600,12 +612,49 @@ public partial class App : Application
         HookTrace.Log("EnsureStartMenu: window object built");
     }
 
-    /// One-shot warm-up scheduled at app startup. Builds the menu
-    /// window and runs the heavy LoadAsync work (programs tree, pin
-    /// list seed, newly-installed scan) in the background so the
-    /// first Shift+Win press has nothing to wait for.
+    // If MenYou launched within this long after the OS booted, it was almost
+    // certainly started by its autostart entry into the post-login congestion
+    // storm (the shell + every other auto-start app coming up at once).
+    private const long ColdBootThresholdMs = 120_000;   // 2 min of OS uptime
+    // How long to hold the warm-up on a cold boot so the login storm can drain
+    // before we pay the expensive window build + off-screen first-paint.
+    private static readonly TimeSpan ColdBootSettleDelay = TimeSpan.FromSeconds(20);
+
+    /// Decides WHEN to run the one-shot warm-up. On a warm launch the machine
+    /// is idle and the user is likely about to use MenYou, so warm immediately
+    /// at Input priority. On a cold boot, autostart fires while the system is
+    /// thrashing through login; doing the heavy window construction then both
+    /// drags out MenYou's own first paint and adds to the storm. So we hold for
+    /// a settle window, then post at Background priority (which drains fine once
+    /// the render timer has calmed). If the user opens the menu during the
+    /// hold, the open realizes the window on-demand and the deferred warm-up
+    /// no-ops (see the guard below) — so we never do redundant work, and never
+    /// warm eagerly while the user isn't even looking.
+    private void ScheduleWarmup()
+    {
+        if (Environment.TickCount64 >= ColdBootThresholdMs)
+        {
+            HookTrace.Log("Warmup: warm launch -> immediate (Input)");
+            Dispatcher.UIThread.Post(WarmupStartMenu, DispatcherPriority.Input);
+            return;
+        }
+        HookTrace.Log($"Warmup: cold boot (uptime {Environment.TickCount64 / 1000}s) -> hold {ColdBootSettleDelay.TotalSeconds:F0}s");
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(ColdBootSettleDelay).ConfigureAwait(false);
+            Dispatcher.UIThread.Post(WarmupStartMenu, DispatcherPriority.Background);
+        });
+    }
+
+    /// One-shot warm-up. Builds the menu window and runs the heavy LoadAsync
+    /// work (programs tree, pin list seed, newly-installed scan) in the
+    /// background so the first Shift+Win press has nothing to wait for. No-ops
+    /// if the window is already realized — e.g. the user opened the menu during
+    /// a cold-boot hold, so an on-demand realize already happened and re-warming
+    /// would needlessly re-run LoadAsync and PreRender a live, visible window.
     private void WarmupStartMenu()
     {
+        if (_startMenu is not null) { HookTrace.Log("WarmupStartMenu: already realized -> skip"); return; }
         HookTrace.Log("WarmupStartMenu: called (about to construct window)");
         EnsureStartMenu();
         HookTrace.Log("WarmupStartMenu: window constructed");
@@ -749,6 +798,24 @@ public partial class App : Application
         _startMirror?.Dispose();
     }
 
+    /// Path to the persisted settings file (kept in sync with
+    /// <see cref="Services.SettingsService"/>). Its ABSENCE is the
+    /// "fresh install / first run" signal that gates the one-time splash +
+    /// "ready" balloon.
+    private static string SettingsFilePath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "MenYou", "settings.json");
+
+    /// First-run wrap-up: dismiss the splash and surface a one-time tray balloon
+    /// confirming MenYou is up, plus the Shift+Win hint (doubles as onboarding).
+    /// Both halves are best-effort and never throw into the startup path.
+    private void AnnounceReady()
+    {
+        try { NativeSplash.Close(); } catch { /* ignore */ }
+        try { TrayBalloon.Show(Strings.ReadyTitle, Strings.ReadyBody); }
+        catch { /* balloon is best-effort */ }
+    }
+
     /// One-shot migration for profiles that predate the
     /// <see cref="UserSettings.StartWithWindows"/> default flip: force
     /// StartWithWindows on and write the Run-key registry entry, then
@@ -759,21 +826,55 @@ public partial class App : Application
     private static void EnsureAutostartDefault()
     {
         var settings = Services.GetRequiredService<ISettingsService>();
-        if (settings.Current.AutostartDefaultApplied) return;
 
-        settings.Current.StartWithWindows = true;
-        settings.Current.AutostartDefaultApplied = true;
-        settings.Save();
-        try
+        // One-time default-on flip for profiles that predate the
+        // StartWithWindows default (old settings.json carried false).
+        if (!settings.Current.AutostartDefaultApplied)
         {
-            Services.GetRequiredService<IAutostartService>().SetEnabled(true);
+            settings.Current.StartWithWindows = true;
+            settings.Current.AutostartDefaultApplied = true;
+            settings.Save();
         }
-        catch
+
+        // One-time migration off the throttled HKCU\Run autostart and onto a
+        // logon-triggered scheduled task (see Win32AutostartService — Run-key
+        // apps are held ~10-16 s after sign-in by Windows). Re-applies the
+        // user's current StartWithWindows choice through the new mechanism,
+        // which creates the task and clears the legacy Run value.
+        //
+        // Off the UI thread: creating the task spawns schtasks.exe
+        // (~100-300 ms), and it only affects the NEXT sign-in — there's no
+        // reason to delay this session's tray/hotkey setup on it. Idempotent
+        // and gated by the flag, so it runs at most once per profile.
+        if (!settings.Current.AutostartTaskMigrated)
         {
-            // Best-effort — a locked HKCU\Run key shouldn't prevent
-            // MenYou from launching this session. The flag is already
-            // set so we won't retry next launch, mirroring the
-            // SettingsViewModel.Apply path.
+            var want = settings.Current.StartWithWindows;
+            _ = Task.Run(() =>
+            {
+                var autostart = Services.GetRequiredService<IAutostartService>();
+                var established = false;
+                try
+                {
+                    autostart.SetEnabled(want);
+                    // Only treat the migration as done once autostart is ACTUALLY
+                    // in place (task or Run-key) — or the user wants it off. If
+                    // SetEnabled couldn't establish it (a bad task XML once slipped
+                    // through and left no autostart at all), leave the flag false so
+                    // the next launch retries, rather than flipping "migrated" and
+                    // stranding the user with no autostart.
+                    established = !want || autostart.IsEnabled;
+                }
+                catch
+                {
+                    // established stays false -> retry on the next launch.
+                }
+                if (established)
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        settings.Current.AutostartTaskMigrated = true;
+                        settings.Save();
+                    });
+            });
         }
     }
 

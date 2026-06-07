@@ -44,6 +44,70 @@ internal static partial class NativeMethods
         [MarshalAs(UnmanagedType.Bool)] bool forceCritical,
         [MarshalAs(UnmanagedType.Bool)] bool disableWakeEvent);
 
+    // ---- SE_SHUTDOWN_NAME privilege --------------------------------------
+    // ExitWindowsEx (shutdown/reboot) and SetSuspendState (sleep) require the
+    // SE_SHUTDOWN_NAME privilege to be ENABLED on the process token. An
+    // interactive user's token HAS it but it's disabled by default, so without
+    // AdjustTokenPrivileges those calls fail with ERROR_PRIVILEGE_NOT_HELD and
+    // silently do nothing — which is why the Restart/Shutdown buttons appeared
+    // dead. EnableShutdownPrivilege flips it on (idempotent, best-effort).
+    private const uint TOKEN_ADJUST_PRIVILEGES = 0x0020;
+    private const uint TOKEN_QUERY = 0x0008;
+    private const uint SE_PRIVILEGE_ENABLED = 0x0002;
+    private const string SE_SHUTDOWN_NAME = "SeShutdownPrivilege";
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LUID { public uint LowPart; public int HighPart; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LUID_AND_ATTRIBUTES { public LUID Luid; public uint Attributes; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct TOKEN_PRIVILEGES { public uint PrivilegeCount; public LUID_AND_ATTRIBUTES Privileges; }
+
+    [DllImport("kernel32.dll")]
+    private static extern IntPtr GetCurrentProcess();
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool OpenProcessToken(IntPtr processHandle, uint desiredAccess, out IntPtr tokenHandle);
+
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool LookupPrivilegeValueW(string? lpSystemName, string lpName, out LUID lpLuid);
+
+    [DllImport("advapi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool AdjustTokenPrivileges(IntPtr tokenHandle,
+        [MarshalAs(UnmanagedType.Bool)] bool disableAllPrivileges,
+        ref TOKEN_PRIVILEGES newState, uint bufferLength, IntPtr previousState, IntPtr returnLength);
+
+    /// Enable SE_SHUTDOWN_NAME on the current process token. Returns true only
+    /// when the privilege is actually assigned (AdjustTokenPrivileges reports
+    /// success AND GetLastError is ERROR_SUCCESS, not ERROR_NOT_ALL_ASSIGNED).
+    /// Safe to call repeatedly; never throws.
+    public static bool EnableShutdownPrivilege()
+    {
+        if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, out var token))
+            return false;
+        try
+        {
+            if (!LookupPrivilegeValueW(null, SE_SHUTDOWN_NAME, out var luid)) return false;
+            var tp = new TOKEN_PRIVILEGES
+            {
+                PrivilegeCount = 1,
+                Privileges = new LUID_AND_ATTRIBUTES { Luid = luid, Attributes = SE_PRIVILEGE_ENABLED },
+            };
+            return AdjustTokenPrivileges(token, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero)
+                && Marshal.GetLastWin32Error() == 0;
+        }
+        finally { CloseHandle(token); }
+    }
+
     [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     public static extern uint ExtractIconEx(
         string lpszFile, int nIconIndex,

@@ -1,4 +1,6 @@
 {
+  "ReadyTitle": "MenYou の準備が完了しました",
+  "ReadyBody": "Shift+Win キーを押してスタート メニューを開きます。",
   "SearchPlaceholder": "アプリやコマンドを検索...",
   "OpenMenYou": "MenYou を開く",
   "MirrorWinStart": "Windows のスタートにピン留めしたアプリをミラー",

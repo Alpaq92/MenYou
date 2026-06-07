@@ -1,4 +1,6 @@
 {
+  "ReadyTitle": "MenYou 已就绪",
+  "ReadyBody": "按 Shift+Win 打开“开始”菜单。",
   "SearchPlaceholder": "搜索应用和命令...",
   "OpenMenYou": "打开 MenYou",
   "MirrorWinStart": "镜像 Windows 开始菜单的固定项",

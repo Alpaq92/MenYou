@@ -124,6 +124,10 @@ public static class Strings
     public static string MirrorUnavailableTitle  => Resolve("MirrorUnavailableTitle");
     public static string MirrorUnavailableBody   => Resolve("MirrorUnavailableBody");
 
+    // ---- first-run "ready" tray balloon (MenYou-specific, JSON-backed) -----
+    public static string ReadyTitle              => Resolve("ReadyTitle");
+    public static string ReadyBody               => Resolve("ReadyBody");
+
     // ---- Settings dialog labels ------------------------------------------
     // Appearance: shell32.dll,-32004 — the classic Display Properties
     // "Wygląd" / "Appearance" tab label.

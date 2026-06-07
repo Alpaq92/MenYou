@@ -92,6 +92,16 @@ jobs:
       # first activity, for ~16 MB extra. The JIT stays in the image as a
       # fallback, so the runtime-XAML custom-theme feature is unaffected (unlike
       # NativeAOT, which would break it).
+      #
+      # PublishSingleFile: TRIED, then REVERTED to false. Bundling everything
+      # into one ~127 MB exe meant Windows Defender pre-scanned the whole
+      # monolithic, UNSIGNED blob before CreateProcess could return — measured a
+      # ~54 s cold autostart after a reboot (the process didn't even exist for
+      # 54 s; once up, sync init took 505 ms). Multi-file keeps a tiny apphost
+      # that launches immediately while its DLLs are scanned as they load, so
+      # the tray + menu come up far sooner on a cold boot. Net: single-file
+      # trades a lower file COUNT for a much worse first-launch LATENCY on an
+      # unsigned self-contained app — not worth it. Kept false.
       - name: Publish (Release, win-x64, self-contained)
         run: >
           dotnet publish src/MenYou/MenYou.csproj
