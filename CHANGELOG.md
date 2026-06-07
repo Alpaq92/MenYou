@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.5.7](https://github.com/Alpaq92/MenYou/compare/v0.5.6...v0.5.7) (2026-06-07)
+
+
+### Features
+
+* near-instant startup, first-run splash, and power-button fix ([#19](https://github.com/Alpaq92/MenYou/issues/19)) ([f086644](https://github.com/Alpaq92/MenYou/commit/f086644fcc4c9ef05245b2940af9a278c048ba76))
+
 ## [0.5.6](https://github.com/Alpaq92/MenYou/compare/v0.5.5...v0.5.6) (2026-06-05)
 
 
