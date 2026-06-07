@@ -1,5 +1,10 @@
 # MenYou
 
+[![Build](https://img.shields.io/github/actions/workflow/status/Alpaq92/MenYou/build.yml?branch=main&label=build)](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/Alpaq92/MenYou?label=release&sort=semver)](https://github.com/Alpaq92/MenYou/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Alpaq92/MenYou/total?label=downloads&color=blue&cacheSeconds=300)](https://github.com/Alpaq92/MenYou/releases)
+[![Commit activity](https://img.shields.io/github/commit-activity/m/Alpaq92/MenYou?label=commits%2Fmonth)](https://github.com/Alpaq92/MenYou/commits/main)
+[![License](https://img.shields.io/github/license/Alpaq92/MenYou?color=blue)](LICENSE)
 <!--
   Localization badge. Crowdin's native badge (below) renders only for a PUBLIC
   project with Settings -> General -> Badges -> "Display badges" enabled; until
@@ -10,7 +15,6 @@
   See docs/AUTOMATION.md > Translations.
 -->
 [![Localization](https://badges.crowdin.net/menyou/localized.svg)](https://crowdin.com/project/menyou)
-[![Latest release](https://img.shields.io/github/v/release/Alpaq92/MenYou?label=release)](https://github.com/Alpaq92/MenYou/releases/latest)
 
 A Windows Start-menu replacement written in C# / Avalonia. Ships five built-in looks — Windows 11 (the default), Modern (Windows 7), Linux Mint Cinnamon, Classic XP and Classic 9x — rendered on top of modern Windows shell metadata (localized labels, account picture, taskbar pins, Start mirror, JumpLists) rather than reinventing them.
 
