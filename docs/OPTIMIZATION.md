@@ -13,8 +13,8 @@ Cold boot — time from the desktop appearing to MenYou's **process launching** 
 | Build | Desktop → process (cold) | What changed |
 |---|---|---|
 | 0.2.0 (`HKCU\Run`) | ~15 s | *Faster, flicker-free open* — parallel `.lnk` walk (~640 → 400 ms), off-screen warm-up, single-flight load, reveal-on-data. **No** ReadyToRun or discovery cache yet. |
-| 0.5.0 – 0.6.0 (`HKCU\Run`) | ~15 s | Added the **discovery cache** (instant cold data) + **ReadyToRun** (~½ framework startup) + COM-free UWP fingerprint — faster *once running* than 0.2.0, but the Run-key launch was untouched, so this number didn't move. |
-| 0.7.0 — logon task @ PT3S | ~3 s | Autostart moved **off** the Run-key — the launch fix. |
+| 0.5.0 (`HKCU\Run`) | ~15 s | Added the **discovery cache** (instant cold data) + **ReadyToRun** (~½ framework startup) + COM-free UWP fingerprint — faster *once running* than 0.2.0, but the Run-key launch was untouched, so this number didn't move. |
+| 0.6.0 — logon task @ PT3S | ~3 s | Autostart moved **off** the Run-key — the launch fix. |
 | **0.7.0 — logon task @ PT1S** | **~1 s** | Task trigger delay trimmed PT3S → PT1S. |
 
 Same machine, same binary path — the **launch** dropped **~15 s → ~1 s** purely by changing *how Windows is told to start the app*. Desktop→tray-*usable* followed: ~16 s before, **~2–4 s** on 0.7.0.
