@@ -12,14 +12,18 @@ Cold boot, time from the desktop appearing to MenYou being usable (the metric th
 
 | Build | Desktop → MenYou process | Desktop → tray usable | What changed |
 |---|---|---|---|
-| 0.5.0 (`HKCU\Run`) | ~15 s | ~16 s | **Deep *post-launch* pass** — discovery cache (instant data paint), immediate reveal, ReadyToRun (~½ framework startup), COM-free UWP fingerprint. Real wins, but all *after* the process starts (see note). |
-| 0.6.0 (`HKCU\Run`) | ~15 s | ~16 s | No launch-path change; the Run-key throttle still dominates the cold start. |
+| 0.2.0 – 0.6.0 (`HKCU\Run`) | ~15 s | ~16 s | **Run-key startup throttle — flat across every release in this range.** Each optimized hard, but on segments *after* launch (see note). |
 | 0.7.0 — logon task @ PT3S | ~3 s | ~6 s | Autostart moved off the Run-key. |
 | **0.7.0 — logon task @ PT1S** | **~1 s** | **~2–4 s** | Task delay trimmed. |
 
-Same binary, same machine — **~14 seconds faster** purely by changing *how Windows is told to launch the app*. The remaining time is Windows reaching the desktop (not MenYou) plus a brief cold load.
+Same binary, same machine — **~14 seconds faster** purely by changing *how Windows is told to launch the app*. The remaining time is Windows reaching the desktop (not MenYou) plus a brief cold load. (Only 0.6.0 and 0.7.0 were directly measured this session; 0.2.0–0.5.0 share the identical `HKCU\Run` launch path, so the ~15 s holds structurally.)
 
-> **Why 0.5.0 shows no improvement in this table.** 0.5.0 was itself a heavy startup-performance release — but it optimized the *post-launch* path: how fast the menu's data paints and its window is ready *once the process is running*. This cold-start metric is dominated by the **~15 s before the process even starts** — the Run-key throttle, which 0.5.0 never touched — so its gains are invisible end-to-end. That's precisely the measurement trap described in the next section: the right code, the wrong *segment*. The two fixes **compound**: 0.7.0 makes the process start promptly, and 0.5.0's cache + ReadyToRun are what make it *usable* only ~1–3 s after it does. Today's ~2–4 s desktop→usable is both, together.
+> **Why the cold-start number is flat from 0.2.0 to 0.6.0.** Every release in that range autostarted via `HKCU\Run`, so the throttle's ~15 s dominated everything downstream — no in-app work could move it. And there *was* plenty of in-app work, just on segments this end-to-end launch metric doesn't isolate:
+>
+> - **0.2.0** — *"faster, flicker-free Start-menu open"*: parallelized the `.lnk` discovery walk (~640 ms → ~400 ms), pre-rendered the window off-screen during warm-up, single-flight load, deferred slow shell-icon lookups, reveal gated on real data at `Loaded` priority, diff-aware tile rebuild.
+> - **0.5.0** — the persisted **discovery cache** (instant cold data paint), an immediate-reveal option, **ReadyToRun** (~½ framework startup), and a COM-free UWP fingerprint.
+>
+> All of it stayed masked until **0.7.0** removed the launch delay — and now it's exactly what makes the menu *usable* ~1–3 s after the process starts. Right code, wrong *segment*: the measurement trap in the next section.
 
 ---
 
@@ -58,10 +62,10 @@ The decisive insight came from **(3) − (2)**: the gap between the desktop bein
 
 ## 2. Menu data: the discovery cache (0.5.0)
 
-App discovery (enumerating `.lnk` shortcuts, UWP packages, Control Panel and Settings deep-links) is COM-heavy and slow on a cold shell. Two changes keep the menu's data instant:
+App discovery (enumerating `.lnk` shortcuts, UWP packages, Control Panel and Settings deep-links) is COM-heavy and slow on a cold shell. A few changes keep the menu's data instant:
 
-- **Persisted snapshot** — discovery results are cached at `%AppData%\MenYou\discovery-cache.json`. On launch the menu is served from this plain file read (no shell COM), so it paints instantly on a cold start; a live scan still runs in the background and swaps in if anything changed, guarded by a filesystem fingerprint so a stale snapshot is never shown.
-- **Parallelized `.lnk` walk** — per-shortcut `ShellLink` + shell-localization COM is fanned out across cores: cold discovery ~640 ms → ~400 ms.
+- **Persisted snapshot** *(0.5.0)* — discovery results are cached at `%AppData%\MenYou\discovery-cache.json`. On launch the menu is served from this plain file read (no shell COM), so it paints instantly on a cold start; a live scan still runs in the background and swaps in if anything changed, guarded by a filesystem fingerprint so a stale snapshot is never shown.
+- **Parallelized `.lnk` walk** *(0.2.0)* — per-shortcut `ShellLink` + shell-localization COM is fanned out across cores: cold discovery ~640 ms → ~400 ms.
 - **Eager cache preload** — the cache is warmed from disk during sync init (file I/O only, no COM), so the data is ready well before the idle-time warm-up, even for an early first open.
 
 ---
@@ -111,6 +115,7 @@ The one-time ~10 s first-install cold load (Defender + cold disk) can't be elimi
 
 | Version | Optimization work |
 |---|---|
-| **0.5.0** | Deep *post-launch* startup pass: discovery cache (instant cold paint) + COM-free UWP fingerprint, immediate menu reveal, ReadyToRun (~½ framework startup), parallelized `.lnk` walk, account-picture load off the UI thread. (End-to-end gain masked by the Run-key throttle until 0.7.0 — see the note under Results.) |
+| **0.2.0** | "Faster, flicker-free Start-menu open": parallelized `.lnk` discovery walk (~640 ms → ~400 ms), off-screen warm-up/pre-render, single-flight `LoadAsync`, deferred shell-icon extraction, account-picture off the UI thread, reveal-at-`Loaded` gated on real data, diff-aware tile rebuild. (In-process/open path — cold start still Run-key-bound.) |
+| **0.5.0** | Persisted discovery cache (instant cold data paint), immediate-reveal option, ReadyToRun (~½ framework startup), COM-free UWP fingerprint, Windows 11 default look. (Cold-paint + framework — still Run-key-bound end-to-end until 0.7.0.) |
 | **0.5.x** | pdb exclusion from the installer; multi-file kept (single-file trialed and reverted). |
 | **0.7.0** | **Run-key → logon scheduled task** (the ~15 s → ~1 s cold-start win) + PT1S delay + self-healing migration; first-run native splash + ready balloon; Settings-window flash→fade; (trimming evaluated and rejected). |
