@@ -78,7 +78,7 @@ public sealed class UserSettings
     // re-runs. See [[Win32AutostartService]].
     public bool AutostartTaskMigrated { get; set; } = false;
     public bool HideOnFocusLost { get; set; } = true;
-    public int MaxRecentItems { get; set; } = 10;
+    public int MaxRecentItems { get; set; } = 8;
     public List<PinnedItem> Pinned { get; set; } = new();
     public List<RecentEntry> Recent { get; set; } = new();
 
