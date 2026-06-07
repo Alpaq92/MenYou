@@ -14,6 +14,7 @@ public sealed partial class SearchViewModel : ViewModelBase
     private readonly ISearchService _search;
     private readonly IShellLauncher _launcher;
     private readonly IIconService _icons;
+    private readonly IRecentItemsService _recent;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -203,11 +204,12 @@ public sealed partial class SearchViewModel : ViewModelBase
         }
     }
 
-    public SearchViewModel(ISearchService search, IShellLauncher launcher, IIconService icons)
+    public SearchViewModel(ISearchService search, IShellLauncher launcher, IIconService icons, IRecentItemsService recent)
     {
         _search = search;
         _launcher = launcher;
         _icons = icons;
+        _recent = recent;
     }
 
     partial void OnQueryChanged(string value) => _ = RunSearchAsync(value);
@@ -300,6 +302,7 @@ public sealed partial class SearchViewModel : ViewModelBase
                     UseShellExecute = true,
                 });
                 _launcher.NotifyLaunched();
+                RecordRecentApp(r);
             }
             catch { }
             return;
@@ -314,7 +317,24 @@ public sealed partial class SearchViewModel : ViewModelBase
             return;
         }
         if (!string.IsNullOrWhiteSpace(r.TargetPath))
+        {
             _launcher.Launch(r.TargetPath!, r.Arguments);
+            RecordRecentApp(r);
+        }
+    }
+
+    /// Records App / PackagedApp launches that came through search into the
+    /// recent-apps list. The tile paths launch via ShellLauncher.Launch(AppEntry),
+    /// which records; search used the path-based overload (and a direct
+    /// Process.Start for UWP), which doesn't — so apps opened by searching never
+    /// appeared in Recent. Keyed on the discovery AppId so RebuildRecent's
+    /// FindById resolves it back to a tile. File / Folder / Command /
+    /// Control-Panel results carry no AppId and are intentionally skipped.
+    private void RecordRecentApp(SearchResult r)
+    {
+        if (r.Kind is SearchResultKind.App or SearchResultKind.PackagedApp
+            && !string.IsNullOrEmpty(r.AppId))
+            _recent.RecordLaunch(r.AppId);
     }
 
     // The Selected-based commands (driven by the Win7 / Classic2 search
@@ -366,6 +386,7 @@ public sealed partial class SearchViewModel : ViewModelBase
                 Verb = "runas",
             });
             _launcher.NotifyLaunched();
+            RecordRecentApp(r);
         }
         catch { }
     }

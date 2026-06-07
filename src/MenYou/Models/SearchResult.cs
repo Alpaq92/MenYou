@@ -25,4 +25,10 @@ public sealed record SearchResult(
     int IconIndex,
     SearchResultKind Kind,
     int Score,
-    string? Aumid = null);
+    string? Aumid = null,
+    // Discovery AppEntry.Id for App / PackagedApp results, so a launch from
+    // search can be recorded into the recent-apps list. RecentItemsService
+    // keys on this Id and AppDiscoveryService.FindById resolves it back to a
+    // tile. Null for File / Folder / Command / ControlPanelTask results,
+    // which aren't tracked as recent apps.
+    string? AppId = null);

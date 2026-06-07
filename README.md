@@ -1,19 +1,19 @@
 # MenYou
 
+<!--
+  Localization badge kept last. Crowdin's native badge renders only for a PUBLIC
+  project with Settings -> General -> Badges -> "Display badges" enabled; until
+  then it 403s. If your project is private (or you want a custom label/color),
+  the `crowdin-badge.yml` workflow publishes an equivalent dynamic badge from
+  the Crowdin API to an orphan `badges` branch -- swap the localization line for:
+  [![Localization](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Alpaq92/MenYou/badges/crowdin-localization.json)](https://crowdin.com/project/menyou)
+  See docs/AUTOMATION.md > Translations.
+-->
 [![Build](https://img.shields.io/github/actions/workflow/status/Alpaq92/MenYou/build.yml?branch=main&label=build)](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/Alpaq92/MenYou?label=release&sort=semver)](https://github.com/Alpaq92/MenYou/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Alpaq92/MenYou/total?label=downloads&color=blue&cacheSeconds=300)](https://github.com/Alpaq92/MenYou/releases)
 [![Commit activity](https://img.shields.io/github/commit-activity/m/Alpaq92/MenYou?label=commits%2Fmonth)](https://github.com/Alpaq92/MenYou/commits/main)
 [![License](https://img.shields.io/github/license/Alpaq92/MenYou?color=blue)](LICENSE)
-<!--
-  Localization badge. Crowdin's native badge (below) renders only for a PUBLIC
-  project with Settings -> General -> Badges -> "Display badges" enabled; until
-  then it 403s. If your project is private (or you want custom label/color), the
-  `crowdin-badge.yml` workflow publishes an equivalent dynamic badge from the
-  Crowdin API to an orphan `badges` branch -- swap the line below for:
-  [![Localization](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Alpaq92/MenYou/badges/crowdin-localization.json)](https://crowdin.com/project/menyou)
-  See docs/AUTOMATION.md > Translations.
--->
 [![Localization](https://badges.crowdin.net/menyou/localized.svg)](https://crowdin.com/project/menyou)
 
 A Windows Start-menu replacement written in C# / Avalonia. Ships five built-in looks — Windows 11 (the default), Modern (Windows 7), Linux Mint Cinnamon, Classic XP and Classic 9x — rendered on top of modern Windows shell metadata (localized labels, account picture, taskbar pins, Start mirror, JumpLists) rather than reinventing them.
@@ -77,6 +77,7 @@ The Windows 11 and Linux Mint Cinnamon looks that used to ship as custom-theme s
 ## Documentation
 
 - [`docs/OVERVIEW.md`](docs/OVERVIEW.md) — architecture, tech stack, how it works.
+- [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md) — startup/performance engineering: the cold-start work, measurements, and what changed each release.
 - [`docs/AUTOMATION.md`](docs/AUTOMATION.md) — CI/CD map, code-signing options, required secrets, and the release pipeline.
 - [`docs/THEMING.md`](docs/THEMING.md) — authoring custom themes for the Settings → Custom feature.
 - [`CREDITS.md`](CREDITS.md) — inspirations, third-party code, and asset attributions.

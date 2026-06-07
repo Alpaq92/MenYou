@@ -8,19 +8,19 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
-## [0.7.0](https://github.com/Alpaq92/MenYou/compare/v0.5.7...v0.7.0) (2026-06-07)
+## [0.7.0](https://github.com/Alpaq92/MenYou/compare/v0.5.6...v0.7.0) (2026-06-07)
 
-
-### Documentation
-
-* **changelog:** reframe 0.5.0 as a starting point; release as 0.7.0 ([#21](https://github.com/Alpaq92/MenYou/issues/21)) ([e6591c0](https://github.com/Alpaq92/MenYou/commit/e6591c091aa4c1ed3acc9455d21789faea81ae6a))
-
-## [0.5.7](https://github.com/Alpaq92/MenYou/compare/v0.5.6...v0.5.7) (2026-06-07)
+> 🚀 **Deeply optimized release** — the cold-start payoff: autostart moved off Windows' throttled `HKCU\Run` value onto a per-user logon scheduled task, cutting time-to-usable from **~15 s to ~1 s** after sign-in. Plus a first-run splash, a one-time "ready" tray balloon, and a power-button (`SeShutdownPrivilege`) fix. Full write-up in [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md).
 
 
 ### Features
 
 * near-instant startup, first-run splash, and power-button fix ([#19](https://github.com/Alpaq92/MenYou/issues/19)) ([f086644](https://github.com/Alpaq92/MenYou/commit/f086644fcc4c9ef05245b2940af9a278c048ba76))
+
+
+### Documentation
+
+* **changelog:** reframe 0.5.0 as a starting point; release as 0.7.0 ([#21](https://github.com/Alpaq92/MenYou/issues/21)) ([e6591c0](https://github.com/Alpaq92/MenYou/commit/e6591c091aa4c1ed3acc9455d21789faea81ae6a))
 
 ## [0.5.6](https://github.com/Alpaq92/MenYou/compare/v0.5.5...v0.5.6) (2026-06-05)
 

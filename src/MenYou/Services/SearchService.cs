@@ -62,7 +62,8 @@ public sealed class SearchService : ISearchService
                 IconIndex: a.IconIndex,
                 Kind: isUwp ? SearchResultKind.PackagedApp : SearchResultKind.App,
                 Score: score,
-                Aumid: a.Aumid));
+                Aumid: a.Aumid,
+                AppId: a.Id));
             discoveredNames.Add(a.DisplayName);
             if (!string.IsNullOrEmpty(a.AlternativeName))
                 discoveredNames.Add(a.AlternativeName!);
