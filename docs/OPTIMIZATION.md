@@ -12,11 +12,14 @@ Cold boot, time from the desktop appearing to MenYou being usable (the metric th
 
 | Build | Desktop → MenYou process | Desktop → tray usable | What changed |
 |---|---|---|---|
-| ≤ 0.6.0 (`HKCU\Run` autostart) | **~15 s** | ~16 s | Windows' Run-key startup throttle |
-| 0.7.0 — logon task @ PT3S | ~3 s | ~6 s | autostart moved off the Run-key |
-| **0.7.0 — logon task @ PT1S** | **~1 s** | **~2–4 s** | task delay trimmed |
+| 0.5.0 (`HKCU\Run`) | ~15 s | ~16 s | **Deep *post-launch* pass** — discovery cache (instant data paint), immediate reveal, ReadyToRun (~½ framework startup), COM-free UWP fingerprint. Real wins, but all *after* the process starts (see note). |
+| 0.6.0 (`HKCU\Run`) | ~15 s | ~16 s | No launch-path change; the Run-key throttle still dominates the cold start. |
+| 0.7.0 — logon task @ PT3S | ~3 s | ~6 s | Autostart moved off the Run-key. |
+| **0.7.0 — logon task @ PT1S** | **~1 s** | **~2–4 s** | Task delay trimmed. |
 
 Same binary, same machine — **~14 seconds faster** purely by changing *how Windows is told to launch the app*. The remaining time is Windows reaching the desktop (not MenYou) plus a brief cold load.
+
+> **Why 0.5.0 shows no improvement in this table.** 0.5.0 was itself a heavy startup-performance release — but it optimized the *post-launch* path: how fast the menu's data paints and its window is ready *once the process is running*. This cold-start metric is dominated by the **~15 s before the process even starts** — the Run-key throttle, which 0.5.0 never touched — so its gains are invisible end-to-end. That's precisely the measurement trap described in the next section: the right code, the wrong *segment*. The two fixes **compound**: 0.7.0 makes the process start promptly, and 0.5.0's cache + ReadyToRun are what make it *usable* only ~1–3 s after it does. Today's ~2–4 s desktop→usable is both, together.
 
 ---
 
@@ -108,6 +111,6 @@ The one-time ~10 s first-install cold load (Defender + cold disk) can't be elimi
 
 | Version | Optimization work |
 |---|---|
-| **0.5.0** | Discovery cache (instant cold paint), parallelized `.lnk` walk, account-picture load off the UI thread. |
-| **0.5.x** | ReadyToRun in the release build; pdb exclusion from the installer; multi-file (single-file reverted). |
+| **0.5.0** | Deep *post-launch* startup pass: discovery cache (instant cold paint) + COM-free UWP fingerprint, immediate menu reveal, ReadyToRun (~½ framework startup), parallelized `.lnk` walk, account-picture load off the UI thread. (End-to-end gain masked by the Run-key throttle until 0.7.0 — see the note under Results.) |
+| **0.5.x** | pdb exclusion from the installer; multi-file kept (single-file trialed and reverted). |
 | **0.7.0** | **Run-key → logon scheduled task** (the ~15 s → ~1 s cold-start win) + PT1S delay + self-healing migration; first-run native splash + ready balloon; Settings-window flash→fade; (trimming evaluated and rejected). |
