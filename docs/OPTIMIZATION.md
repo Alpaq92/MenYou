@@ -8,22 +8,20 @@ This is an engineering record, not a changelog: it covers *what* was done, *why*
 
 ## Results
 
-Cold boot, time from the desktop appearing to MenYou being usable (the metric the user actually experiences):
+Cold boot — time from the desktop appearing to MenYou's **process launching** (the term 0.7.0 fixed; tray-usable follows a beat later):
 
-| Build | Desktop → MenYou process | Desktop → tray usable | What changed |
-|---|---|---|---|
-| 0.2.0 – 0.6.0 (`HKCU\Run`) | ~15 s | ~16 s | **Run-key startup throttle — flat across every release in this range.** Each optimized hard, but on segments *after* launch (see note). |
-| 0.7.0 — logon task @ PT3S | ~3 s | ~6 s | Autostart moved off the Run-key. |
-| **0.7.0 — logon task @ PT1S** | **~1 s** | **~2–4 s** | Task delay trimmed. |
+| Build | Desktop → process (cold) | What changed |
+|---|---|---|
+| 0.2.0 (`HKCU\Run`) | ~15 s | *Faster, flicker-free open* — parallel `.lnk` walk (~640 → 400 ms), off-screen warm-up, single-flight load, reveal-on-data. **No** ReadyToRun or discovery cache yet. |
+| 0.5.0 – 0.6.0 (`HKCU\Run`) | ~15 s | Added the **discovery cache** (instant cold data) + **ReadyToRun** (~½ framework startup) + COM-free UWP fingerprint — faster *once running* than 0.2.0, but the Run-key launch was untouched, so this number didn't move. |
+| 0.7.0 — logon task @ PT3S | ~3 s | Autostart moved **off** the Run-key — the launch fix. |
+| **0.7.0 — logon task @ PT1S** | **~1 s** | Task trigger delay trimmed PT3S → PT1S. |
 
-Same binary, same machine — **~14 seconds faster** purely by changing *how Windows is told to launch the app*. The remaining time is Windows reaching the desktop (not MenYou) plus a brief cold load. (Only 0.6.0 and 0.7.0 were directly measured this session; 0.2.0–0.5.0 share the identical `HKCU\Run` launch path, so the ~15 s holds structurally.)
+Same machine, same binary path — the **launch** dropped **~15 s → ~1 s** purely by changing *how Windows is told to start the app*. Desktop→tray-*usable* followed: ~16 s before, **~2–4 s** on 0.7.0.
 
-> **Why the cold-start number is flat from 0.2.0 to 0.6.0.** Every release in that range autostarted via `HKCU\Run`, so the throttle's ~15 s dominated everything downstream — no in-app work could move it. And there *was* plenty of in-app work, just on segments this end-to-end launch metric doesn't isolate:
+> **"Was 0.2.0 really no different from 0.5.0?"** For the *launch* number above — yes, provably. The `HKCU\Run` autostart code (`Win32AutostartService`) was **byte-identical from 0.2.0 through 0.6.0** (sha `07a2825…`); the logon task and the `StartupDelayInMSec` tweak only landed in **0.7.0** (commit `213b320`), so nothing could move the ~15 s launch before then.
 >
-> - **0.2.0** — *"faster, flicker-free Start-menu open"*: parallelized the `.lnk` discovery walk (~640 ms → ~400 ms), pre-rendered the window off-screen during warm-up, single-flight load, deferred slow shell-icon lookups, reveal gated on real data at `Loaded` priority, diff-aware tile rebuild.
-> - **0.5.0** — the persisted **discovery cache** (instant cold data paint), an immediate-reveal option, **ReadyToRun** (~½ framework startup), and a COM-free UWP fingerprint.
->
-> All of it stayed masked until **0.7.0** removed the launch delay — and now it's exactly what makes the menu *usable* ~1–3 s after the process starts. Right code, wrong *segment*: the measurement trap in the next section.
+> But the releases *were* different where it counts **after** launch: **ReadyToRun landed in 0.5.0** (commit `8d39ce3`, ~½ framework startup) alongside the discovery cache — so 0.5.0 reached *usable* faster than 0.2.0 once its process was running. The Run-key throttle simply hid that gain in the end-to-end cold start until 0.7.0 exposed it. (Only 0.6.0 and 0.7.0 were directly timed this session; the flat 0.2.0–0.6.0 *launch* is **structural** — identical code — not extrapolated.) Right code, wrong *segment*: the measurement trap in the next section.
 
 ---
 
