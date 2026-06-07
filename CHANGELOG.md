@@ -24,7 +24,7 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 ## [0.5.0](https://github.com/Alpaq92/MenYou/compare/v0.2.0...v0.5.0) (2026-06-05)
 
-> **Deeply optimized release** — a from-scratch startup-performance pass: cold start now paints from a persisted snapshot instead of waiting on a live shell scan, and the binaries are AOT-compiled ahead of first run.
+> **The first startup pass — a starting point, not the finish line.** 0.5.0 began painting cold-start from a persisted discovery cache and shipped ReadyToRun binaries. Real gains, but on the work *after* launch — the autostart launch itself stayed throttled (~15 s) until the **0.7.0** logon-task fix actually moved the needle. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md).
 
 
 ### Features
