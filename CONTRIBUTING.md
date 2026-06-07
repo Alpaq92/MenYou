@@ -9,7 +9,7 @@ Thanks for taking a look! MenYou is a small project but happy to take PRs.
 dotnet build src/MenYou/MenYou.csproj
 ```
 
-The native input bridge (`src/MenYou.Bridge`) is compiled by `build-bridge.ps1` as a pre-build step. If MSVC isn't installed the script exits 0 and MenYou falls back to the managed WinEvent monitor at runtime — you can develop without VS C++ tools.
+The native input bridge (`src/MenYou.Bridge`) is compiled by `tools/build-bridge.ps1` as a pre-build step. If MSVC isn't installed the script exits 0 and MenYou falls back to the managed WinEvent monitor at runtime — you can develop without VS C++ tools.
 
 ## Running locally
 

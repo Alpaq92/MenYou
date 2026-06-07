@@ -74,7 +74,7 @@ dotnet build src/MenYou/MenYou.csproj
 src/MenYou/bin/Debug/net10.0-windows/MenYou.exe
 ```
 
-The `BuildNativeBridge` MSBuild target runs `build-bridge.ps1` first; it locates VS's `msbuild` via `vswhere` and exits 0 if MSVC is missing (MenYou then runs without the start-button hook). A tray icon appears on launch — press **Shift+Win** to toggle the menu.
+The `BuildNativeBridge` MSBuild target runs `tools/build-bridge.ps1` first; it locates VS's `msbuild` via `vswhere` and exits 0 if MSVC is missing (MenYou then runs without the start-button hook). A tray icon appears on launch — press **Shift+Win** to toggle the menu.
 
 ## Branding
 

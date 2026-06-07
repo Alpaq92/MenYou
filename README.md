@@ -50,7 +50,7 @@ dotnet build src/MenYou/MenYou.csproj
 src/MenYou/bin/Debug/net10.0-windows/MenYou.exe
 ```
 
-The native input bridge under `src/MenYou.Bridge/` is compiled by `build-bridge.ps1` as a pre-build step. It's optional — if MSVC isn't installed the script exits 0 and MenYou falls back to the managed WinEvent monitor at runtime.
+The native input bridge under `src/MenYou.Bridge/` is compiled by `tools/build-bridge.ps1` as a pre-build step. It's optional — if MSVC isn't installed the script exits 0 and MenYou falls back to the managed WinEvent monitor at runtime.
 
 Press **Shift+Win** to toggle the menu.
 
