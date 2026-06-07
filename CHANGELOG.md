@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.7.1](https://github.com/Alpaq92/MenYou/compare/v0.7.0...v0.7.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* **recents:** record app launches opened from search; default count to 8 ([#23](https://github.com/Alpaq92/MenYou/issues/23)) ([6dbf914](https://github.com/Alpaq92/MenYou/commit/6dbf91485dfce339af0db6117693c822a11b233a))
+
 ## [0.7.0](https://github.com/Alpaq92/MenYou/compare/v0.5.6...v0.7.0) (2026-06-07)
 
 > 🚀 **Deeply optimized release** — the cold-start payoff: autostart moved off Windows' throttled `HKCU\Run` value onto a per-user logon scheduled task, cutting time-to-usable from **~15 s to ~1 s** after sign-in. Plus a first-run splash, a one-time "ready" tray balloon, and a power-button (`SeShutdownPrivilege`) fix. Full write-up in [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md).
