@@ -19,9 +19,9 @@ Cold boot — time from the desktop appearing to MenYou's **process launching** 
 
 Same machine, same binary path — the **launch** dropped **~15 s → ~1 s** purely by changing *how Windows is told to start the app*. Desktop→tray-*usable* followed: ~16 s before, **~2–4 s** on 0.7.0.
 
-> **"Was 0.2.0 really no different from 0.5.0?"** For the *launch* number above — yes, provably. The `HKCU\Run` autostart code (`Win32AutostartService`) was **byte-identical from 0.2.0 through 0.6.0** (sha `07a2825…`); the logon task and the `StartupDelayInMSec` tweak only landed in **0.7.0** (commit `213b320`), so nothing could move the ~15 s launch before then.
+> **"Was 0.2.0 really no different from 0.5.0?"** For the *launch* number above — yes, provably. The `HKCU\Run` autostart code (`Win32AutostartService`) was **byte-identical across every Run-key release, 0.2.0 through 0.5.6** (sha `07a2825…`); the logon task and the `StartupDelayInMSec` tweak arrived with the task work (the 0.6.0 build at PT3S, trimmed to PT1S for 0.7.0), so nothing could move the ~15 s launch across the Run-key era.
 >
-> But the releases *were* different where it counts **after** launch: **ReadyToRun landed in 0.5.0** (commit `8d39ce3`, ~½ framework startup) alongside the discovery cache — so 0.5.0 reached *usable* faster than 0.2.0 once its process was running. The Run-key throttle simply hid that gain in the end-to-end cold start until 0.7.0 exposed it. (Only 0.6.0 and 0.7.0 were directly timed this session; the flat 0.2.0–0.6.0 *launch* is **structural** — identical code — not extrapolated.) Right code, wrong *segment*: the measurement trap in the next section.
+> But the releases *were* different where it counts **after** launch: **ReadyToRun landed in 0.5.0** (commit `8d39ce3`, ~½ framework startup) alongside the discovery cache — so 0.5.0 reached *usable* faster than 0.2.0 once its process was running. The Run-key throttle simply hid that gain in the end-to-end cold start until the task removed the launch delay. (Only the 0.6.0/0.7.0 task builds were directly timed this session; the flat 0.2.0–0.5.6 *launch* is **structural** — identical code — not extrapolated.) Right code, wrong *segment*: the measurement trap in the next section.
 
 ---
 
@@ -38,7 +38,7 @@ The decisive insight came from **(3) − (2)**: the gap between the desktop bein
 
 ---
 
-## 1. Cold-start: the autostart mechanism (the big win, 0.7.0)
+## 1. Cold-start: the autostart mechanism (the big win, 0.6.0–0.7.0)
 
 **Symptom.** After a reboot, MenYou's tray icon and hotkey took ~15 s to appear *after the desktop was already interactive*.
 
@@ -114,6 +114,7 @@ The one-time ~10 s first-install cold load (Defender + cold disk) can't be elimi
 | Version | Optimization work |
 |---|---|
 | **0.2.0** | "Faster, flicker-free Start-menu open": parallelized `.lnk` discovery walk (~640 ms → ~400 ms), off-screen warm-up/pre-render, single-flight `LoadAsync`, deferred shell-icon extraction, account-picture off the UI thread, reveal-at-`Loaded` gated on real data, diff-aware tile rebuild. (In-process/open path — cold start still Run-key-bound.) |
-| **0.5.0** | Persisted discovery cache (instant cold data paint), immediate-reveal option, ReadyToRun (~½ framework startup), COM-free UWP fingerprint, Windows 11 default look. (Cold-paint + framework — still Run-key-bound end-to-end until 0.7.0.) |
+| **0.5.0** | Persisted discovery cache (instant cold data paint), immediate-reveal option, ReadyToRun (~½ framework startup), COM-free UWP fingerprint, Windows 11 default look. (Cold-paint + framework — still Run-key-bound end-to-end until the 0.6.0 task build.) |
 | **0.5.x** | pdb exclusion from the installer; multi-file kept (single-file trialed and reverted). |
-| **0.7.0** | **Run-key → logon scheduled task** (the ~15 s → ~1 s cold-start win) + PT1S delay + self-healing migration; first-run native splash + ready balloon; Settings-window flash→fade; (trimming evaluated and rejected). |
+| **0.6.0** | **Run-key → logon scheduled task** at PT3S — autostart off the throttled Run-key: the ~15 s → ~3 s cold-start win, plus self-healing migration and a zeroed-`StartupDelayInMSec` fallback. |
+| **0.7.0** | Trigger delay trimmed PT3S → PT1S (~3 s → ~1 s); first-run native splash + ready balloon; power-button `SeShutdownPrivilege` fix; Settings-window flash→fade; (trimming evaluated and rejected). |
