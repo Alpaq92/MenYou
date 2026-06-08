@@ -3,9 +3,11 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using MenYou.Platform.Windows;
+using MenYou.Services;
 using MenYou.ViewModels;
 using MenYou.ViewModels.Items;
 using MenYou.Views.Behaviors;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MenYou.Views.Controls;
 
@@ -127,10 +129,14 @@ public partial class SearchResultsList : UserControl
 
         // Per-app Recent destinations from the Windows JumpList (long file
         // names trim with an ellipsis; the full name is the tooltip).
-        if (vm.Recent.Count > 0)
+        // Cap recent files in the context menu (default 8; 0 hides them). The
+        // Win 7 / Classic side panel binds to vm.Recent directly and stays full.
+        var cap = App.Services.GetService<ISettingsService>()?.Current.ContextMenuRecentCount ?? 8;
+        var recent = vm.Recent.Take(cap).ToList();
+        if (recent.Count > 0)
         {
             menu.Items.Add(new Separator());
-            foreach (var dest in vm.Recent)
+            foreach (var dest in recent)
                 menu.Items.Add(MenuItemFactory.Create(dest.DisplayName, owner.OpenRecentCommand, dest, tooltip: true));
         }
     }

@@ -10,6 +10,7 @@
   "ShowRecent": "Показывать недавние",
   "ShowSearch": "Показывать поиск",
   "MaxRecentItems": "Макс. число недавних",
+  "ContextMenuRecentCount": "Недавние файлы в контекстном меню",
   "ReplaceStart": "Заменить Пуск: клик на панели задач + Shift+Win",
   "ReplaceStartDescription": "Одиночное нажатие Win по-прежнему открывает системное меню (Microsoft в Windows 11 24H2 перенесла обработчик за DirectComposition — Open-Shell столкнулся с тем же и рекомендует Shift+Win).",
   "HideOnFocusLost": "Скрывать при потере фокуса",

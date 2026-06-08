@@ -13,6 +13,7 @@
   "ShowRecent": "Show recent items",
   "ShowSearch": "Show search box",
   "MaxRecentItems": "Max recent items",
+  "ContextMenuRecentCount": "Recent files in context menu",
   "ReplaceStart": "Replace Start: capture taskbar Start click + Shift+Win shortcut",
   "ReplaceStartDescription": "Lone Win key still opens the system menu (Microsoft moved its detector behind DirectComposition on Win 11 24H2 — Open-Shell hit the same wall and recommends Shift+Win).",
   "HideOnFocusLost": "Hide menu when it loses focus",

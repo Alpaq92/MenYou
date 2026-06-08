@@ -11,6 +11,7 @@
   "ShowRecent": "显示最近使用",
   "ShowSearch": "显示搜索框",
   "MaxRecentItems": "最近项最大数量",
+  "ContextMenuRecentCount": "右键菜单中的最近文件",
   "ReplaceStart": "替换开始：任务栏开始点击 + Shift+Win",
   "ReplaceStartDescription": "单独按 Win 键仍会打开系统菜单（Microsoft 在 Windows 11 24H2 把检测器移到 DirectComposition 之后 — Open-Shell 也撞墙后推荐 Shift+Win）。",
   "HideOnFocusLost": "失去焦点时隐藏",

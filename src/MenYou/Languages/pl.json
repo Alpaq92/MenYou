@@ -13,6 +13,7 @@
   "ShowRecent": "Pokaż ostatnio używane",
   "ShowSearch": "Pokaż pole wyszukiwania",
   "MaxRecentItems": "Maksymalna liczba ostatnich",
+  "ContextMenuRecentCount": "Ostatnie pliki w menu kontekstowym",
   "ReplaceStart": "Przejmij Start: kliknięcie ikony na pasku zadań + Shift+Win",
   "ReplaceStartDescription": "Pojedynczy klawisz Win nadal otwiera menu systemowe (Microsoft schował detektor za DirectComposition w Windows 11 24H2 — Open-Shell trafił na tę samą ścianę i rekomenduje Shift+Win).",
   "HideOnFocusLost": "Ukryj menu po utracie fokusu",

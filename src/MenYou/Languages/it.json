@@ -11,6 +11,7 @@
   "ShowRecent": "Mostra elementi recenti",
   "ShowSearch": "Mostra casella di ricerca",
   "MaxRecentItems": "Numero massimo di recenti",
+  "ContextMenuRecentCount": "File recenti nel menu contestuale",
   "ReplaceStart": "Sostituisci Start: clic sulla barra delle applicazioni + Shift+Win",
   "HideOnFocusLost": "Nascondi quando perde il focus",
   "CheckForUpdates": "Verifica aggiornamenti",

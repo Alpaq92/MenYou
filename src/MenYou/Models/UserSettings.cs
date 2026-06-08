@@ -83,6 +83,12 @@ public sealed class UserSettings
     public bool AutostartTaskMigrated { get; set; } = false;
     public bool HideOnFocusLost { get; set; } = true;
     public int MaxRecentItems { get; set; } = 8;
+
+    /// Caps how many per-app JumpList "recent files" appear in the right-click
+    /// context menus (app tiles + search results). The Win 7 / Classic layouts'
+    /// side detail panel is intentionally NOT capped by this — it shows the full
+    /// recent list. Default 8; 0 hides recent files from the context menu.
+    public int ContextMenuRecentCount { get; set; } = 8;
     public List<PinnedItem> Pinned { get; set; } = new();
     public List<RecentEntry> Recent { get; set; } = new();
 
