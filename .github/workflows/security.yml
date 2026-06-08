@@ -67,7 +67,7 @@ jobs:
           # (SARIF upload + Security-tab triage is the workflow). Set
           # to 1 once we're confident no false positives are surfacing.
           exit-code: "0"
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
