@@ -1,7 +1,7 @@
 # MenYou
 
 <!--
-  Localization badge kept last. Crowdin's native badge renders only for a PUBLIC
+  Localization badge. Crowdin's native badge renders only for a PUBLIC
   project with Settings -> General -> Badges -> "Display badges" enabled; until
   then it 403s. If your project is private (or you want a custom label/color),
   the `crowdin-badge.yml` workflow publishes an equivalent dynamic badge from
@@ -9,12 +9,12 @@
   [![Localization](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Alpaq92/MenYou/badges/crowdin-localization.json)](https://crowdin.com/project/menyou)
   See docs/AUTOMATION.md > Translations.
 -->
-[![Build](https://img.shields.io/github/actions/workflow/status/Alpaq92/MenYou/build.yml?branch=main&label=build)](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml)
+[![Build](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/Alpaq92/MenYou?label=release&sort=semver)](https://github.com/Alpaq92/MenYou/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Alpaq92/MenYou/total?label=downloads&color=blue&cacheSeconds=300)](https://github.com/Alpaq92/MenYou/releases)
 [![Commit activity](https://img.shields.io/github/commit-activity/m/Alpaq92/MenYou?label=commits%2Fmonth)](https://github.com/Alpaq92/MenYou/commits/main)
-[![License](https://img.shields.io/github/license/Alpaq92/MenYou?color=blue)](LICENSE)
 [![Localization](https://badges.crowdin.net/menyou/localized.svg)](https://crowdin.com/project/menyou)
+[![License](https://img.shields.io/github/license/Alpaq92/MenYou?color=blue)](LICENSE)
 
 A Windows Start-menu replacement written in C# / Avalonia. Ships five built-in looks — Windows 11 (the default), Modern (Windows 7), Linux Mint Cinnamon, Classic XP and Classic 9x — rendered on top of modern Windows shell metadata (localized labels, account picture, taskbar pins, Start mirror, JumpLists) rather than reinventing them.
 

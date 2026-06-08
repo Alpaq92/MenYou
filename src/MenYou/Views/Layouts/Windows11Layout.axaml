@@ -503,7 +503,7 @@
   <Border Grid.Row="1"
           Background="{DynamicResource Win11Bg}"
           IsVisible="{Binding Search.HasQuery}">
-    <ctrl:SearchResultsList DataContext="{Binding Search}" />
+    <ctrl:SearchResultsList SingleClickLaunch="True" DataContext="{Binding Search}" />
   </Border>
 
   </Grid>

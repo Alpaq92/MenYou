@@ -244,14 +244,48 @@ public sealed partial class SearchViewModel : ViewModelBase
             // generation cycle.
             const int Cap = 60;
             var capped = results.Count > Cap ? results.Take(Cap).ToList() : results;
-            Results.Clear();
-            foreach (var r in capped) Results.Add(new SearchResultViewModel(r, this));
+            ReconcileResults(capped);
             Selected = Results.FirstOrDefault();
             IsSearching = false;
             _ = Task.Run(() => LoadIconsAsync(token), token);
         }
         catch (OperationCanceledException) { /* superseded — leave IsSearching to the newer call */ }
     }
+
+    /// Diff-aware update of <see cref="Results"/>. Clearing and re-adding the
+    /// whole list on every keystroke meant a click landing while a
+    /// still-settling search (the 80 ms debounce + thread-pool work) committed
+    /// its results hit a row being torn down and rebuilt — the pointer press
+    /// was dropped, so the result "needed 2-3 clicks to launch". Reuse the
+    /// existing view-model (and its already-loaded icon) for any result
+    /// unchanged at its position; only genuinely changed rows are swapped, so a
+    /// stable result stays a stable click target across keystrokes.
+    private void ReconcileResults(IReadOnlyList<SearchResult> desired)
+    {
+        while (Results.Count > desired.Count)
+            Results.RemoveAt(Results.Count - 1);
+        for (var i = 0; i < desired.Count; i++)
+        {
+            if (i < Results.Count)
+            {
+                if (!SameResult(Results[i].Data, desired[i]))
+                    Results[i] = new SearchResultViewModel(desired[i], this);
+            }
+            else
+            {
+                Results.Add(new SearchResultViewModel(desired[i], this));
+            }
+        }
+    }
+
+    private static bool SameResult(SearchResult a, SearchResult b) =>
+        a.Kind == b.Kind
+        && string.Equals(a.Title, b.Title, StringComparison.Ordinal)
+        && string.Equals(a.AppId ?? a.TargetPath, b.AppId ?? b.TargetPath, StringComparison.OrdinalIgnoreCase)
+        // Launch-critical fields: if these differ, the row must NOT be reused —
+        // a stale view-model would launch the old target.
+        && string.Equals(a.Arguments, b.Arguments, StringComparison.Ordinal)
+        && string.Equals(a.Aumid, b.Aumid, StringComparison.OrdinalIgnoreCase);
 
     private async Task LoadIconsAsync(CancellationToken token)
     {

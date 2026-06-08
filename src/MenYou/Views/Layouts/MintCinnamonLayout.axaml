@@ -340,7 +340,7 @@
        =================================================================== -->
   <Border Grid.Row="0" Grid.Column="1" Background="{DynamicResource MintMainBg}"
           IsVisible="{Binding Search.HasQuery}">
-    <ctrl:SearchResultsList DataContext="{Binding Search}" />
+    <ctrl:SearchResultsList SingleClickLaunch="True" DataContext="{Binding Search}" />
   </Border>
 
   </Grid>
