@@ -35,6 +35,26 @@ internal static class JumpListReader
     /// pass to <see cref="Target"/>.
     public sealed record JumpTask(string Title, string Target, string Arguments, bool IsSeparator);
 
+    /// Resolves the implicit AUMID / key the shell uses to store an app's
+    /// JumpList (Recent + Tasks): an explicit AUMID wins, else the id derived
+    /// from a <c>.lnk</c> via IApplicationResolver, else the raw target path.
+    /// Shared by the search results and every app context menu so they key off
+    /// the same destination list. Returns "" when nothing is resolvable.
+    public static string ResolveKey(string? aumid, string? lnkPath, string? targetPath)
+    {
+        if (!string.IsNullOrEmpty(aumid)) return aumid!;
+        if (!string.IsNullOrEmpty(lnkPath) &&
+            lnkPath!.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            var resolved = GetAppIdForShortcut(lnkPath);
+            if (!string.IsNullOrEmpty(resolved)) return resolved!;
+            // Per this method's contract, the final fallback is the raw target
+            // path (a stable JumpList key) — not the .lnk path.
+            return !string.IsNullOrEmpty(targetPath) ? targetPath : lnkPath;
+        }
+        return targetPath ?? string.Empty;
+    }
+
     /// Listed in Open-Shell's GetJumplist switch: 0=Pinned, 1=Recent, 2=Frequent.
     public static IReadOnlyList<Destination> ReadRecent(string aumid, int max = 8)
     {

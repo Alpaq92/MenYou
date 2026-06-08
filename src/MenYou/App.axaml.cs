@@ -38,11 +38,9 @@ public partial class App : Application
         // pull those properties — so the localizer has to exist first.
         Jeek.Avalonia.Localization.Localizer.SetLocalizer(
             new MenYou.Services.AvaloniaResourceLocalizer());
-        // The first-run splash is shown earlier, in Program.Main (before
-        // Avalonia loads, so it appears ASAP). Here we just re-capture the same
-        // first-run signal (no settings.json yet) to gate AnnounceReady, which
-        // dismisses that splash and shows the one-time "ready" balloon once the
-        // tray + hotkey are up.
+        // Capture the first-run signal (no settings.json yet) to gate
+        // AnnounceReady, which surfaces the one-time "ready" tray balloon once
+        // the tray + hotkey are up.
         _isFirstRun = !File.Exists(SettingsFilePath);
         Services = BuildServices();
         // Eagerly warm app discovery FROM THE CACHE (file I/O only, no shell
@@ -90,6 +88,7 @@ public partial class App : Application
         HookTrace.Log("Startup: hotkey done");
         SetupForegroundWatcher();
         SetupIpcListener();
+        SetupSingleInstanceShowListener();
         SetupLaunchHider();
         // One-shot cleanup of any "Pin to MenYou" shell entries an earlier
         // build wrote. No-op once the keys are gone.
@@ -98,10 +97,10 @@ public partial class App : Application
         _ = SetupStartMirrorAsync();
         _ = LoadFallbackIconAsync();
         HookTrace.Log("Startup: sync init done (async tasks kicked off)");
-        // First run only: tray + hotkey are live now, so dismiss the splash and
-        // surface a one-time balloon confirming MenYou is up + the Shift+Win
-        // hint. One-shot — next launch settings.json exists, so _isFirstRun is
-        // false and neither the splash nor the balloon appear.
+        // First run only: tray + hotkey are live now, so surface a one-time
+        // balloon confirming MenYou is up + the Shift+Win hint. One-shot — next
+        // launch settings.json exists, so _isFirstRun is false and the balloon
+        // doesn't reappear.
         if (_isFirstRun) AnnounceReady();
         // React to the user toggling MirrorWindowsStart in Settings.
         Services.GetRequiredService<ISettingsService>().Changed += () =>
@@ -252,6 +251,17 @@ public partial class App : Application
                 ToggleStartMenu();
                 break;
         }
+    }
+
+    /// Wire the single-instance "show" doorbell to the menu. Program.Main's
+    /// SingleInstance guard lets a second launch signal this (already-running)
+    /// instance instead of starting a duplicate; when it fires we surface the
+    /// Start menu — the same idempotent reveal the tray Open verb uses. The
+    /// signal arrives on a background listener thread, so hop to the UI thread.
+    private void SetupSingleInstanceShowListener()
+    {
+        SingleInstance.StartShowListener(
+            () => Dispatcher.UIThread.Post(ShowStartMenu));
     }
 
     private static async Task SeedPinnedAsync()
@@ -800,18 +810,17 @@ public partial class App : Application
 
     /// Path to the persisted settings file (kept in sync with
     /// <see cref="Services.SettingsService"/>). Its ABSENCE is the
-    /// "fresh install / first run" signal that gates the one-time splash +
-    /// "ready" balloon.
+    /// "fresh install / first run" signal that gates the one-time "ready"
+    /// balloon.
     private static string SettingsFilePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "MenYou", "settings.json");
 
-    /// First-run wrap-up: dismiss the splash and surface a one-time tray balloon
-    /// confirming MenYou is up, plus the Shift+Win hint (doubles as onboarding).
-    /// Both halves are best-effort and never throw into the startup path.
+    /// First-run wrap-up: surface a one-time tray balloon confirming MenYou is
+    /// up, plus the Shift+Win hint (doubles as onboarding). Best-effort — never
+    /// throws into the startup path.
     private void AnnounceReady()
     {
-        try { NativeSplash.Close(); } catch { /* ignore */ }
         try { TrayBalloon.Show(Strings.ReadyTitle, Strings.ReadyBody); }
         catch { /* balloon is best-effort */ }
     }

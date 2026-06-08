@@ -3,6 +3,7 @@
              xmlns:items="using:MenYou.ViewModels.Items"
              xmlns:conv="using:MenYou.Views.Converters"
              xmlns:loc="using:MenYou.Platform.Windows"
+             xmlns:behaviors="using:MenYou.Views.Behaviors"
              x:Class="MenYou.Views.Controls.ProgramsTree"
              x:Name="Root">
     <UserControl.Resources>
@@ -86,21 +87,8 @@
                      Background="Transparent" makes the whole row a hit
                      target — see the folder template above for the
                      rationale. -->
-                <Grid ColumnDefinitions="9,Auto,*" Background="Transparent">
-                    <Grid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="{x:Static loc:Strings.Open}"
-                                      Command="{Binding LaunchCommand}" />
-                            <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}"
-                                      Command="{Binding RunAsAdministratorCommand}" />
-                            <Separator />
-                            <MenuItem Header="{Binding PinToggleLabel}"
-                                      Command="{Binding TogglePinCommand}"
-                                      IsVisible="{Binding CanModifyPin}" />
-                            <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
-                                      Command="{Binding OpenFileLocationCommand}" />
-                        </ContextMenu>
-                    </Grid.ContextMenu>
+                <Grid ColumnDefinitions="9,Auto,*" Background="Transparent"
+                      behaviors:AppContextMenuBehavior.Enable="True">
                     <Border Grid.Column="0" Classes="new-indicator"
                             IsVisible="{Binding IsNew}" />
                     <Image Grid.Column="1" Width="16" Height="16" Margin="0,0,8,0" Source="{Binding Icon}" />

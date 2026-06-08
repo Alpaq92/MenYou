@@ -3,6 +3,7 @@
              xmlns:items="using:MenYou.ViewModels.Items"
              xmlns:loc="using:MenYou.Platform.Windows"
              xmlns:conv="using:MenYou.Views.Converters"
+             xmlns:behaviors="using:MenYou.Views.Behaviors"
              x:Class="MenYou.Views.Controls.AppGrid"
              x:Name="Root">
     <!-- Horizontal scrolling strip — tiles stay on one row and the
@@ -57,16 +58,8 @@
                             Width="108"
                             HorizontalContentAlignment="Center"
                             Background="{Binding IsNew, Converter={x:Static conv:NewItemHighlightConverter.Instance}}"
+                            behaviors:AppContextMenuBehavior.Enable="True"
                             Command="{Binding LaunchCommand}">
-                        <Button.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="{Binding PinToggleLabel}"
-                                          Command="{Binding TogglePinCommand}"
-                                          IsVisible="{Binding CanModifyPin}" />
-                                <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
-                                          Command="{Binding OpenFileLocationCommand}" />
-                            </ContextMenu>
-                        </Button.ContextMenu>
                         <StackPanel HorizontalAlignment="Center" Spacing="4">
                             <Image Width="32" Height="32" Source="{Binding Icon}" />
                             <TextBlock Text="{Binding DisplayName}"

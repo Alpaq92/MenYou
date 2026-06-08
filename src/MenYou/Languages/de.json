@@ -46,5 +46,7 @@
   "DiagnosticLogging": "Diagnoseprotokoll",
   "DiagnosticLoggingDescription": "Schreibt Diagnoseprotokolle nach %TEMP%\\menyou-hooks.log zur Fehlersuche bei Start und Hooks. Standardmäßig aus; das Protokoll wird beim Start gelöscht, sobald es die unten angegebene Größe überschreitet.",
   "LogSize": "Größe",
-  "Preview": "Vorschau"
+  "Preview": "Vorschau",
+  "Searching": "Suchvorgang läuft…",
+  "SearchResults": "Suchergebnisse"
 }

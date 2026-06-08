@@ -35,6 +35,7 @@
              xmlns:ctrl="using:MenYou.Views.Controls"
              xmlns:items="using:MenYou.ViewModels.Items"
              xmlns:loc="using:MenYou.Platform.Windows"
+             xmlns:behaviors="using:MenYou.Views.Behaviors"
              x:Class="MenYou.Views.Controls.ProgramsFolderFlyout"
              x:DataType="items:FolderItemViewModel">
   <ScrollViewer HorizontalScrollBarVisibility="Disabled"
@@ -72,16 +73,8 @@
                     Padding="6,10"
                     HorizontalContentAlignment="Center"
                     Click="OnAppLeafClick"
+                    behaviors:AppContextMenuBehavior.Enable="True"
                     Command="{Binding LaunchCommand}">
-              <Button.ContextMenu>
-                <ContextMenu>
-                  <MenuItem Header="{x:Static loc:Strings.Open}" Command="{Binding LaunchCommand}" />
-                  <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}" Command="{Binding RunAsAdministratorCommand}" />
-                  <Separator />
-                  <MenuItem Header="{Binding PinToggleLabel}" Command="{Binding TogglePinCommand}" IsVisible="{Binding CanModifyPin}" />
-                  <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}" Command="{Binding OpenFileLocationCommand}" />
-                </ContextMenu>
-              </Button.ContextMenu>
               <StackPanel HorizontalAlignment="Center" Spacing="6">
                 <Image Width="32" Height="32" Source="{Binding Icon}"
                        RenderOptions.BitmapInterpolationMode="HighQuality" />

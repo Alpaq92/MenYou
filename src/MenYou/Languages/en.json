@@ -51,5 +51,7 @@
   "DiagnosticLogging": "Diagnostic logging",
   "DiagnosticLoggingDescription": "Write diagnostic logs to %TEMP%\\menyou-hooks.log for troubleshooting startup and hooks. Off by default; the log is cleared on startup once it grows past the size below.",
   "LogSize": "Size",
-  "Preview": "Preview"
+  "Preview": "Preview",
+  "Searching": "Searching…",
+  "SearchResults": "Search results"
 }

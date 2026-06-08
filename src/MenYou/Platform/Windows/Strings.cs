@@ -99,12 +99,20 @@ public static class Strings
     // label. shell32.dll's "Zablokuj" matches are all unrelated (ACL,
     // cookies, taskbar) — verified during the deep probe.
     public static string Lock                    => Resolve("Lock", $@"@{Sys}\powercpl.dll,-360");
-    // Results: themecpl.dll,-1107 = "Ładowanie" / "Loading" — the
-    // Personalization Control Panel's spinner label. Semantically not
-    // "Results", but per user preference it stands in for the search-
-    // results header since no standalone "Wyniki" / "Results" exists
-    // as a Windows resource.
-    public static string Results                 => Resolve("Results", $@"@{Sys}\themecpl.dll,-1107");
+    // Searching: shell32.dll,-32950 = "Trwa wyszukiwanie..." / "Searching..."
+    // — the shell's own in-progress search status. Shown as the search
+    // overlay's header ONLY while a query is in flight (SearchViewModel
+    // .IsSearching); once results settle it's replaced by SearchResults
+    // below. (Earlier this used themecpl,-1107 "Ładowanie" / "Loading"; the
+    // shell32 string is the exact, semantically-correct phrase for the state.)
+    public static string Searching               => Resolve("Searching", $@"@{Sys}\shell32.dll,-32950");
+    // SearchResults: shell32.dll,-34133 = "Wyniki wyszukiwania" / "Search
+    // results" — the canonical, decades-stable shell string Explorer titles
+    // its own search-results view with. Found via a live SHLoadIndirectString
+    // brute-force over the shell DLLs; ships in every Windows display
+    // language, so the header localizes for free. The Jeek "SearchResults"
+    // key backs up the (Windows-only, so practically never) no-DLL case.
+    public static string SearchResults           => Resolve("SearchResults", $@"@{Sys}\shell32.dll,-34133");
     public static string SearchPlaceholder       => Resolve("SearchPlaceholder");
     public static string OpenMenYou              => Resolve("OpenMenYou");
     // Custom-theme empty-state preview placeholder label. JSON-only.

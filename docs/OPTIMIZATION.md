@@ -90,7 +90,9 @@ The first `Shift+Win` after launch otherwise pays the full window-realization + 
 
 ---
 
-## 5. Perceived first-run: the splash (0.7.0)
+## 5. Perceived first-run: the splash (0.7.0, removed in 0.8.0)
+
+> **Removed in 0.8.0.** The splash didn't reliably paint on a fresh install — the very cold-load it was meant to cover also starved its own first frame, so users often saw nothing anyway. It was dropped to simplify startup; the one-time "ready" balloon (below) stays. The original design is kept here for the record.
 
 The one-time ~10 s first-install cold load (Defender + cold disk) can't be eliminated without signing or trimming (see Rejected), so it's **covered** instead:
 

@@ -2,6 +2,8 @@ using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MenYou.Models;
+using MenYou.Platform.Windows;
+using MenYou.Services;
 
 namespace MenYou.ViewModels.Items;
 
@@ -26,6 +28,11 @@ public sealed partial class SearchResultViewModel : ObservableObject
     /// already implemented on the parent, so we route through it.
     private readonly SearchViewModel _owner;
 
+    /// Pin service, shared from the owner, so an app result can be pinned /
+    /// unpinned straight from its context menu — the same verb the Pinned
+    /// tiles and All-Programs rows expose.
+    private readonly IPinService _pin;
+
     /// "Open" verb — same as left-clicking or pressing Enter.
     [RelayCommand]
     private void Launch() => _owner.Launch(this);
@@ -40,6 +47,40 @@ public sealed partial class SearchResultViewModel : ObservableObject
     /// schemes, Control Panel tasks).
     [RelayCommand]
     private void OpenFileLocation() => _owner.OpenFileLocation(this);
+
+    /// "Pin to Start" / "Unpin from Start" verb. Toggles the app's pin via
+    /// the shared IPinService, keyed on the discovery AppId. No-op (and
+    /// hidden, see CanModifyPin) for non-app results, which carry no AppId.
+    [RelayCommand]
+    private void TogglePin()
+    {
+        if (string.IsNullOrEmpty(Data.AppId)) return;
+        _pin.Toggle(Data.AppId!);
+        // Live getters — nudge the bound menu so the label flips immediately
+        // if the user reopens it without retyping the query.
+        OnPropertyChanged(nameof(IsPinned));
+        OnPropertyChanged(nameof(PinToggleLabel));
+    }
+
+    /// True only for discovered apps (App / PackagedApp) carrying an AppId —
+    /// the results that can actually be pinned. Files, folders, settings
+    /// deep-links and Control Panel tasks have no AppId, so the Pin/Unpin
+    /// verb (and its separator) hide for them. This makes the search context
+    /// menu identical to the Pinned / All-Programs menus for an app, and
+    /// gracefully shorter for everything else.
+    public bool CanModifyPin =>
+        Data.Kind is SearchResultKind.App or SearchResultKind.PackagedApp
+        && !string.IsNullOrEmpty(Data.AppId)
+        && _pin.CanUnpin(Data.AppId!);
+
+    /// Whether this app is currently in MenYou's Pinned list (live lookup).
+    public bool IsPinned =>
+        !string.IsNullOrEmpty(Data.AppId) && _pin.IsPinned(Data.AppId!);
+
+    /// "Pin to Start" / "Unpin from Start" — the same Windows-sourced labels
+    /// (StartTileData.dll) the tile and tree menus use, so it reads in the
+    /// user's display language for free.
+    public string PinToggleLabel => IsPinned ? Strings.UnpinFromStart : Strings.PinToStart;
 
     /// True only when the result points at something the shell can run
     /// via the `runas` verb. Mirrors SearchViewModel.CanRunAsAdmin but
@@ -112,7 +153,12 @@ public sealed partial class SearchResultViewModel : ObservableObject
     /// publish a destination list (UWP apps without explicit AUMID,
     /// Control Panel tasks, settings deep-links).
     public System.Collections.ObjectModel.ObservableCollection<RecentDestination> Recent { get; } = new();
-    public bool HasRecentLoaded { get; set; }
+    /// Cached JumpList load Task (Tasks + Recent), set by
+    /// <see cref="SearchViewModel.EnsureJumpListLoadedAsync"/> the first time
+    /// this result is selected or right-clicked. Null until loading starts;
+    /// awaiting it tells the context menu when the app-specific items are
+    /// populated. (Replaces the old "started" bool so the load is awaitable.)
+    public Task? JumpListLoad { get; set; }
 
     /// File-level recent entry — path + display name + lazily-loaded icon.
     public sealed partial class RecentDestination : ObservableObject
@@ -137,9 +183,10 @@ public sealed partial class SearchResultViewModel : ObservableObject
     /// Tasks (custom destinations) loaded lazily alongside Recent.
     public System.Collections.ObjectModel.ObservableCollection<JumpTask> Tasks { get; } = new();
 
-    public SearchResultViewModel(SearchResult data, SearchViewModel owner)
+    public SearchResultViewModel(SearchResult data, SearchViewModel owner, IPinService pin)
     {
         Data = data;
         _owner = owner;
+        _pin = pin;
     }
 }

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
@@ -118,6 +119,7 @@ public partial class SettingsWindow : Window
         {
             Title = "Select an Avalonia XAML file",
             AllowMultiple = false,
+            SuggestedStartLocation = await ResolveThemeStartFolderAsync(top),
             FileTypeFilter = new[]
             {
                 new FilePickerFileType("Avalonia XAML")
@@ -127,7 +129,9 @@ public partial class SettingsWindow : Window
             }
         });
         if (files.Count == 0) return null;
-        return files[0].TryGetLocalPath();
+        var path = files[0].TryGetLocalPath();
+        RememberThemeFolder(path);
+        return path;
     }
 
     /// Save-picker counterpart to <see cref="PickXamlFileAsync"/>.
@@ -142,6 +146,7 @@ public partial class SettingsWindow : Window
             Title = "Save custom theme as",
             DefaultExtension = "axaml",
             ShowOverwritePrompt = true,
+            SuggestedStartLocation = await ResolveThemeStartFolderAsync(top),
             FileTypeChoices = new[]
             {
                 new FilePickerFileType("Avalonia XAML")
@@ -150,7 +155,38 @@ public partial class SettingsWindow : Window
                 }
             }
         });
-        return file?.TryGetLocalPath();
+        var path = file?.TryGetLocalPath();
+        RememberThemeFolder(path);
+        return path;
+    }
+
+    /// Resolves the folder the custom-theme dialogs should open at: the last
+    /// folder the user picked a theme from (remembered across launches), or
+    /// MenYou's bundled samples folder ({app}\samples\custom-themes) when there
+    /// is no remembered folder yet or it no longer exists. Returns null when
+    /// neither exists (e.g. a dev build with no samples dir) so the OS uses its
+    /// own default — which is the per-app "remember last folder" behaviour.
+    private async Task<IStorageFolder?> ResolveThemeStartFolderAsync(TopLevel top)
+    {
+        var last = _settings?.Current.LastThemeFolder;
+        if (!string.IsNullOrEmpty(last) && Directory.Exists(last))
+            return await top.StorageProvider.TryGetFolderFromPathAsync(last);
+
+        var samples = Path.Combine(AppContext.BaseDirectory, "samples", "custom-themes");
+        return Directory.Exists(samples)
+            ? await top.StorageProvider.TryGetFolderFromPathAsync(samples)
+            : null;
+    }
+
+    /// Remembers the folder a just-picked theme file lives in, so the next
+    /// Load/Save dialog reopens there. No-op when nothing was picked.
+    private void RememberThemeFolder(string? pickedPath)
+    {
+        if (_settings is null || string.IsNullOrEmpty(pickedPath)) return;
+        var dir = Path.GetDirectoryName(pickedPath);
+        if (string.IsNullOrEmpty(dir) || dir == _settings.Current.LastThemeFolder) return;
+        _settings.Current.LastThemeFolder = dir;
+        _settings.Save();
     }
 
     /// Confirmation the SettingsViewModel calls before applying an

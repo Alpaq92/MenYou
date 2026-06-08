@@ -6,9 +6,19 @@
              x:Class="MenYou.Views.Controls.SearchResultsList"
              x:DataType="vm:SearchViewModel">
     <Grid RowDefinitions="Auto,Auto,*">
+        <!-- Header swaps with search state: "Loading" (Ładowanie) only while
+             a query is in flight, "Search results" (Znalezione wyniki) once it
+             settles with at least one hit. Both share row 0; at most one is
+             ever visible, and during an empty / zero-result idle neither
+             shows. -->
         <TextBlock Grid.Row="0"
                    Classes="section"
-                   Text="{x:Static loc:Strings.Results}" />
+                   Text="{x:Static loc:Strings.Searching}"
+                   IsVisible="{Binding IsSearching}" />
+        <TextBlock Grid.Row="0"
+                   Classes="section"
+                   Text="{x:Static loc:Strings.SearchResults}"
+                   IsVisible="{Binding ShowResultsHeader}" />
         <!-- Thin indeterminate stripe shown while the search debounce +
              thread-pool work resolve. Without it the panel reads as a
              frozen blank for the first keystroke. -->
@@ -25,27 +35,16 @@
             <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="items:SearchResultViewModel">
                     <!-- Background="Transparent" makes the whole row a
-                         right-click hit target — without it the Grid's
-                         empty gaps have Background=null and Avalonia skips
-                         hit-testing there, so right-clicks between the
-                         icon and text would miss the context menu (same
-                         fix as ProgramsTree's rows). The per-item verbs
-                         live on SearchResultViewModel and delegate to the
-                         owning SearchViewModel, so no row needs to be
-                         Selected first for the menu to act on it. -->
+                         right-click hit target — without it the Grid's empty
+                         gaps have Background=null and Avalonia skips hit-testing
+                         there, so a right-click between the icon and text would
+                         miss (same fix as ProgramsTree's rows). The context
+                         menu itself is built in code-behind (ContextRequested,
+                         see SearchResultsList.axaml.cs) so it can mirror the
+                         selection detail panel: standard verbs + Pin/Unpin,
+                         then the app's JumpList Tasks and Recent destinations,
+                         which load lazily and stream into the open menu. -->
                     <Grid ColumnDefinitions="Auto,*" Margin="0,2" Background="Transparent">
-                        <Grid.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="{x:Static loc:Strings.Open}"
-                                          Command="{Binding LaunchCommand}" />
-                                <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}"
-                                          Command="{Binding RunAsAdministratorCommand}"
-                                          IsVisible="{Binding CanRunAsAdmin}" />
-                                <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
-                                          Command="{Binding OpenFileLocationCommand}"
-                                          IsVisible="{Binding CanOpenFileLocation}" />
-                            </ContextMenu>
-                        </Grid.ContextMenu>
                         <Panel Grid.Column="0"
                                Width="32" Height="32"
                                Margin="0,0,10,0">

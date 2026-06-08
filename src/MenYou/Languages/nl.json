@@ -31,5 +31,7 @@
   "DiagnosticLogging": "Diagnostische logboeken",
   "DiagnosticLoggingDescription": "Schrijft diagnostische logboeken naar %TEMP%\\menyou-hooks.log voor het oplossen van problemen met opstarten en hooks. Standaard uit; het logboek wordt bij het opstarten gewist zodra het groter wordt dan de hieronder opgegeven grootte.",
   "LogSize": "Grootte",
-  "Preview": "Voorbeeld"
+  "Preview": "Voorbeeld",
+  "Searching": "Bezig met zoeken…",
+  "SearchResults": "Zoekresultaten"
 }

@@ -12,8 +12,11 @@
             <Color x:Key="MenuForegroundMuted">#BFBFBF</Color>
             <Color x:Key="MenuAccent">#4CC2FF</Color>
             <Color x:Key="MenuAccentHover">#3FAEEC</Color>
-            <Color x:Key="MenuHover">#2D2D2D</Color>
-            <Color x:Key="MenuHighlight">#3A3A3A</Color>
+            <!-- Hover / selection greys, brightened from #2D2D2D / #3A3A3A so
+                 the menu-row highlight reads clearly against the #1A1A1A bg
+                 (the old hover was only ~19 levels above the background). -->
+            <Color x:Key="MenuHover">#3C3C3C</Color>
+            <Color x:Key="MenuHighlight">#4A4A4A</Color>
             <Color x:Key="MenuSeparator">#3D3D3D</Color>
             <Color x:Key="PowerDanger">#FF6B6B</Color>
             <Color x:Key="SearchBoxBackground">#2B2B2B</Color>
@@ -44,7 +47,9 @@
             <Color x:Key="MenuForegroundMuted">#5C5C5C</Color>
             <Color x:Key="MenuAccent">#0078D4</Color>
             <Color x:Key="MenuAccentHover">#106EBE</Color>
-            <Color x:Key="MenuHover">#E5E5E5</Color>
+            <!-- Hover darkened from #E5E5E5 for a clearer row highlight on the
+                 near-white #FAFAFA menu; selection keeps its blue tint. -->
+            <Color x:Key="MenuHover">#D6D6D6</Color>
             <Color x:Key="MenuHighlight">#D5E6F5</Color>
             <Color x:Key="MenuSeparator">#D1D1D1</Color>
             <Color x:Key="PowerDanger">#C42B1C</Color>

@@ -44,5 +44,7 @@
   "DiagnosticLogging": "Journalisation de diagnostic",
   "DiagnosticLoggingDescription": "Écrit des journaux de diagnostic dans %TEMP%\\menyou-hooks.log pour le dépannage du démarrage et des hooks. Désactivé par défaut ; le journal est effacé au démarrage lorsqu'il dépasse la taille indiquée ci-dessous.",
   "LogSize": "Taille",
-  "Preview": "Aperçu"
+  "Preview": "Aperçu",
+  "Searching": "Recherche en cours…",
+  "SearchResults": "Résultats de la recherche"
 }

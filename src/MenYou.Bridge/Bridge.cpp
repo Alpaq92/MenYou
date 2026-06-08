@@ -25,11 +25,9 @@ enum BridgeNotifyId : ULONG_PTR {
     BridgeNotify_WinKey       = 2,
 };
 
-static HINSTANCE g_module       = nullptr;
 static volatile LONG g_initialized = 0;
 static bool      g_isExplorer   = false;
 static bool      g_spyEnabled   = false;
-static HHOOK     g_msgHook      = nullptr;
 
 // Win-tap state machine. Manipulated only from Explorer's UI thread inside
 // the WH_GETMESSAGE hook proc, so no atomics are strictly needed — but we
@@ -109,7 +107,7 @@ static const wchar_t* ClassNameOf(HWND hwnd) {
 
 static bool IsWinKey(WPARAM vk) { return vk == VK_LWIN_W || vk == VK_RWIN_W; }
 
-// WH_GETMESSAGE hook running on Explorer's UI thread inside Explorer.exe.
+// WH_GETMESSAGE hook proc, run on Explorer's UI thread inside Explorer.exe.
 // On Win 11 24H2 the lone-Win-tap routes plain WM_KEYDOWN / WM_KEYUP with
 // VK_LWIN to Explorer's "Windows.UI.Input.InputSite.WindowClass" hwnd —
 // confirmed by spying on Open-Shell's running install. Open-Shell catches
@@ -119,7 +117,18 @@ static bool IsWinKey(WPARAM vk) { return vk == VK_LWIN_W || vk == VK_RWIN_W; }
 //
 // Win+letter combinations stay intact because we mark the press as compound
 // the moment any other key arrives during Win-hold and skip the neuter step.
-static LRESULT CALLBACK MsgHookProc(int code, WPARAM wParam, LPARAM lParam) {
+//
+// This proc is EXPORTED and installed by MenYou.exe itself (BridgeInjector),
+// targeting Explorer's UI thread. Because MenYou owns the hook, Windows removes
+// it — and unloads this DLL from Explorer — when MenYou exits OR is killed. An
+// earlier version self-installed the hook from inside Explorer (owned by
+// Explorer's own thread), so the DLL stayed pinned to its file after MenYou
+// closed and blocked in-place upgrades. Don't reintroduce that.
+extern "C" __declspec(dllexport)
+LRESULT CALLBACK MenYouGetMsgProc(int code, WPARAM wParam, LPARAM lParam) {
+    if (code >= 0 && g_isExplorer && InterlockedExchange(&g_initialized, 1) == 0)
+        Trace("MenYouGetMsgProc: first call inside Explorer pid=%lu (spy=%d)",
+              GetCurrentProcessId(), g_spyEnabled ? 1 : 0);
     if (code < 0 || wParam == PM_NOREMOVE) return CallNextHookEx(nullptr, code, wParam, lParam);
     auto* msg = reinterpret_cast<MSG*>(lParam);
     if (!msg) return CallNextHookEx(nullptr, code, wParam, lParam);
@@ -169,36 +178,10 @@ static LRESULT CALLBACK MsgHookProc(int code, WPARAM wParam, LPARAM lParam) {
     return CallNextHookEx(nullptr, code, wParam, lParam);
 }
 
-// Install the message-hook unconditionally — this is now the actual Win-key
-// intercept, not just a debug spy. The spy flag only controls verbose
-// per-event logging.
-static void InstallMessageHook() {
-    if (!g_isExplorer) return;
-    g_msgHook = SetWindowsHookExW(WH_GETMESSAGE, MsgHookProc, g_module, GetCurrentThreadId());
-    if (g_msgHook == nullptr) {
-        Trace("MsgHook: SetWindowsHookEx WH_GETMESSAGE failed err=%lu", GetLastError());
-    } else {
-        Trace("MsgHook: WH_GETMESSAGE installed on Explorer UI thread %lu (spy=%d)",
-            GetCurrentThreadId(), g_spyEnabled ? 1 : 0);
-    }
-}
-
-extern "C" __declspec(dllexport)
-LRESULT CALLBACK MenYouHookProc(int code, WPARAM wParam, LPARAM lParam)
-{
-    if (code >= 0 && InterlockedExchange(&g_initialized, 1) == 0 && g_isExplorer) {
-        Trace("MenYouHookProc: first call inside Explorer pid=%lu (spy=%d)",
-              GetCurrentProcessId(), g_spyEnabled ? 1 : 0);
-        InstallMessageHook();
-    }
-    return CallNextHookEx(nullptr, code, wParam, lParam);
-}
-
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID /*reserved*/)
 {
     switch (reason) {
         case DLL_PROCESS_ATTACH:
-            g_module = hModule;
             DisableThreadLibraryCalls(hModule);
             g_isExplorer = ProcessNameIsExplorer();
             g_spyEnabled = SpyMarkerPresent();
@@ -206,7 +189,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID /*reserved*/)
                   g_isExplorer ? 1 : 0, g_spyEnabled ? 1 : 0);
             break;
         case DLL_PROCESS_DETACH:
-            if (g_msgHook) { UnhookWindowsHookEx(g_msgHook); g_msgHook = nullptr; }
             Trace("DLL_PROCESS_DETACH");
             break;
     }

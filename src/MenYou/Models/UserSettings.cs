@@ -36,6 +36,10 @@ public sealed class UserSettings
     /// as inline error text in the preview area rather than crashing
     /// the dialog.
     public string CustomThemeXaml { get; set; } = "";
+    /// Folder the custom-theme Load/Save dialogs reopen at — the last folder
+    /// the user picked a theme from, remembered across launches. Empty falls
+    /// back to MenYou's bundled samples folder ({app}\samples\custom-themes).
+    public string LastThemeFolder { get; set; } = "";
     /// When true (default) the Settings window's accent tracks Windows'
     /// personalization accent at runtime. When false, <see cref="Accent"/>
     /// is parsed as a 6-digit hex color and applied as the override.
