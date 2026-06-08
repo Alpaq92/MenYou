@@ -3,6 +3,7 @@
              xmlns:items="using:MenYou.ViewModels.Items"
              xmlns:loc="using:MenYou.Platform.Windows"
              xmlns:conv="using:MenYou.Views.Converters"
+             xmlns:behaviors="using:MenYou.Views.Behaviors"
              x:Class="MenYou.Views.Controls.AppList"
              x:Name="Root">
     <ItemsControl ItemsSource="{Binding #Root.Items}">
@@ -16,29 +17,8 @@
                 <Button Classes="menu"
                         HorizontalAlignment="Stretch"
                         Margin="6,1"
+                        behaviors:AppContextMenuBehavior.Enable="True"
                         Command="{Binding LaunchCommand}">
-                    <Button.ContextMenu>
-                        <!-- Verbs ordered to mirror Windows Explorer's
-                             right-click context menu for an .exe / .lnk:
-                             Open verb first, Run as administrator second,
-                             Pin/Unpin and Open new window after a
-                             separator. Every label resolves through
-                             SHLoadIndirectString so the menu is in the
-                             user's Windows display language for free —
-                             no per-string localization key needed. -->
-                        <ContextMenu>
-                            <MenuItem Header="{x:Static loc:Strings.Open}"
-                                      Command="{Binding LaunchCommand}" />
-                            <MenuItem Header="{x:Static loc:Strings.RunAsAdmin}"
-                                      Command="{Binding RunAsAdministratorCommand}" />
-                            <Separator />
-                            <MenuItem Header="{Binding PinToggleLabel}"
-                                      Command="{Binding TogglePinCommand}"
-                                      IsVisible="{Binding CanModifyPin}" />
-                            <MenuItem Header="{x:Static loc:Strings.OpenFileLocation}"
-                                      Command="{Binding OpenFileLocationCommand}" />
-                        </ContextMenu>
-                    </Button.ContextMenu>
                     <!-- Fixed-width indicator column (3 px bar + 6 px right
                          margin = 9 px) so the icon starts at the same X
                          for both new and non-new rows. -->

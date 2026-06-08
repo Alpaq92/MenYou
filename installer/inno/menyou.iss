@@ -86,6 +86,16 @@ MinVersion=10.0
 ; relaunch it afterwards — no manual restart needed.
 CloseApplications=yes
 RestartApplications=yes
+; ...but only ever bounce MenYou's OWN process — never a third party that
+; merely holds one of our files open. MenYou injects MenYou.Bridge.dll into
+; explorer.exe (a SetWindowsHookEx hook), so the DEFAULT filter
+; (*.exe,*.dll,*.chm) sees Explorer holding that DLL and Restart Manager
+; tries to CLOSE the shell mid-upgrade — which hangs Setup and tears down the
+; taskbar. Restricting detection to *.exe means only MenYou.exe is closed +
+; relaunched; Windows auto-removes the hook when MenYou exits (freeing the
+; DLL), and the app shadow-copies the bridge OUT of {app} so the install copy
+; is never the one Explorer locks anyway (see BridgeInjector.ResolveBridgePath).
+CloseApplicationsFilter=*.exe
 
 ; Local signing only (CI signs the output via SignPath instead). Pass
 ; /DMySignTool="sign $f" plus a configured SignTool to enable it.
@@ -129,6 +139,15 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 ; Autostart is registered by the app at runtime (logon scheduled task via
 ; Win32AutostartService), not by an installer shortcut — see the [Tasks] note.
+
+[UninstallDelete]
+; The native bridge is shadow-copied here at runtime — outside {app}, so an
+; in-place upgrade never finds Explorer locking a file under the install folder
+; (see CloseApplicationsFilter above and BridgeInjector.ResolveBridgePath). It
+; isn't part of [Files], so remove it explicitly on uninstall. Best-effort: a
+; copy still mapped into Explorer can't be deleted right now and is reclaimed by
+; Windows later.
+Type: filesandordirs; Name: "{localappdata}\MenYou\bridge"
 
 [Run]
 ; Offered only on an interactive (first) install; silent updates skip it
@@ -204,5 +223,45 @@ begin
              mbInformation, MB_OK);
       Result := False;
     end;
+  end;
+end;
+
+{ Runs right before files are installed. Older MenYou builds (< 0.8.0) injected
+  MenYou.Bridge.dll into explorer.exe with a hook OWNED BY EXPLORER, so the DLL
+  stayed mapped — and its file locked — even after MenYou closed. Replacing it
+  then failed with "Wystapil blad ... DeleteFile; kod 5. Odmowa dostepu."
+  (DeleteFile failed, access denied). 0.8.0+ owns the hook from MenYou and drops
+  it on exit, so the installed copy is never pinned; the block below therefore
+  only triggers when upgrading FROM an older build, and never again afterwards.
+
+  Probe by trying to delete the file: if that fails it is locked, so close
+  MenYou (so it cannot re-inject), restart Explorer to unload the stale hook,
+  then delete the now-free file — leaving a clean slate for [Files] with no
+  error prompt. }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Dll: String;
+  Rc: Integer;
+begin
+  Result := '';
+  Dll := ExpandConstant('{app}\MenYou.Bridge.dll');
+  if FileExists(Dll) and (not DeleteFile(Dll)) then
+  begin
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /im MenYou.exe', '',
+         SW_HIDE, ewWaitUntilTerminated, Rc);
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /im explorer.exe', '',
+         SW_HIDE, ewWaitUntilTerminated, Rc);
+    Sleep(2000);
+    { Windows relaunches the shell automatically (AutoRestartShell); only force
+      it if the taskbar did not return, so we do not pop a stray Explorer
+      window. }
+    if FindWindowByClassName('Shell_TrayWnd') = 0 then
+      Exec(ExpandConstant('{win}\explorer.exe'), '', '', SW_SHOWNORMAL, ewNoWait, Rc);
+    { If it is somehow STILL locked after closing MenYou and restarting Explorer,
+      fail fast with an actionable message rather than letting [Files] trip the
+      cryptic "DeleteFile; kod 5" prompt later. }
+    if (not DeleteFile(Dll)) and FileExists(Dll) then
+      Result := 'Setup could not replace MenYou.Bridge.dll because it is still in use. ' +
+                'Please reboot and run Setup again.';
   end;
 end;

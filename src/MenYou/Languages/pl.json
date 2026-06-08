@@ -51,5 +51,7 @@
   "DiagnosticLogging": "Logi diagnostyczne",
   "DiagnosticLoggingDescription": "Zapisuje logi diagnostyczne do %TEMP%\\menyou-hooks.log w celu rozwiązywania problemów z uruchamianiem i hakami. Domyślnie wyłączone; dziennik jest czyszczony przy uruchomieniu, gdy przekroczy rozmiar podany poniżej.",
   "LogSize": "Rozmiar",
-  "Preview": "Podgląd"
+  "Preview": "Podgląd",
+  "Searching": "Trwa wyszukiwanie…",
+  "SearchResults": "Wyniki wyszukiwania"
 }

@@ -15,6 +15,7 @@ public sealed partial class SearchViewModel : ViewModelBase
     private readonly IShellLauncher _launcher;
     private readonly IIconService _icons;
     private readonly IRecentItemsService _recent;
+    private readonly IPinService _pin;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -26,8 +27,19 @@ public sealed partial class SearchViewModel : ViewModelBase
     /// True while a search is in flight — drives the indeterminate
     /// progress bar in the search results overlay so the user gets
     /// feedback instead of a blank panel during the 80 ms debounce +
-    /// thread-pool work.
-    [ObservableProperty] private bool _isSearching;
+    /// thread-pool work. Also flips the overlay header between the
+    /// "Loading" (searching) and "Search results" (settled) states.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResultsHeader))]
+    private bool _isSearching;
+
+    /// Drives the "Search results" (Znalezione wyniki) overlay header,
+    /// shown ONLY once a search has settled (not in flight) with at least
+    /// one hit. While searching, the "Loading" header shows instead (bound
+    /// to IsSearching); when the query is empty or nothing matched, neither
+    /// header shows. Re-raised from ReconcileResults whenever the result
+    /// count changes.
+    public bool ShowResultsHeader => !IsSearching && Results.Count > 0;
 
     public ObservableCollection<SearchResultViewModel> Results { get; } = new();
 
@@ -62,61 +74,69 @@ public sealed partial class SearchViewModel : ViewModelBase
             });
         }
 
-        // Lazily load the per-app Recent destination list (the JumpList
-        // strip — what Excel shows for last spreadsheets etc.).
-        if (!value.HasRecentLoaded)
+        // Lazily load the per-app JumpList (published Tasks + Recent
+        // destinations) — shared with the right-click context menu, which
+        // awaits the same cached load Task to fill its app-specific items.
+        _ = EnsureJumpListLoadedAsync(value);
+    }
+
+    /// Loads a result's per-app JumpList (app-published Tasks + Recent
+    /// destinations) exactly once, caching the in-flight Task on the result
+    /// so the selection detail panel and the right-click context menu share a
+    /// single load. Returns the cached Task on repeat calls — await it to know
+    /// when <see cref="SearchResultViewModel.Tasks"/> /
+    /// <see cref="SearchResultViewModel.Recent"/> are populated. Recent-file
+    /// icons stream in afterward.
+    public Task EnsureJumpListLoadedAsync(SearchResultViewModel vm)
+    {
+        if (vm.JumpListLoad is not null) return vm.JumpListLoad;
+        var pathKey = ResolveJumpListKey(vm.Data);
+        if (string.IsNullOrEmpty(pathKey)) return vm.JumpListLoad = Task.CompletedTask;
+        return vm.JumpListLoad = LoadJumpListAsync(vm, pathKey);
+    }
+
+    private async Task LoadJumpListAsync(SearchResultViewModel vm, string pathKey)
+    {
+        try
         {
-            value.HasRecentLoaded = true;
-            var capturedRecent = value;
-            var pathKey = ResolveJumpListKey(capturedRecent.Data);
-            if (string.IsNullOrEmpty(pathKey)) return;
-            _ = Task.Run(async () =>
+            // App-published Tasks (Firefox "Open new tab", Brave "New window" /
+            // "New private window", …) + per-app Recent destinations — read off
+            // the UI thread. Separator markers are dropped from Tasks.
+            var (taskVms, recentVms) = await Task.Run(() =>
             {
+                var tasks = MenYou.Platform.Windows.JumpListReader.ReadTasks(pathKey)
+                    .Where(t => !t.IsSeparator && !string.IsNullOrEmpty(t.Title))
+                    .Select(t => new SearchResultViewModel.JumpTask(t.Title, t.Target, t.Arguments))
+                    .ToList();
+                var recent = MenYou.Platform.Windows.JumpListReader.ReadRecent(pathKey, 8)
+                    .Select(d => new SearchResultViewModel.RecentDestination(d.Path, d.DisplayName))
+                    .ToList();
+                return (taskVms: tasks, recentVms: recent);
+            });
+
+            // Publish both lists in one UI hop so anything awaiting this Task
+            // (the context menu) sees the fully-populated collections at once.
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                foreach (var t in taskVms) vm.Tasks.Add(t);
+                foreach (var r in recentVms) vm.Recent.Add(r);
+            });
+
+            // Stream per-file shell icons in afterward — keeps the list snappy
+            // while the names are already on screen.
+            foreach (var r in recentVms)
+            {
+                if (string.IsNullOrEmpty(r.Path)) continue;
                 try
                 {
-                    // App-published Tasks first (Firefox-style "Open new
-                    // tab" / "New private window" / etc.). Skip separator
-                    // markers when projecting into the VM.
-                    var tasks = MenYou.Platform.Windows.JumpListReader.ReadTasks(pathKey);
-                    var taskVms = tasks
-                        .Where(t => !t.IsSeparator && !string.IsNullOrEmpty(t.Title))
-                        .Select(t => new SearchResultViewModel.JumpTask(t.Title, t.Target, t.Arguments))
-                        .ToList();
-                    if (taskVms.Count > 0)
-                    {
-                        await Dispatcher.UIThread.InvokeAsync(() =>
-                        {
-                            foreach (var t in taskVms) capturedRecent.Tasks.Add(t);
-                        });
-                    }
-
-                    var items = MenYou.Platform.Windows.JumpListReader.ReadRecent(pathKey, 8);
-                    if (items.Count == 0) return;
-                    var vms = items
-                        .Select(d => new SearchResultViewModel.RecentDestination(d.Path, d.DisplayName))
-                        .ToList();
-                    await Dispatcher.UIThread.InvokeAsync(() =>
-                    {
-                        foreach (var vm in vms) capturedRecent.Recent.Add(vm);
-                    });
-                    // Load per-file shell icons in the background — keeps
-                    // the dropdown responsive while the list pops into
-                    // view immediately with the names.
-                    foreach (var vm in vms)
-                    {
-                        if (string.IsNullOrEmpty(vm.Path)) continue;
-                        try
-                        {
-                            var bmp = await _icons.GetIconForPathAsync(vm.Path);
-                            if (bmp is null) continue;
-                            await Dispatcher.UIThread.InvokeAsync(() => vm.Icon = bmp);
-                        }
-                        catch { }
-                    }
+                    var bmp = await _icons.GetIconForPathAsync(r.Path);
+                    if (bmp is null) continue;
+                    await Dispatcher.UIThread.InvokeAsync(() => r.Icon = bmp);
                 }
                 catch { }
-            });
+            }
         }
+        catch { }
     }
 
     /// Picks the right identifier for a JumpList lookup. The Recent
@@ -126,18 +146,11 @@ public sealed partial class SearchViewModel : ViewModelBase
     /// undocumented shell COM Open-Shell uses) to compute the same AUMID
     /// Explorer used when writing recent docs. Falls through to a UWP's
     /// own AUMID or the raw target path otherwise.
-    private static string ResolveJumpListKey(MenYou.Models.SearchResult r)
-    {
-        if (!string.IsNullOrEmpty(r.Aumid)) return r.Aumid!;
-        var path = r.TargetPath;
-        if (string.IsNullOrEmpty(path)) return string.Empty;
-        if (path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
-        {
-            var resolved = MenYou.Platform.Windows.JumpListReader.GetAppIdForShortcut(path);
-            if (!string.IsNullOrEmpty(resolved)) return resolved!;
-        }
-        return path;
-    }
+    private static string ResolveJumpListKey(MenYou.Models.SearchResult r) =>
+        // Search stores SourceLnkPath ?? TargetPath in TargetPath, so the .lnk
+        // (when there is one) is already in TargetPath — pass it as both the
+        // lnk and the fallback path. Shared with the app context menus.
+        MenYou.Platform.Windows.JumpListReader.ResolveKey(r.Aumid, r.TargetPath, r.TargetPath);
 
     [RelayCommand]
     public void OpenRecent(SearchResultViewModel.RecentDestination dest)
@@ -204,12 +217,13 @@ public sealed partial class SearchViewModel : ViewModelBase
         }
     }
 
-    public SearchViewModel(ISearchService search, IShellLauncher launcher, IIconService icons, IRecentItemsService recent)
+    public SearchViewModel(ISearchService search, IShellLauncher launcher, IIconService icons, IRecentItemsService recent, IPinService pin)
     {
         _search = search;
         _launcher = launcher;
         _icons = icons;
         _recent = recent;
+        _pin = pin;
     }
 
     partial void OnQueryChanged(string value) => _ = RunSearchAsync(value);
@@ -223,8 +237,15 @@ public sealed partial class SearchViewModel : ViewModelBase
         {
             if (string.IsNullOrWhiteSpace(q))
             {
-                IsSearching = false;
+                // Clear BEFORE flipping IsSearching: the IsSearching setter
+                // re-raises ShowResultsHeader, which reads Results.Count — so
+                // the list must already be empty or the header would linger.
+                // The explicit raise covers the case where IsSearching was
+                // already false (clearing an already-settled query), where the
+                // setter wouldn't fire a change notification.
                 Results.Clear();
+                IsSearching = false;
+                OnPropertyChanged(nameof(ShowResultsHeader));
                 return;
             }
             IsSearching = true;
@@ -269,13 +290,18 @@ public sealed partial class SearchViewModel : ViewModelBase
             if (i < Results.Count)
             {
                 if (!SameResult(Results[i].Data, desired[i]))
-                    Results[i] = new SearchResultViewModel(desired[i], this);
+                    Results[i] = new SearchResultViewModel(desired[i], this, _pin);
             }
             else
             {
-                Results.Add(new SearchResultViewModel(desired[i], this));
+                Results.Add(new SearchResultViewModel(desired[i], this, _pin));
             }
         }
+        // Result count may have changed — refresh the "Search results" header
+        // gate. (The main search path flips IsSearching=false right after this,
+        // which also re-raises it, but a same-count reconcile that only swaps
+        // rows wouldn't — so raise it explicitly here too.)
+        OnPropertyChanged(nameof(ShowResultsHeader));
     }
 
     private static bool SameResult(SearchResult a, SearchResult b) =>

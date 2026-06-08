@@ -34,10 +34,16 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>
-    <!-- Anchor OutDir on the vcxproj's own location so the .dll lands next to
-         MenYou.exe whether we're built via dotnet build (which invokes us
-         standalone) or via VS msbuild on the .sln. -->
-    <OutDir>$(MSBuildProjectDirectory)\..\MenYou\bin\$(Configuration)\net8.0-windows\</OutDir>
+    <!-- Output to the bridge project's OWN bin, deliberately TFM-neutral.
+         MenYou.csproj's CopyNativeBridge* targets then place MenYou.Bridge.dll
+         next to MenYou.exe for both `dotnet build` and `dotnet publish` (the
+         RID-specific publish dir + the -o folder the Inno installer globs).
+         The old value hardcoded `..\MenYou\bin\$(Configuration)\net8.0-windows\`,
+         which silently stranded the DLL when the app moved to net10.0-windows —
+         the bridge stopped shipping and MenYou fell back to its managed
+         WinEvent monitor. Keeping this TFM-free is what makes the fix permanent
+         across future TargetFramework bumps. -->
+    <OutDir>$(MSBuildProjectDirectory)\bin\$(Configuration)\</OutDir>
     <IntDir>$(MSBuildProjectDirectory)\obj\$(Configuration)\$(Platform)\</IntDir>
     <TargetName>MenYou.Bridge</TargetName>
     <TargetExt>.dll</TargetExt>

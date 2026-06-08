@@ -34,5 +34,7 @@
   "DiagnosticLogging": "Registro di diagnostica",
   "DiagnosticLoggingDescription": "Scrive i registri di diagnostica in %TEMP%\\menyou-hooks.log per la risoluzione dei problemi di avvio e hook. Disattivato per impostazione predefinita; il registro viene cancellato all'avvio quando supera la dimensione indicata sotto.",
   "LogSize": "Dimensione",
-  "Preview": "Anteprima"
+  "Preview": "Anteprima",
+  "Searching": "Ricerca in corso…",
+  "SearchResults": "Risultati della ricerca"
 }

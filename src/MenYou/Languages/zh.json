@@ -44,5 +44,7 @@
   "DiagnosticLogging": "诊断日志",
   "DiagnosticLoggingDescription": "将诊断日志写入 %TEMP%\\menyou-hooks.log，用于排查启动和挂钩问题。默认关闭；当日志超过下方指定的大小时，会在启动时清除。",
   "LogSize": "大小",
-  "Preview": "预览"
+  "Preview": "预览",
+  "Searching": "正在搜索…",
+  "SearchResults": "搜索结果"
 }

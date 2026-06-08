@@ -82,4 +82,24 @@ public sealed partial class AppItemViewModel : MenuItemViewModel
         catch { }
     }
 
+    /// Launches a JumpList entry from the context menu: a published Task
+    /// (target + CLI args, e.g. Brave's "New window") or a Recent destination
+    /// (a file path, args null). Signals the menu to hide afterward. Mirrors
+    /// SearchViewModel.OpenTask / OpenRecent for the app context menu.
+    public void OpenJumpListTarget(string target, string? arguments)
+    {
+        if (string.IsNullOrWhiteSpace(target)) return;
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = target,
+                Arguments = arguments ?? string.Empty,
+                UseShellExecute = true,
+            });
+            _launcher.NotifyLaunched();
+        }
+        catch { }
+    }
+
 }

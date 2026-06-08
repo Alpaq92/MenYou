@@ -13,7 +13,7 @@
     <!-- Baked into the assembly so the app can self-report its version (shown
          next to the About button). release-please bumps this on each release
          via the generic updater in release-please-config.json. -->
-    <Version>0.7.2</Version> <!-- x-release-please-version -->
+    <Version>0.8.0</Version> <!-- x-release-please-version -->
     <UseWindowsForms>false</UseWindowsForms>
     <UseWPF>false</UseWPF>
     <EnableDefaultAvaloniaItems>true</EnableDefaultAvaloniaItems>
@@ -44,12 +44,35 @@
   </ItemGroup>
 
   <!--
-    Build the native bridge DLL before the managed build so it lands next to
-    MenYou.exe. Delegates to tools\build-bridge.ps1, which locates
-    VS msbuild via vswhere. If MSVC isn't installed the script exits 0 and
-    MenYou falls back to the WinEvent monitor at runtime.
+    Native bridge: build it before the managed build, then copy the resulting
+    MenYou.Bridge.dll next to MenYou.exe. build-bridge.ps1 locates VS msbuild
+    via vswhere and compiles MenYou.Bridge.vcxproj into the bridge project's
+    own bin (TFM-neutral). If MSVC isn't installed the script exits 0, the DLL
+    is absent, and the copies below no-op — MenYou then falls back to its
+    managed WinEvent monitor at runtime.
+
+    The copy is split across two hops because the DLL is generated mid-build,
+    so a static <Content> glob can't see it at evaluation time:
+    CopyNativeBridgeToOutput covers `dotnet build` (and running from bin);
+    CopyNativeBridgeToPublish covers `dotnet publish` — the RID-specific
+    publish dir, which the Inno installer globs. BridgeInjector LoadLibrary's
+    the DLL from AppContext.BaseDirectory, so "next to MenYou.exe" is exactly
+    what it needs. This TFM-neutral-output + copy approach survives future
+    TargetFramework bumps (the previous setup hardcoded net8.0-windows in the
+    vcxproj and silently stopped shipping the bridge at the net10.0 move).
   -->
+  <PropertyGroup>
+    <BridgeDll>$(MSBuildThisFileDirectory)..\MenYou.Bridge\bin\$(Configuration)\MenYou.Bridge.dll</BridgeDll>
+  </PropertyGroup>
   <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild">
     <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\build-bridge.ps1&quot; -Configuration $(Configuration)" ContinueOnError="true" IgnoreExitCode="true" />
+  </Target>
+  <Target Name="CopyNativeBridgeToOutput" AfterTargets="Build" Condition="Exists('$(BridgeDll)')">
+    <Copy SourceFiles="$(BridgeDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Message Importance="normal" Text="MenYou.Bridge: copied to $(OutDir)" />
+  </Target>
+  <Target Name="CopyNativeBridgeToPublish" AfterTargets="Publish" Condition="Exists('$(BridgeDll)')">
+    <Copy SourceFiles="$(BridgeDll)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="MenYou.Bridge: copied to publish dir $(PublishDir)" />
   </Target>
 </Project>

@@ -2,8 +2,10 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.VisualTree;
+using MenYou.Platform.Windows;
 using MenYou.ViewModels;
 using MenYou.ViewModels.Items;
+using MenYou.Views.Behaviors;
 
 namespace MenYou.Views.Controls;
 
@@ -30,6 +32,10 @@ public partial class SearchResultsList : UserControl
         InitializeComponent();
         AddHandler(TappedEvent, OnTapped);
         AddHandler(DoubleTappedEvent, OnDoubleTapped);
+        // Right-click / Menu key: build the per-result context menu in code so
+        // it can mirror the selection detail panel — verbs + Pin/Unpin, then
+        // the app's JumpList Tasks + Recent destinations (which load lazily).
+        AddHandler(ContextRequestedEvent, OnContextRequested);
     }
 
     private void OnTapped(object? sender, TappedEventArgs e)
@@ -59,5 +65,73 @@ public partial class SearchResultsList : UserControl
                     .FirstOrDefault()?.DataContext as SearchResultViewModel
                 ?? vm.Selected;
         if (r is not null) vm.LaunchCommand.Execute(r);
+    }
+
+    /// Builds and opens the per-result context menu at the pointer. Mirrors
+    /// the selection detail panel: standard verbs + Pin/Unpin first, then the
+    /// app's JumpList Tasks and Recent destinations. The JumpList loads
+    /// lazily, so the menu opens immediately with the verbs and refills once
+    /// the load completes (if it's still open).
+    private async void OnContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        if (DataContext is not SearchViewModel owner) return;
+        var row = (e.Source as Visual)?
+            .GetSelfAndVisualAncestors()
+            .OfType<ListBoxItem>()
+            .FirstOrDefault();
+        if (row?.DataContext is not SearchResultViewModel vm) return;
+        e.Handled = true;
+
+        // Right-click selects the row too — matches Windows, updates the
+        // detail panel, and shares the same JumpList load.
+        owner.Selected = vm;
+
+        var menu = new ContextMenu { Placement = PlacementMode.Pointer };
+        PopulateMenu(menu, vm, owner);
+        menu.Open(row);
+
+        // Fill the app-specific JumpList items in once they've loaded.
+        try { await owner.EnsureJumpListLoadedAsync(vm); } catch { }
+        if (menu.IsOpen) PopulateMenu(menu, vm, owner);
+    }
+
+    /// (Re)builds the menu's items from the result's current state. Called on
+    /// open and again after the JumpList load resolves, so app-specific items
+    /// appear as soon as they're available.
+    private static void PopulateMenu(ContextMenu menu, SearchResultViewModel vm, SearchViewModel owner)
+    {
+        menu.Items.Clear();
+
+        // Standard verbs — same order as the Pinned / All-Programs menus.
+        menu.Items.Add(MenuItemFactory.Create(Strings.Open, vm.LaunchCommand));
+        if (vm.CanRunAsAdmin)
+            menu.Items.Add(MenuItemFactory.Create(Strings.RunAsAdmin, vm.RunAsAdministratorCommand));
+        if (vm.CanModifyPin)
+        {
+            menu.Items.Add(new Separator());
+            menu.Items.Add(MenuItemFactory.Create(vm.PinToggleLabel, vm.TogglePinCommand));
+        }
+        if (vm.CanOpenFileLocation)
+            menu.Items.Add(MenuItemFactory.Create(Strings.OpenFileLocation, vm.OpenFileLocationCommand));
+
+        // App-published JumpList Tasks (Brave "New window" / "New private
+        // window", Firefox "Open new tab", …) — the per-app verbs the
+        // selection detail panel lists. Tooltip carries the full title since a
+        // long one trims with an ellipsis.
+        if (vm.Tasks.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+            foreach (var task in vm.Tasks)
+                menu.Items.Add(MenuItemFactory.Create(task.Title, owner.OpenTaskCommand, task, tooltip: true));
+        }
+
+        // Per-app Recent destinations from the Windows JumpList (long file
+        // names trim with an ellipsis; the full name is the tooltip).
+        if (vm.Recent.Count > 0)
+        {
+            menu.Items.Add(new Separator());
+            foreach (var dest in vm.Recent)
+                menu.Items.Add(MenuItemFactory.Create(dest.DisplayName, owner.OpenRecentCommand, dest, tooltip: true));
+        }
     }
 }

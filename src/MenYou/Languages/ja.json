@@ -44,5 +44,7 @@
   "DiagnosticLogging": "診断ログ",
   "DiagnosticLoggingDescription": "起動とフックのトラブルシューティング用に、診断ログを %TEMP%\\menyou-hooks.log に書き込みます。既定ではオフです。ログは起動時に、下記のサイズを超えると削除されます。",
   "LogSize": "サイズ",
-  "Preview": "プレビュー"
+  "Preview": "プレビュー",
+  "Searching": "検索しています…",
+  "SearchResults": "検索結果"
 }

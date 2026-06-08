@@ -44,5 +44,7 @@
   "DiagnosticLogging": "Registro de diagnóstico",
   "DiagnosticLoggingDescription": "Escribe registros de diagnóstico en %TEMP%\\menyou-hooks.log para solucionar problemas de inicio y hooks. Desactivado de forma predeterminada; el registro se borra al inicio cuando supera el tamaño indicado abajo.",
   "LogSize": "Tamaño",
-  "Preview": "Vista previa"
+  "Preview": "Vista previa",
+  "Searching": "Buscando…",
+  "SearchResults": "Resultados de la búsqueda"
 }

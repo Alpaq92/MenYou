@@ -1,3 +1,2 @@
-LIBRARY MenYou.Bridge
 EXPORTS
-    MenYouHookProc
+    MenYouGetMsgProc

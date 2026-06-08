@@ -37,8 +37,15 @@ public sealed class Win32HotkeyService : IHotkeyService
         //     shell's lone-tap detector sees a compound press and never
         //     opens the system Start menu; on the real Win-up our hook
         //     fires MenYou.
-        //   - BridgeInjector keeps a foothold inside Explorer (idle today;
-        //     useful for future in-process work like taskbar drag/drop).
+        //   - BridgeInjector maps MenYou.Bridge.dll into Explorer's UI thread
+        //     and installs a WH_GETMESSAGE hook there. It catches the lone
+        //     Win-tap as it surfaces on Win 11 24H2 — a plain WM_KEYUP on
+        //     Explorer's input window (mirroring Open-Shell) — neuters it so
+        //     the system Start menu never opens, and posts WM_COPYDATA back to
+        //     our CopyDataListener to open MenYou: an in-process counterpart to
+        //     the out-of-process WinKeyHook above. (The DLL is shadow-copied out
+        //     of the install dir first, so an in-place upgrade can't get stuck
+        //     on Explorer holding it — see BridgeInjector.ResolveBridgePath.)
         //   - Win+F12 stays as a deterministic fallback when ReplaceWinKey
         //     is off (or when the LL hook can't be installed, e.g. on
         //     locked-down machines).
