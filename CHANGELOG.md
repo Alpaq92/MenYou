@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.1](https://github.com/Alpaq92/MenYou/compare/v0.8.0...v0.8.1) (2026-06-08)
+
+
+### Features
+
+* cap recent files in context menus (configurable) ([#32](https://github.com/Alpaq92/MenYou/issues/32)) ([8a66185](https://github.com/Alpaq92/MenYou/commit/8a66185bdfadee6f15ed5cff2247ccdf4599176a))
+
 ## [0.8.0](https://github.com/Alpaq92/MenYou/compare/v0.7.2...v0.8.0) (2026-06-08)
 
 
