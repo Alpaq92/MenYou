@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.7.2](https://github.com/Alpaq92/MenYou/compare/v0.7.1...v0.7.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* **search:** launch results on a single click; keep them stable while typing ([#25](https://github.com/Alpaq92/MenYou/issues/25)) ([3f3f575](https://github.com/Alpaq92/MenYou/commit/3f3f57542a50c77b1334a32c2730fedab400083b))
+
 ## [0.7.1](https://github.com/Alpaq92/MenYou/compare/v0.7.0...v0.7.1) (2026-06-07)
 
 
