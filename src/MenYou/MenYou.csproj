@@ -13,7 +13,7 @@
     <!-- Baked into the assembly so the app can self-report its version (shown
          next to the About button). release-please bumps this on each release
          via the generic updater in release-please-config.json. -->
-    <Version>0.8.0</Version> <!-- x-release-please-version -->
+    <Version>0.8.1</Version> <!-- x-release-please-version -->
     <UseWindowsForms>false</UseWindowsForms>
     <UseWPF>false</UseWPF>
     <EnableDefaultAvaloniaItems>true</EnableDefaultAvaloniaItems>

@@ -11,6 +11,7 @@
   "ShowRecent": "Mostrar elementos recientes",
   "ShowSearch": "Mostrar cuadro de búsqueda",
   "MaxRecentItems": "Máximo de elementos recientes",
+  "ContextMenuRecentCount": "Archivos recientes en el menú contextual",
   "ReplaceStart": "Reemplazar Inicio: clic en barra de tareas + Shift+Win",
   "ReplaceStartDescription": "La tecla Win sola sigue abriendo el menú del sistema (Microsoft movió el detector tras DirectComposition en Windows 11 24H2 — Open-Shell topó con lo mismo y recomienda Shift+Win).",
   "HideOnFocusLost": "Ocultar el menú al perder el foco",

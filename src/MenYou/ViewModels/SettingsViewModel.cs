@@ -179,6 +179,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _hideOnFocusLost;
     [ObservableProperty] private bool _mirrorWindowsStart;
     [ObservableProperty] private int _maxRecentItems;
+    [ObservableProperty] private int _contextMenuRecentCount;
     [ObservableProperty] private string? _pushStatus;
 
     // ---- Developer tab ---------------------------------------------------
@@ -270,6 +271,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _hideOnFocusLost = s.HideOnFocusLost;
         _mirrorWindowsStart = s.MirrorWindowsStart;
         _maxRecentItems = s.MaxRecentItems;
+        _contextMenuRecentCount = s.ContextMenuRecentCount;
         _useDiscoveryCache = s.UseDiscoveryCache;
         _immediateMenuReveal = s.ImmediateMenuReveal;
         _diagnosticLogging = s.DiagnosticLogging;
@@ -304,6 +306,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         s.HideOnFocusLost = HideOnFocusLost;
         s.MirrorWindowsStart = MirrorWindowsStart;
         s.MaxRecentItems = MaxRecentItems;
+        s.ContextMenuRecentCount = ContextMenuRecentCount;
         s.UseDiscoveryCache = UseDiscoveryCache;
         s.ImmediateMenuReveal = ImmediateMenuReveal;
         s.DiagnosticLogging = DiagnosticLogging;
@@ -378,6 +381,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         HideOnFocusLost = s.HideOnFocusLost;
         MirrorWindowsStart = s.MirrorWindowsStart;
         MaxRecentItems = s.MaxRecentItems;
+        ContextMenuRecentCount = s.ContextMenuRecentCount;
         UseDiscoveryCache = s.UseDiscoveryCache;
         ImmediateMenuReveal = s.ImmediateMenuReveal;
         DiagnosticLogging = s.DiagnosticLogging;

@@ -10,6 +10,7 @@
   "ShowRecent": "최근 항목 표시",
   "ShowSearch": "검색 표시",
   "MaxRecentItems": "최근 항목 최대",
+  "ContextMenuRecentCount": "컨텍스트 메뉴의 최근 파일",
   "ReplaceStart": "시작 대체: 작업 표시줄 클릭 + Shift+Win",
   "HideOnFocusLost": "포커스 잃으면 숨기기",
   "CheckForUpdates": "업데이트 확인",

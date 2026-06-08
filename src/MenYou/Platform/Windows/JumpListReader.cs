@@ -58,7 +58,7 @@ internal static class JumpListReader
     /// Listed in Open-Shell's GetJumplist switch: 0=Pinned, 1=Recent, 2=Frequent.
     public static IReadOnlyList<Destination> ReadRecent(string aumid, int max = 8)
     {
-        if (string.IsNullOrWhiteSpace(aumid)) return Array.Empty<Destination>();
+        if (string.IsNullOrWhiteSpace(aumid) || max <= 0) return Array.Empty<Destination>();
         try
         {
             return ReadViaAutomaticDestinationList(aumid, listType: 1, max);
@@ -270,13 +270,20 @@ internal static class JumpListReader
 
             var iid = typeof(IObjectCollection).GUID;
             object? collObj;
+            // Over-fetch, then cap to `max` filesystem results in the loop below.
+            // The automatic-destination list can carry a non-filesystem entry (a
+            // category / pinned slot) that we skip when reading, yet it still
+            // counts against GetList's maxCount — so asking for exactly `max`
+            // returns max-1 *files* (e.g. cap 5 showed 4). A small buffer plus
+            // the loop cap yields exactly `max` files when that many exist.
+            uint fetch = (uint)(max + 16);
             if (newer is not null)
             {
-                hr = newer.GetList(listType, (uint)max, 1u, ref iid, out collObj);
+                hr = newer.GetList(listType, fetch, 1u, ref iid, out collObj);
             }
             else
             {
-                hr = older!.GetList(listType, (uint)max, ref iid, out collObj);
+                hr = older!.GetList(listType, fetch, ref iid, out collObj);
             }
             if (hr != 0 || collObj is not IObjectArray array) return Array.Empty<Destination>();
 
@@ -285,7 +292,7 @@ internal static class JumpListReader
                 array.GetCount(out var count);
                 var results = new List<Destination>((int)count);
                 var siIid = typeof(IShellItem).GUID;
-                for (uint i = 0; i < count; i++)
+                for (uint i = 0; i < count && results.Count < max; i++)
                 {
                     array.GetAt(i, ref siIid, out var itemObj);
                     if (itemObj is not IShellItem item) continue;

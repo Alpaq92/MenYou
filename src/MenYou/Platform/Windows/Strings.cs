@@ -159,6 +159,7 @@ public static class Strings
     public static string ShowRecent              => Resolve("ShowRecent");
     public static string ShowSearch              => Resolve("ShowSearch");
     public static string MaxRecentItems          => Resolve("MaxRecentItems");
+    public static string ContextMenuRecentCount  => Resolve("ContextMenuRecentCount");
     // Behavior: per user, repurposed to display "Advanced" instead of
     // a literal "Behavior" verb (no standalone "Zachowanie" exists in
     // any shell DLL). comres.dll,-2739 = "Zaawansowane" / "Advanced"

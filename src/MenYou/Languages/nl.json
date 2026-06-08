@@ -10,6 +10,7 @@
   "ShowRecent": "Recente items tonen",
   "ShowSearch": "Zoekvak tonen",
   "MaxRecentItems": "Max. aantal recente items",
+  "ContextMenuRecentCount": "Recente bestanden in contextmenu",
   "ReplaceStart": "Start vervangen: taakbalkklik + Shift+Win",
   "HideOnFocusLost": "Verbergen wanneer focus verloren gaat",
   "CheckForUpdates": "Controleren op updates",

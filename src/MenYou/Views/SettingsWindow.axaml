@@ -198,8 +198,17 @@
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MaxRecentItems}" VerticalAlignment="Center" />
                     <NumericUpDown Grid.Row="0" Grid.Column="1"
-                                   Minimum="0" Maximum="30"
+                                   Minimum="0" Maximum="30" Increment="1" FormatString="0"
                                    Value="{Binding MaxRecentItems, Mode=TwoWay}" />
+                </Grid>
+
+                <!-- Cap for per-app JumpList "recent files" in the right-click
+                     context menus. The Win 7 / Classic side panel stays full. -->
+                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.ContextMenuRecentCount}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <NumericUpDown Grid.Row="0" Grid.Column="1"
+                                   Minimum="0" Maximum="30" Increment="1" FormatString="0"
+                                   Value="{Binding ContextMenuRecentCount, Mode=TwoWay}" />
                 </Grid>
 
                 <StackPanel Spacing="6">
@@ -392,7 +401,7 @@
                                    Text="{x:Static loc:Strings.MaxLogSizeMb}"
                                    VerticalAlignment="Center" />
                         <NumericUpDown Grid.Column="1"
-                                       Minimum="1" Maximum="100" Increment="1"
+                                       Minimum="1" Maximum="100" Increment="1" FormatString="0"
                                        Value="{Binding MaxLogSizeMb, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>

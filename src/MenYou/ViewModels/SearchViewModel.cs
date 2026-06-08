@@ -108,7 +108,10 @@ public sealed partial class SearchViewModel : ViewModelBase
                     .Where(t => !t.IsSeparator && !string.IsNullOrEmpty(t.Title))
                     .Select(t => new SearchResultViewModel.JumpTask(t.Title, t.Target, t.Arguments))
                     .ToList();
-                var recent = MenYou.Platform.Windows.JumpListReader.ReadRecent(pathKey, 8)
+                // Load the full recent list (NOT the context-menu cap): the
+                // Win 7 / Classic side panel binds to vm.Recent and shows all of
+                // it. The right-click menu caps separately (ContextMenuRecentCount).
+                var recent = MenYou.Platform.Windows.JumpListReader.ReadRecent(pathKey, 50)
                     .Select(d => new SearchResultViewModel.RecentDestination(d.Path, d.DisplayName))
                     .ToList();
                 return (taskVms: tasks, recentVms: recent);

@@ -2,7 +2,9 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using MenYou.Platform.Windows;
+using MenYou.Services;
 using MenYou.ViewModels.Items;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MenYou.Views.Behaviors;
 
@@ -57,6 +59,11 @@ public sealed class AppContextMenuBehavior
         var key = JumpListReader.ResolveKey(vm.Entry.Aumid, vm.Entry.SourceLnkPath, vm.Entry.TargetPath);
         if (string.IsNullOrEmpty(key)) return;
 
+        // User-configurable cap for recent files in the context menu (default 8;
+        // 0 hides them). The Win 7 / Classic side panel is uncapped — see
+        // SearchViewModel.LoadJumpListAsync.
+        var cap = App.Services.GetService<ISettingsService>()?.Current.ContextMenuRecentCount ?? 8;
+
         IReadOnlyList<JumpListReader.JumpTask> tasks;
         IReadOnlyList<JumpListReader.Destination> recent;
         try
@@ -64,7 +71,7 @@ public sealed class AppContextMenuBehavior
             (tasks, recent) = await Task.Run(() => (
                 (IReadOnlyList<JumpListReader.JumpTask>)JumpListReader.ReadTasks(key)
                     .Where(t => !t.IsSeparator && !string.IsNullOrEmpty(t.Title)).ToList(),
-                JumpListReader.ReadRecent(key, 8)));
+                JumpListReader.ReadRecent(key, cap)));
         }
         catch { return; }
 
