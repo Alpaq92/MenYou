@@ -86,7 +86,7 @@ jobs:
 
       - name: Open dependency-refresh PR
         id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           # PAT preferred so the PR triggers CI and downstream release flow.
           token: ${{ secrets.RELEASE_PLEASE_PAT || secrets.GITHUB_TOKEN }}
