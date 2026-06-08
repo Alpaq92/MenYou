@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.0](https://github.com/Alpaq92/MenYou/compare/v0.7.2...v0.8.0) (2026-06-08)
+
+
+### Features
+
+* bundle native input bridge; single-instance, startup + UI polish ([#30](https://github.com/Alpaq92/MenYou/issues/30)) ([517ed10](https://github.com/Alpaq92/MenYou/commit/517ed10c1ce3bc63ae2215bdaaf0e34f08c07d0e))
+
 ## [0.7.2](https://github.com/Alpaq92/MenYou/compare/v0.7.1...v0.7.2) (2026-06-08)
 
 
