@@ -47,5 +47,12 @@
   "LogSize": "Tamaño",
   "Preview": "Vista previa",
   "Searching": "Buscando…",
-  "SearchResults": "Resultados de la búsqueda"
+  "SearchResults": "Resultados de la búsqueda",
+  "MirrorUnavailableTitle": "MenYou — Reflejo de Inicio no disponible",
+  "MirrorUnavailableBody": "Windows rechazó Export-StartLayout en esta compilación. MenYou mantendrá los últimos anclados conocidos.",
+  "PhoneLink": "Dispositivos móviles",
+  "Yes": "Sí",
+  "No": "No",
+  "ConfirmEmptyThemeTitle": "¿Aplicar tema personalizado vacío?",
+  "ConfirmEmptyThemeBody": "«Usar tema personalizado» está activado pero el editor está vacío, así que el menú aparecerá en blanco. ¿Aplicar de todos modos?"
 }

@@ -46,5 +46,13 @@
   "LogSize": "Размер",
   "Preview": "Предпросмотр",
   "Searching": "Идёт поиск…",
-  "SearchResults": "Результаты поиска"
+  "SearchResults": "Результаты поиска",
+  "PushToWinStart": "Отправить закреплённые в меню Пуск Windows",
+  "MirrorUnavailableTitle": "MenYou — зеркалирование Пуска недоступно",
+  "MirrorUnavailableBody": "Windows отклонил Export-StartLayout в этой сборке. MenYou сохранит последние известные закрепления.",
+  "PhoneLink": "Мобильные устройства",
+  "Yes": "Да",
+  "No": "Нет",
+  "ConfirmEmptyThemeTitle": "Применить пустую пользовательскую тему?",
+  "ConfirmEmptyThemeBody": "«Использовать пользовательскую тему» включено, но редактор пуст, поэтому меню будет пустым. Всё равно применить?"
 }
