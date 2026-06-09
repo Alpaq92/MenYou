@@ -62,19 +62,25 @@ internal static class TrayBalloon
                 cbSize = (uint)Marshal.SizeOf<NOTIFYICONDATAW>(),
                 hWnd = hwnd,
                 uID = 1,
-                uFlags = NIF_INFO | NIF_ICON,
+                // NIF_ICON only on the ADD — registering the icon must NOT
+                // carry NIF_INFO, or Windows raises the balloon here too. The
+                // balloon is fired once, below, by the NIM_MODIFY.
+                uFlags = NIF_ICON,
                 hIcon = LoadIconW(IntPtr.Zero, new IntPtr(IDI_INFORMATION)),
                 szInfoTitle = title,
                 szInfo = body,
                 dwInfoFlags = NIIF_INFO,
             };
 
-            // Add + Modify pattern — Add registers the icon (we leave it
-            // invisible by not setting NIF_TIP/state), Modify triggers the
-            // balloon. Then a short pump so Windows actually displays it
+            // Add + Modify pattern — NIM_ADD registers the (transient) icon
+            // WITHOUT a balloon; NIM_MODIFY then sets NIF_INFO to fire the
+            // balloon exactly once. Previously NIF_INFO was on the ADD as well,
+            // so the balloon showed on BOTH calls — the "ready balloon shows
+            // twice" bug. Then a short pump so Windows actually displays it
             // before we tear down.
             if (Shell_NotifyIconW(NIM_ADD, ref data))
             {
+                data.uFlags = NIF_INFO | NIF_ICON;
                 Shell_NotifyIconW(NIM_MODIFY, ref data);
 
                 // Pump for ~6 s so the balloon has time to appear and
