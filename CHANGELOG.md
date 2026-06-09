@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.3](https://github.com/Alpaq92/MenYou/compare/v0.8.2...v0.8.3) (2026-06-09)
+
+
+### Bug Fixes
+
+* **i18n:** complete missing translations across all locales ([#38](https://github.com/Alpaq92/MenYou/issues/38)) ([5640e7e](https://github.com/Alpaq92/MenYou/commit/5640e7e9de65c76fc7c3b17888a91f7e703a4e8e))
+
 ## [0.8.2](https://github.com/Alpaq92/MenYou/compare/v0.8.1...v0.8.2) (2026-06-09)
 
 
