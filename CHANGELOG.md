@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.4](https://github.com/Alpaq92/MenYou/compare/v0.8.3...v0.8.4) (2026-06-09)
+
+
+### Bug Fixes
+
+* stop the "ready" tray balloon from showing twice ([#40](https://github.com/Alpaq92/MenYou/issues/40)) ([37223a0](https://github.com/Alpaq92/MenYou/commit/37223a089133bec0ba5d3c2241040acf9091d22b))
+
 ## [0.8.3](https://github.com/Alpaq92/MenYou/compare/v0.8.2...v0.8.3) (2026-06-09)
 
 
