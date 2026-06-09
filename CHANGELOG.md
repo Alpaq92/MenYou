@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.5](https://github.com/Alpaq92/MenYou/compare/v0.8.4...v0.8.5) (2026-06-09)
+
+
+### Bug Fixes
+
+* **uninstaller:** remove the autostart task and legacy Run value on uninstall ([#41](https://github.com/Alpaq92/MenYou/issues/41)) ([de9b868](https://github.com/Alpaq92/MenYou/commit/de9b8681a4f9560036d48943f70a17ed3c5e6c3f))
+
 ## [0.8.4](https://github.com/Alpaq92/MenYou/compare/v0.8.3...v0.8.4) (2026-06-09)
 
 
