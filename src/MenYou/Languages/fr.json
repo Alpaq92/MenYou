@@ -47,5 +47,12 @@
   "LogSize": "Taille",
   "Preview": "Aperçu",
   "Searching": "Recherche en cours…",
-  "SearchResults": "Résultats de la recherche"
+  "SearchResults": "Résultats de la recherche",
+  "MirrorUnavailableTitle": "MenYou — Miroir du menu Démarrer indisponible",
+  "MirrorUnavailableBody": "Windows a refusé Export-StartLayout sur cette version. MenYou conservera les dernières épingles connues.",
+  "PhoneLink": "Appareils mobiles",
+  "Yes": "Oui",
+  "No": "Non",
+  "ConfirmEmptyThemeTitle": "Appliquer un thème personnalisé vide ?",
+  "ConfirmEmptyThemeBody": "« Utiliser un thème personnalisé » est activé mais l'éditeur est vide, donc le menu sera vide. Appliquer quand même ?"
 }

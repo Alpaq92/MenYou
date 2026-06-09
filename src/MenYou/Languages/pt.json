@@ -37,5 +37,22 @@
   "LogSize": "Tamanho",
   "Preview": "Pré-visualização",
   "Searching": "Pesquisando…",
-  "SearchResults": "Resultados da pesquisa"
+  "SearchResults": "Resultados da pesquisa",
+  "MirrorUnavailableTitle": "MenYou — Espelhamento do Iniciar indisponível",
+  "MirrorUnavailableBody": "O Windows recusou Export-StartLayout nesta compilação. O MenYou manterá os últimos fixados conhecidos.",
+  "ReplaceStartDescription": "A tecla Win sozinha ainda abre o menu do sistema (a Microsoft moveu o detector para trás do DirectComposition no Windows 11 24H2 — o Open-Shell enfrentou o mesmo obstáculo e recomenda Shift+Win).",
+  "MirrorWinStartDescription": "Quando ativado, a seção Fixados reflete a lista de fixados do menu Iniciar do Windows 11 em tempo real (via Export-StartLayout + um monitor de arquivo em start2.bin). Fixar/desafixar manualmente no MenYou fica desativado — o Iniciar do sistema é a fonte da verdade.",
+  "PushToWinStartDescription": "Grava a lista de fixados do MenYou na política ConfigureStartPins e reinicia o Explorer. Ação única — o Windows aplica os fixados no próximo login. Execute novamente para enviar de novo.",
+  "StyleWin7Desc": "Duas colunas, blocos fixados, árvore de programas embutida",
+  "StyleClassic2Desc": "Fixados + Todos os programas em cascata, atalhos do shell à direita",
+  "StyleClassic1Desc": "Lista compacta com submenu Programas em cascata",
+  "PhoneLink": "Dispositivos móveis",
+  "StyleWindows11": "Windows 11",
+  "StyleWindows11Desc": "Pesquisa no topo, grade de blocos, conta e energia na barra inferior",
+  "StyleMintCinnamon": "Cinnamon Mint",
+  "StyleMintCinnamonDesc": "Barra lateral escura com fixados e locais, programas no painel de conteúdo",
+  "Yes": "Sim",
+  "No": "Não",
+  "ConfirmEmptyThemeTitle": "Aplicar tema personalizado vazio?",
+  "ConfirmEmptyThemeBody": "«Usar tema personalizado» está ativado mas o editor está vazio, portanto o menu aparecerá em branco. Aplicar mesmo assim?"
 }

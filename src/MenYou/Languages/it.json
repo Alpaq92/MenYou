@@ -37,5 +37,22 @@
   "LogSize": "Dimensione",
   "Preview": "Anteprima",
   "Searching": "Ricerca in corso…",
-  "SearchResults": "Risultati della ricerca"
+  "SearchResults": "Risultati della ricerca",
+  "MirrorUnavailableTitle": "MenYou — Mirroring di Start non disponibile",
+  "MirrorUnavailableBody": "Windows ha rifiutato Export-StartLayout in questa build. MenYou manterrà gli ultimi elementi appuntati noti.",
+  "ReplaceStartDescription": "Il solo tasto Win apre comunque il menu di sistema (Microsoft ha spostato il rilevatore dietro DirectComposition in Windows 11 24H2 — Open-Shell ha trovato lo stesso muro e consiglia Shift+Win).",
+  "MirrorWinStartDescription": "Quando attivo, la sezione Appuntati riflette in tempo reale l'elenco degli elementi appuntati del menu Start di Windows 11 (tramite Export-StartLayout + un watcher su start2.bin). L'aggiunta/rimozione manuale in MenYou è disattivata — Start di sistema è la fonte attendibile.",
+  "PushToWinStartDescription": "Scrive l'elenco degli elementi appuntati di MenYou nei criteri ConfigureStartPins e riavvia Explorer. Operazione singola — Windows applica gli elementi al successivo accesso. Esegui di nuovo per inviare un altro aggiornamento.",
+  "StyleWin7Desc": "Due colonne, riquadri appuntati, albero dei programmi integrato",
+  "StyleClassic2Desc": "Appuntati + Tutti i programmi a cascata, collegamenti shell a destra",
+  "StyleClassic1Desc": "Elenco compatto con sottomenu Programmi a cascata",
+  "PhoneLink": "Dispositivi mobili",
+  "StyleWindows11": "Windows 11",
+  "StyleWindows11Desc": "Ricerca in alto, griglia di riquadri, account e alimentazione nella barra inferiore",
+  "StyleMintCinnamon": "Cinnamon Mint",
+  "StyleMintCinnamonDesc": "Barra laterale scura con appuntati e risorse, programmi nel riquadro contenuti",
+  "Yes": "Sì",
+  "No": "No",
+  "ConfirmEmptyThemeTitle": "Applicare il tema personalizzato vuoto?",
+  "ConfirmEmptyThemeBody": "«Usa tema personalizzato» è attivo ma l'editor è vuoto, quindi il menu apparirà vuoto. Applicare comunque?"
 }

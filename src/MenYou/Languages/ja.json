@@ -47,5 +47,12 @@
   "LogSize": "サイズ",
   "Preview": "プレビュー",
   "Searching": "検索しています…",
-  "SearchResults": "検索結果"
+  "SearchResults": "検索結果",
+  "MirrorUnavailableTitle": "MenYou — スタートのミラーリングは利用できません",
+  "MirrorUnavailableBody": "このビルドでは Windows が Export-StartLayout を拒否しました。MenYou は最後に判明したピン留めを保持します。",
+  "PhoneLink": "モバイル デバイス",
+  "Yes": "はい",
+  "No": "いいえ",
+  "ConfirmEmptyThemeTitle": "空のカスタム テーマを適用しますか？",
+  "ConfirmEmptyThemeBody": "「カスタム テーマを使用」がオンですが、エディターが空のためメニューが空白になります。それでも適用しますか？"
 }

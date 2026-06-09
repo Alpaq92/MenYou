@@ -47,5 +47,12 @@
   "LogSize": "大小",
   "Preview": "预览",
   "Searching": "正在搜索…",
-  "SearchResults": "搜索结果"
+  "SearchResults": "搜索结果",
+  "MirrorUnavailableTitle": "MenYou — 无法镜像开始菜单",
+  "MirrorUnavailableBody": "Windows 在此版本中拒绝了 Export-StartLayout。MenYou 将保留最后已知的固定项。",
+  "PhoneLink": "移动设备",
+  "Yes": "是",
+  "No": "否",
+  "ConfirmEmptyThemeTitle": "应用空的自定义主题？",
+  "ConfirmEmptyThemeBody": "“使用自定义主题”已开启，但编辑器为空，菜单将显示为空白。仍要应用吗？"
 }
