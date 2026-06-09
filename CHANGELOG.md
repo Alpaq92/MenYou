@@ -8,6 +8,37 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.1](https://github.com/Alpaq92/MenYou/compare/v0.8.2...v0.8.1) (2026-06-09)
+
+
+### Features
+
+* app version in Settings, refined translations, release-notes checksum ([#13](https://github.com/Alpaq92/MenYou/issues/13)) ([728bea5](https://github.com/Alpaq92/MenYou/commit/728bea55bb10b3f81e359464dca7b3a7418d55bc))
+* bundle native input bridge; single-instance, startup + UI polish ([#30](https://github.com/Alpaq92/MenYou/issues/30)) ([517ed10](https://github.com/Alpaq92/MenYou/commit/517ed10c1ce3bc63ae2215bdaaf0e34f08c07d0e))
+* cap recent files in context menus (configurable) ([#32](https://github.com/Alpaq92/MenYou/issues/32)) ([8a66185](https://github.com/Alpaq92/MenYou/commit/8a66185bdfadee6f15ed5cff2247ccdf4599176a))
+* cap recent files in context menus (configurable) ([#34](https://github.com/Alpaq92/MenYou/issues/34)) ([0745741](https://github.com/Alpaq92/MenYou/commit/07457416894089503477f78d3c229ba329e330dd))
+* near-instant startup, first-run splash, and power-button fix ([#19](https://github.com/Alpaq92/MenYou/issues/19)) ([f086644](https://github.com/Alpaq92/MenYou/commit/f086644fcc4c9ef05245b2940af9a278c048ba76))
+* theme showcase gallery, layout polish, and settings cleanup ([#17](https://github.com/Alpaq92/MenYou/issues/17)) ([e655698](https://github.com/Alpaq92/MenYou/commit/e655698a49efa72aa54c2d145adff7db585830d6))
+* Windows 11 default look, discovery cache, and Developer settings ([8d39ce3](https://github.com/Alpaq92/MenYou/commit/8d39ce385bde7aa64b8ca4c5da8acb0d8fa3317f))
+
+
+### Bug Fixes
+
+* **installer:** avoid premature comment close in Inno [Code] block ([f21162e](https://github.com/Alpaq92/MenYou/commit/f21162eeec508077ea6bb8af386d9c2045be7fc3))
+* **installer:** use correct Inno page type for the Setup Type page ([0c317a6](https://github.com/Alpaq92/MenYou/commit/0c317a67fe56358eadd12c72c60803d9e6ae0644))
+* **recents:** record app launches opened from search; default count to 8 ([#23](https://github.com/Alpaq92/MenYou/issues/23)) ([6dbf914](https://github.com/Alpaq92/MenYou/commit/6dbf91485dfce339af0db6117693c822a11b233a))
+* **search:** launch results on a single click; keep them stable while typing ([#25](https://github.com/Alpaq92/MenYou/issues/25)) ([3f3f575](https://github.com/Alpaq92/MenYou/commit/3f3f57542a50c77b1334a32c2730fedab400083b))
+
+
+### Performance
+
+* **startup:** faster, flicker-free Start menu open ([5a758a6](https://github.com/Alpaq92/MenYou/commit/5a758a6e79339f340e8cc5ff1b5e9318d48c3ffb))
+
+
+### Documentation
+
+* **changelog:** reframe 0.5.0 as a starting point; release as 0.7.0 ([#21](https://github.com/Alpaq92/MenYou/issues/21)) ([e6591c0](https://github.com/Alpaq92/MenYou/commit/e6591c091aa4c1ed3acc9455d21789faea81ae6a))
+
 ## [0.8.2](https://github.com/Alpaq92/MenYou/compare/v0.8.1...v0.8.2) (2026-06-09)
 
 
