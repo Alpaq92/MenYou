@@ -115,6 +115,17 @@ public sealed partial class StartMenuViewModel : ViewModelBase
             UseCustomTheme = settings.Current.UseCustomTheme;
             CustomThemeXaml = settings.Current.CustomThemeXaml;
             ImmediateReveal = settings.Current.ImmediateMenuReveal;
+            // Re-cap the live Pinned / Recent lists so a changed "Max recent
+            // items" (or pin set) takes effect immediately, not only after the
+            // next launch or restart. Both rebuilds are diff-aware, so an
+            // unrelated settings change (theme, etc.) leaves the tiles — and
+            // their already-loaded icons — untouched.
+            Dispatcher.UIThread.Post(() =>
+            {
+                RebuildPinned();
+                RebuildRecent();
+                _ = Task.Run(LoadIconsAsync);
+            });
         };
         // When the discovery cache's background backstop swaps in a fresher
         // app list, rebuild the surfaces (single-flight + diff-aware, so it's

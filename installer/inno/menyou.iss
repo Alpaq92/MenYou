@@ -149,6 +149,15 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 ; Windows later.
 Type: filesandordirs; Name: "{localappdata}\MenYou\bridge"
 
+[Registry]
+; One-shot "show the ready balloon" marker. MenYou shows its tray balloon on the
+; next launch when this value is present, then clears it — so the "MenYou is
+; ready" balloon appears after every install/update, not only on a brand-new
+; profile (settings.json survives uninstall, which would otherwise suppress it
+; after the first run). The whole key is MenYou-only, so uninsdeletekey cleans
+; it up on uninstall.
+Root: HKCU; Subkey: "Software\MenYou"; ValueType: dword; ValueName: "ShowReadyBalloon"; ValueData: 1; Flags: uninsdeletekey
+
 [Run]
 ; Offered only on an interactive (first) install; silent updates skip it
 ; and rely on Restart Manager to relaunch the instance it closed.

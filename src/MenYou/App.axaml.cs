@@ -97,11 +97,14 @@ public partial class App : Application
         _ = SetupStartMirrorAsync();
         _ = LoadFallbackIconAsync();
         HookTrace.Log("Startup: sync init done (async tasks kicked off)");
-        // First run only: tray + hotkey are live now, so surface a one-time
-        // balloon confirming MenYou is up + the Shift+Win hint. One-shot — next
-        // launch settings.json exists, so _isFirstRun is false and the balloon
-        // doesn't reappear.
-        if (_isFirstRun) AnnounceReady();
+        // Surface the one-time "ready" balloon (MenYou is up + the Shift+Win
+        // hint) on a brand-new profile OR after any install/update: the Inno
+        // installer drops a one-shot HKCU marker that ConsumeReadyMarker reads
+        // and clears, so it also shows on reinstalls/upgrades — not only when
+        // settings.json is absent (it survives uninstall). Consume the marker
+        // unconditionally so it never lingers and double-fires.
+        var installedNow = ConsumeReadyMarker();
+        if (installedNow || _isFirstRun) AnnounceReady();
         // React to the user toggling MirrorWindowsStart in Settings.
         Services.GetRequiredService<ISettingsService>().Changed += () =>
             Dispatcher.UIThread.Post(() => _ = ApplyMirrorStateAsync());
@@ -823,6 +826,28 @@ public partial class App : Application
     {
         try { TrayBalloon.Show(Strings.ReadyTitle, Strings.ReadyBody); }
         catch { /* balloon is best-effort */ }
+    }
+
+    /// Reads and clears the installer's one-shot "show ready balloon" marker
+    /// (HKCU\Software\MenYou\ShowReadyBalloon, written by menyou.iss on every
+    /// install/update). Returns true if it was set — so the "ready" balloon
+    /// fires once per install even when settings.json already exists from a
+    /// prior run. Best-effort: any registry failure just means no balloon.
+    private static bool ConsumeReadyMarker()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\MenYou", writable: true);
+            if (key?.GetValue("ShowReadyBalloon") is null) return false;
+            key.DeleteValue("ShowReadyBalloon", throwOnMissingValue: false);
+            return true;
+        }
+        // Specific (not a generic catch-all, per CodeQL): the only realistic
+        // failures opening/reading/deleting our own HKCU value. Anything else
+        // is a bug we'd want to surface, not swallow.
+        catch (System.Security.SecurityException) { return false; }
+        catch (System.UnauthorizedAccessException) { return false; }
+        catch (System.IO.IOException) { return false; }
     }
 
     /// One-shot migration for profiles that predate the
