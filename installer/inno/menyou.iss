@@ -274,3 +274,25 @@ begin
                 'Please reboot and run Setup again.';
   end;
 end;
+
+{ On uninstall, tear down the per-user autostart the APP created at runtime: the
+  logon-triggered scheduled task (Win32AutostartService, task name "MenYou") and
+  any legacy HKCU\...\Run value from pre-scheduled-task builds. [Files]/[Registry]
+  don't know about these — they're written by the running app, not Setup — so
+  without this they outlive the uninstall: the orphaned logon task keeps firing
+  at each sign-in and silently fails because its target exe is gone. Per-user
+  install (PrivilegesRequired=lowest), so the uninstaller runs in the user's
+  context and both removals hit the right hive. Best-effort; user data under
+  %APPDATA%\MenYou (settings, caches, custom themes) is intentionally left intact. }
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Rc: Integer;
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    { Task name matches Win32AutostartService.TaskName. }
+    Exec(ExpandConstant('{sys}\schtasks.exe'), '/delete /tn "MenYou" /f', '',
+         SW_HIDE, ewWaitUntilTerminated, Rc);
+    RegDeleteValue(HKCU, 'Software\Microsoft\Windows\CurrentVersion\Run', 'MenYou');
+  end;
+end;
