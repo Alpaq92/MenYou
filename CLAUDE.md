@@ -12,21 +12,40 @@ PR tags `vX.Y.Z`, which triggers `release.yml` to build the installer and publis
 the GitHub Release.
 
 ### ⚠️ Release PRs auto-merge → code fixes keep shipping a release late
-The `chore(main): release …` PRs are auto-approved (`auto-approve-chore.yml`) and
-auto-merged (`auto-merge.yml`) **the moment their CI passes**. But **code /
+The `chore(main): release …` PRs (authored by `github-actions[bot]`) take the
+**trusted-author fast path**: `trusted-author-auto-merge.yml` arms native
+auto-merge for them, so they merge **the moment their CI passes** (they are
+also exempt from `auto-merge.yml`'s 7-day soak; `auto-approve-chore.yml`
+approval is not the gate — the ruleset requires 0 approvals). But **code /
 installer PRs are NOT auto-approved** — only non-code changes (docs,
 `Languages/*.json` i18n, chore) are — so they need manual review and sit `BEHIND`
 (the branch ruleset requires up-to-date branches) while the release PR ships
 ahead of them. Net effect: a code fix repeatedly **misses the release that cuts
 just before it lands**, then trickles into the next one. (This shipped 0.8.3 with
-only the i18n fix, leaving the balloon + uninstaller fixes for 0.8.4.)
+only the i18n fix, then scattered the balloon fix into 0.8.4 and the uninstaller
+fix into 0.8.5 — one micro-release per approved fix.)
 
-**Recommendation — owner has NOT yet approved implementing this: disable
-auto-merge on the release-please PRs** so releases are cut **manually** and the
-owner controls when a release ships and what's in it. Until that's done, when
-batching fixes into one release, hold the release PR (`gh pr merge <rp>
---disable-auto`, re-run each cycle because updates re-enable it) until every
-intended fix is merged, then merge the release PR once.
+**Do NOT try to batch by holding the release PR** (`gh pr merge <rp>
+--disable-auto`). Tried for 0.8.4 and it failed: while code PRs sit awaiting the
+owner's review there is often **no release PR to hold yet** (release-please only
+opens/updates it after a fix merges), and once one exists,
+`trusted-author-auto-merge.yml` re-arms auto-merge on every `synchronize`
+event (each release-please force-push) — the release cuts within minutes of
+each fix merging. With sequential approvals, each fix gets its own release.
+
+**Recommendation — owner has NOT yet approved implementing this: make release
+PRs skip the trusted fast path** so releases are cut **manually** and the owner
+controls when a release ships and what's in it. The precise change is in
+`trusted-author-auto-merge.yml`: its author allowlist (`Alpaq92`,
+`dependabot[bot]`, `github-actions[bot]`) is what catches release-please's PRs
+— add a release-please exclusion to the job's `if:` (head ref
+`release-please--branches--main--components--MenYou`, or a `chore(main):
+release` title check) rather than dropping `github-actions[bot]` entirely
+(that would also slow the monthly dependency-refresh PR). Leave
+`auto-approve-chore.yml` unchanged — approval is not what merges these PRs.
+Until that change is made there is no reliable way to batch from the outside;
+the closest is the owner approving all queued fix PRs back-to-back and
+accepting whatever grouping the merge/release race produces.
 
 ### ⚠️ `Release-As:` is sticky
 A `Release-As: X.Y.Z` commit footer overrides the computed version on every run
