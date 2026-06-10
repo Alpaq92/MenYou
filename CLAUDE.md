@@ -19,14 +19,22 @@ installer PRs are NOT auto-approved** — only non-code changes (docs,
 (the branch ruleset requires up-to-date branches) while the release PR ships
 ahead of them. Net effect: a code fix repeatedly **misses the release that cuts
 just before it lands**, then trickles into the next one. (This shipped 0.8.3 with
-only the i18n fix, leaving the balloon + uninstaller fixes for 0.8.4.)
+only the i18n fix, then scattered the balloon fix into 0.8.4 and the uninstaller
+fix into 0.8.5 — one micro-release per approved fix.)
 
-**Recommendation — owner has NOT yet approved implementing this: disable
-auto-merge on the release-please PRs** so releases are cut **manually** and the
-owner controls when a release ships and what's in it. Until that's done, when
-batching fixes into one release, hold the release PR (`gh pr merge <rp>
---disable-auto`, re-run each cycle because updates re-enable it) until every
-intended fix is merged, then merge the release PR once.
+**Do NOT try to batch by holding the release PR** (`gh pr merge <rp>
+--disable-auto`). Tried for 0.8.4 and it failed: while code PRs sit awaiting the
+owner's review there is often **no release PR to hold yet** (release-please only
+opens/updates it after a fix merges), and once one exists the auto-merge
+workflow re-arms it on every update — the release cuts within minutes of each
+fix merging. With sequential approvals, each fix gets its own release.
+
+**Recommendation — owner has NOT yet approved implementing this: exclude the
+release-please branches from the auto-merge/auto-approve workflows** so releases
+are cut **manually** and the owner controls when a release ships and what's in
+it. Until that change is made there is no reliable way to batch from the
+outside; the closest is the owner approving all queued fix PRs back-to-back and
+accepting whatever grouping the merge/release race produces.
 
 ### ⚠️ `Release-As:` is sticky
 A `Release-As: X.Y.Z` commit footer overrides the computed version on every run
