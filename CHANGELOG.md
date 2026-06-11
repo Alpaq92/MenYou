@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.8](https://github.com/Alpaq92/MenYou/compare/v0.8.7...v0.8.8) (2026-06-11)
+
+
+### Features
+
+* **startup:** subtle "Updating apps…" caption during background refresh ([#52](https://github.com/Alpaq92/MenYou/issues/52)) ([0c63af1](https://github.com/Alpaq92/MenYou/commit/0c63af188c916e31561f0bd03bdeca80a1abcf47))
+
 ## [0.8.7](https://github.com/Alpaq92/MenYou/compare/v0.8.6...v0.8.7) (2026-06-11)
 
 
