@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.6](https://github.com/Alpaq92/MenYou/compare/v0.8.5...v0.8.6) (2026-06-11)
+
+
+### Bug Fixes
+
+* **uninstaller:** close a running MenYou before removing files ([#48](https://github.com/Alpaq92/MenYou/issues/48)) ([1318c56](https://github.com/Alpaq92/MenYou/commit/1318c5620c1a9e6ee99186c3ab2a5bc6181d2f3a))
+
 ## [0.8.5](https://github.com/Alpaq92/MenYou/compare/v0.8.4...v0.8.5) (2026-06-09)
 
 

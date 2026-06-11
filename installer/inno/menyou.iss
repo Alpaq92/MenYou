@@ -275,21 +275,82 @@ begin
   end;
 end;
 
-{ On uninstall, tear down the per-user autostart the APP created at runtime: the
-  logon-triggered scheduled task (Win32AutostartService, task name "MenYou") and
-  any legacy HKCU\...\Run value from pre-scheduled-task builds. [Files]/[Registry]
-  don't know about these — they're written by the running app, not Setup — so
-  without this they outlive the uninstall: the orphaned logon task keeps firing
-  at each sign-in and silently fails because its target exe is gone. Per-user
-  install (PrivilegesRequired=lowest), so the uninstaller runs in the user's
-  context and both removals hit the right hive. Best-effort; user data under
-  %APPDATA%\MenYou (settings, caches, custom themes) is intentionally left intact. }
+{ On uninstall (after the user confirms, before anything is removed):
+
+  1. CLOSE a running MenYou first. Uninstalling while the app runs left a
+     real machine in a zombie state: the uninstall log's registry entries
+     (the <AppId>_is1 key, the autostart cleanup below) were processed, but
+     the running process kept MenYou.exe + its loaded DLLs locked so the
+     payload survived — and on its next launch the app self-healed its
+     autostart task (EnsureAutostartDefault). Net result: still installed
+     and autostarting, but invisible to Windows' Apps list and with the
+     in-app updater dead (GitHubUpdateService.IsPackaged reads
+     DisplayVersion from the _is1 key). Killing the process up front lets
+     the file removal actually complete. Only MenYou.exe is touched — NOT
+     explorer.exe: the 0.8.0+ input hook is MenYou-owned, so Windows drops
+     it (and unmaps the bridge DLL from Explorer) when MenYou exits. The
+     kill is verified — re-run until taskkill reports the process gone — and
+     if MenYou is somehow still alive afterwards the uninstall is aborted
+     before any payload is removed, rather than proceeding into the zombie
+     state. 128 ("not running") is the benign success case. See the loop.
+
+  2. Tear down the per-user autostart the APP created at runtime: the
+     logon-triggered scheduled task (Win32AutostartService, task name
+     "MenYou") and any legacy HKCU\...\Run value from pre-scheduled-task
+     builds. [Files]/[Registry] don't know about these — they're written by
+     the running app, not Setup — so without this they outlive the
+     uninstall: the orphaned logon task keeps firing at each sign-in and
+     silently fails because its target exe is gone.
+
+  Per-user install (PrivilegesRequired=lowest), so the uninstaller runs in
+  the user's context and the removals hit the right hive. User data under
+  %APPDATA%\MenYou (settings, caches, custom themes) is intentionally left
+  intact. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  Rc: Integer;
+  Rc, Attempt: Integer;
+  StillRunning: Boolean;
 begin
   if CurUninstallStep = usUninstall then
   begin
+    { Kill, wait, then VERIFY the process is actually gone before touching
+      files. taskkill's Rc is only a usable signal in /IM mode: there Rc=128
+      means "no such process" (gone) while Rc=0 means it killed an instance
+      this pass (teardown + handle release is async, so re-verify). Do NOT use
+      /FI filter mode to probe: filter mode returns 0 whether it killed
+      something or found nothing, so it cannot tell "gone" from "killed".
+      Mirror PrepareToInstall's verify-by-side-effect: re-run /IM until it
+      reports 128 (gone). 128 on a normal uninstall (app never running) is the
+      benign success case and must NOT be treated as a failure. }
+    StillRunning := True;
+    for Attempt := 1 to 3 do
+    begin
+      if Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /im MenYou.exe', '',
+              SW_HIDE, ewWaitUntilTerminated, Rc) and (Rc = 128) then
+      begin
+        StillRunning := False;
+        Break;
+      end;
+      { Either we just killed an instance (Rc=0) or the kill genuinely failed
+        (other Rc / Exec failure). Give the OS a beat to finish teardown and
+        release file handles, then loop to confirm it is really gone. }
+      Sleep(1500);
+    end;
+
+    { Refuse to proceed if MenYou is verifiably still alive: continuing would
+      strip the _is1 key + autostart while the live process keeps the payload
+      locked, recreating the invisible, still-autostarting zombie this fix
+      exists to prevent. RaiseException fails the uninstall with a real error
+      (and a non-zero exit choco logs) instead of a MsgBox, which would hang
+      the /VERYSILENT path since /SUPPRESSMSGBOXES does not suppress [Code]
+      MsgBox. The uninstall aborts before any payload is removed, so the app
+      stays fully installed and re-uninstallable. }
+    if StillRunning then
+      RaiseException('MenYou could not be closed automatically, so uninstall '
+        + 'was stopped to avoid leaving a half-removed install. Please close '
+        + 'MenYou (it may be in the system tray) and run the uninstaller '
+        + 'again.');
+
     { Task name matches Win32AutostartService.TaskName. }
     Exec(ExpandConstant('{sys}\schtasks.exe'), '/delete /tn "MenYou" /f', '',
          SW_HIDE, ewWaitUntilTerminated, Rc);
