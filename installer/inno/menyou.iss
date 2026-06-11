@@ -275,21 +275,45 @@ begin
   end;
 end;
 
-{ On uninstall, tear down the per-user autostart the APP created at runtime: the
-  logon-triggered scheduled task (Win32AutostartService, task name "MenYou") and
-  any legacy HKCU\...\Run value from pre-scheduled-task builds. [Files]/[Registry]
-  don't know about these — they're written by the running app, not Setup — so
-  without this they outlive the uninstall: the orphaned logon task keeps firing
-  at each sign-in and silently fails because its target exe is gone. Per-user
-  install (PrivilegesRequired=lowest), so the uninstaller runs in the user's
-  context and both removals hit the right hive. Best-effort; user data under
-  %APPDATA%\MenYou (settings, caches, custom themes) is intentionally left intact. }
+{ On uninstall (after the user confirms, before anything is removed):
+
+  1. CLOSE a running MenYou first. Uninstalling while the app runs left a
+     real machine in a zombie state: the uninstall log's registry entries
+     (the <AppId>_is1 key, the autostart cleanup below) were processed, but
+     the running process kept MenYou.exe + its loaded DLLs locked so the
+     payload survived — and on its next launch the app self-healed its
+     autostart task (EnsureAutostartDefault). Net result: still installed
+     and autostarting, but invisible to Windows' Apps list and with the
+     in-app updater dead (GitHubUpdateService.IsPackaged reads
+     DisplayVersion from the _is1 key). Killing the process up front lets
+     the file removal actually complete. Only MenYou.exe is touched — NOT
+     explorer.exe: the 0.8.0+ input hook is MenYou-owned, so Windows drops
+     it (and unmaps the bridge DLL from Explorer) when MenYou exits. The
+     Sleep gives the OS a beat to release file handles before deletion
+     starts; both calls are best-effort (Rc deliberately unchecked — if
+     MenYou isn't running, taskkill exits 128 and that's fine).
+
+  2. Tear down the per-user autostart the APP created at runtime: the
+     logon-triggered scheduled task (Win32AutostartService, task name
+     "MenYou") and any legacy HKCU\...\Run value from pre-scheduled-task
+     builds. [Files]/[Registry] don't know about these — they're written by
+     the running app, not Setup — so without this they outlive the
+     uninstall: the orphaned logon task keeps firing at each sign-in and
+     silently fails because its target exe is gone.
+
+  Per-user install (PrivilegesRequired=lowest), so the uninstaller runs in
+  the user's context and the removals hit the right hive. User data under
+  %APPDATA%\MenYou (settings, caches, custom themes) is intentionally left
+  intact. }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Rc: Integer;
 begin
   if CurUninstallStep = usUninstall then
   begin
+    Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /im MenYou.exe', '',
+         SW_HIDE, ewWaitUntilTerminated, Rc);
+    Sleep(1500);
     { Task name matches Win32AutostartService.TaskName. }
     Exec(ExpandConstant('{sys}\schtasks.exe'), '/delete /tn "MenYou" /f', '',
          SW_HIDE, ewWaitUntilTerminated, Rc);
