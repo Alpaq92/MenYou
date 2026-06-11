@@ -70,7 +70,12 @@
                      tree the same way Pinned/Recent above do, so the All
                      Programs entry visibly matches the rest of the menu's
                      layout idiom. -->
-                <TextBlock Classes="section" Text="{x:Static loc:Strings.AllPrograms}" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Classes="section" Text="{x:Static loc:Strings.AllPrograms}" />
+                    <TextBlock Classes="section" Text="{x:Static loc:Strings.UpdatingApps}"
+                               IsVisible="{Binding IsRefreshing}" VerticalAlignment="Center"
+                               Margin="10,0,0,0" FontSize="11" FontWeight="Normal" Opacity="0.55" />
+                </StackPanel>
                 <ctrl:ProgramsTree Items="{Binding Programs.Items}" />
 
                 <Separator Classes="menu" />
