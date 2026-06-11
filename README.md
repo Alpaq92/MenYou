@@ -78,6 +78,7 @@ The Windows 11 and Linux Mint Cinnamon looks that used to ship as custom-theme s
 
 - [`docs/OVERVIEW.md`](docs/OVERVIEW.md) — architecture, tech stack, how it works.
 - [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md) — startup/performance engineering: the cold-start work, measurements, and what changed each release.
+- [`docs/SEARCH.md`](docs/SEARCH.md) — how search works and ranks results, how the real Windows Start menu and Open-Shell rank theirs, and the planned ranking overhaul.
 - [`docs/AUTOMATION.md`](docs/AUTOMATION.md) — CI/CD map, code-signing options, required secrets, and the release pipeline.
 - [`docs/THEMING.md`](docs/THEMING.md) — authoring custom themes for the Settings → Custom feature.
 - [`CREDITS.md`](CREDITS.md) — inspirations, third-party code, and asset attributions.
