@@ -31,6 +31,13 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
 
     public event Action? Refreshed;
 
+    /// Raised (on a thread-pool thread) at the start (true) and end (false) of a
+    /// background catch-up scan — one revalidating a stale-painted or just-changed
+    /// app list. NOT raised for a routine confirming backstop after a fresh cache
+    /// hit, so a subtle "updating apps" hint shows only when the displayed list is
+    /// actually behind.
+    public event Action<bool>? RefreshingChanged;
+
     private static readonly string[] StartMenuRoots =
     {
         Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
@@ -275,6 +282,11 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         var rerun = false;
         try
         {
+            // Signal "updating apps" only for a catch-up refresh (a stale paint or
+            // a Start-Menu change) — a plain confirming backstop after a fresh hit
+            // stays silent so the caption doesn't flash on every cold boot.
+            if (forcePersist) RefreshingChanged?.Invoke(true);
+
             // When kicked off by the eager preload, wait for the startup storm
             // to pass so the COM-heavy live scan runs fast and doesn't contend.
             if (settleDelayMs > 0) await Task.Delay(settleDelayMs);
@@ -316,6 +328,7 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         }
         finally
         {
+            if (forcePersist) RefreshingChanged?.Invoke(false);
             Interlocked.Exchange(ref _refreshInFlight, 0);
             // A persist-needing request that arrived mid-scan? Run exactly once
             // more (coalesced). Read-and-clear atomically so any number of piled-up
