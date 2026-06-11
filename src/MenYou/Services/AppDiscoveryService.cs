@@ -17,6 +17,18 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
     private Timer? _invalidateDebounce;
     private readonly ISettingsService _settings;
 
+    // Single-flight + coalesce for RefreshLiveInBackgroundAsync: the stale-paint
+    // preload, the first-open fallback, and the Start-Menu watcher can all
+    // request a background rescan; two concurrent COM scans would fight under the
+    // post-login storm. _refreshInFlight admits one scan at a time; a request
+    // that arrives mid-scan and needs a guaranteed persist (a watcher change or a
+    // stale paint) sets _refreshPending so the in-flight scan runs exactly once
+    // more when it finishes — so an app installed during the scan window isn't
+    // dropped until the next reboot (the open path early-returns while data is
+    // already painted, so reopening wouldn't otherwise re-scan).
+    private int _refreshInFlight;
+    private int _refreshPending;
+
     public event Action? Refreshed;
 
     private static readonly string[] StartMenuRoots =
@@ -63,14 +75,29 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         _invalidateDebounce?.Dispose();
         _invalidateDebounce = new Timer(_ =>
         {
-            _lock.Wait();
-            try
+            // A Start-Menu change (install / update / uninstall) happened while
+            // MenYou is running. Re-scan and PERSIST the cache (forcePersist) so
+            // the NEXT cold boot is a fingerprint HIT — the watcher used to only
+            // drop the in-memory copy, leaving the on-disk cache stale and
+            // guaranteeing a slow miss next boot (the regression's real trigger,
+            // since most app updates land while a session is running). The rescan
+            // swaps the live data in and raises Refreshed only if the app list
+            // actually changed.
+            if (_settings.Current.UseDiscoveryCache)
             {
-                _root = null;
-                _flat = null;
-                _byId.Clear();
+                _ = RefreshLiveInBackgroundAsync(forcePersist: true);
             }
-            finally { _lock.Release(); }
+            else
+            {
+                _lock.Wait();
+                try
+                {
+                    _root = null;
+                    _flat = null;
+                    _byId.Clear();
+                }
+                finally { _lock.Release(); }
+            }
         }, null, TimeSpan.FromMilliseconds(750), Timeout.InfiniteTimeSpan);
     }
 
@@ -102,17 +129,30 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         // is correct: Apply mutates plain data under the lock.
         var fingerprint = await Task.Run(ComputeFingerprint).ConfigureAwait(false);
         var cached = await Task.Run(DiscoveryCache.TryLoad).ConfigureAwait(false);
-        if (cached is null || cached.Fingerprint != fingerprint) return;
+        // Stale-while-revalidate: TryLoad already returns null on a missing /
+        // unreadable / wrong-schema cache, so a non-null snapshot is structurally
+        // valid — only its FINGERPRINT may be out of date. Paint it instantly
+        // either way (a miss is at most one app-shaped diff stale, e.g. a
+        // third-party auto-update that rewrote its own .lnk), then let the
+        // background scan correct it. Treating a miss as "discard + blank menu"
+        // was the cold-start regression: one changed .lnk dropped the whole
+        // snapshot and left the menu empty until the (20 s-held) live scan ran.
+        if (cached is null) return; // genuinely no cache: the live scan builds it
+        var fresh = cached.Fingerprint == fingerprint;
 
         await _lock.WaitAsync().ConfigureAwait(false);
         try
         {
             if (_root is not null && _flat is not null) return;
             Apply(cached.Root, cached.Flat);
-            HookTrace.Log($"Discovery: eager cache preload ({cached.Flat.Count} apps, {cached.Root.Folders.Count} folders)");
-            // Run the live backstop, but after a settle delay so its COM work
-            // doesn't fight the rest of startup (the menu already has data).
-            _ = RefreshLiveInBackgroundAsync(settleDelayMs: 2500);
+            HookTrace.Log($"Discovery: eager cache preload ({cached.Flat.Count} apps, " +
+                          $"{cached.Root.Folders.Count} folders, {(fresh ? "fresh" : "stale")})");
+            // Live backstop after a settle delay so its COM work doesn't fight the
+            // rest of startup (the menu already has data). On a stale paint this
+            // swaps the corrected list in and rewrites the cache + fingerprint
+            // (forcePersist) so the NEXT boot is a hit; on a fresh hit it just
+            // confirms and no-ops.
+            _ = RefreshLiveInBackgroundAsync(settleDelayMs: 2500, forcePersist: !fresh);
         }
         finally
         {
@@ -128,20 +168,25 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         {
             if (_root is not null && _flat is not null) return;
 
-            // Cache path: if enabled and the on-disk snapshot's fingerprint
-            // still matches the live Start Menu (a fast, COM-free filesystem
-            // signature), serve it for an instant cold paint — then run a
-            // background live scan as a backstop for changes the .lnk
-            // fingerprint can't see (e.g. a Store app with no shortcut).
+            // Cache path (stale-while-revalidate): a non-null snapshot is always
+            // structurally valid (TryLoad discards wrong-schema), so paint it for
+            // an instant cold start whether or not the fingerprint still matches,
+            // then run a background live scan to correct + re-persist it. Only a
+            // genuinely absent cache falls through to a blocking live scan. (On a
+            // normal cold boot PreloadFromCacheAsync has usually already painted,
+            // so this path is the fallback for an early open that races the
+            // preload, or for cache enabled mid-session.)
             if (_settings.Current.UseDiscoveryCache)
             {
                 var fingerprint = await Task.Run(ComputeFingerprint, ct);
                 var cached = DiscoveryCache.TryLoad();
-                if (cached is not null && cached.Fingerprint == fingerprint)
+                if (cached is not null)
                 {
+                    var fresh = cached.Fingerprint == fingerprint;
                     Apply(cached.Root, cached.Flat);
-                    HookTrace.Log($"Discovery: cache hit ({cached.Flat.Count} apps, {cached.Root.Folders.Count} folders)");
-                    _ = RefreshLiveInBackgroundAsync();
+                    HookTrace.Log($"Discovery: cache {(fresh ? "hit" : "stale paint")} " +
+                                  $"({cached.Flat.Count} apps, {cached.Root.Folders.Count} folders)");
+                    _ = RefreshLiveInBackgroundAsync(forcePersist: !fresh);
                     return;
                 }
             }
@@ -200,46 +245,86 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
         _flat = flat;
     }
 
-    /// Backstop after a cache hit: run the live scan off-thread, and if it
-    /// differs from what we painted, swap it in, rewrite the cache, and raise
-    /// <see cref="Refreshed"/> so the menu rebuilds. The .lnk fingerprint
-    /// already catches almost everything up front; this covers the rest
-    /// (UWP-only installs/removals) within ~half a second.
-    private async Task RefreshLiveInBackgroundAsync(int settleDelayMs = 0)
+    /// Backstop after a cache paint (fresh hit OR stale): run the live scan
+    /// off-thread, swap it in, and rewrite the cache when the app list changed
+    /// OR <paramref name="forcePersist"/> is set (a stale paint, or a Start-Menu
+    /// watcher change) — recomputing the fingerprint so the NEXT cold boot is a
+    /// hit. <see cref="Refreshed"/> fires only when the app list actually
+    /// changed, so a benign refresh never rebuilds the menu.
+    ///
+    /// Single-flight: callers (preload, first-open fallback, watcher) can
+    /// overlap; concurrent COM scans would fight under the post-login storm, so
+    /// a request that arrives while a scan is running is dropped. The in-flight
+    /// scan reads the live Start Menu, so it already reflects whatever prompted
+    /// the dropped request; anything it races past is healed by the next cold
+    /// boot's stale paint. <paramref name="settleDelayMs"/> lets the eager
+    /// preload defer its scan past the startup storm.
+    private async Task RefreshLiveInBackgroundAsync(int settleDelayMs = 0, bool forcePersist = false)
     {
+        if (Interlocked.CompareExchange(ref _refreshInFlight, 1, 0) != 0)
+        {
+            // A scan is already running. If this request needs a guaranteed
+            // persist (a Start-Menu change or a stale paint), ask the in-flight
+            // scan to run once more when it finishes rather than dropping it —
+            // otherwise an app installed during the scan window would stay missing
+            // until the next reboot (the open path early-returns while data is
+            // already painted, so reopening wouldn't re-scan).
+            if (forcePersist) Volatile.Write(ref _refreshPending, 1);
+            return;
+        }
+        var rerun = false;
         try
         {
             // When kicked off by the eager preload, wait for the startup storm
             // to pass so the COM-heavy live scan runs fast and doesn't contend.
             if (settleDelayMs > 0) await Task.Delay(settleDelayMs);
+
+            // Fingerprint BEFORE the scan, so the persisted snapshot's fingerprint
+            // can never describe state newer than the data stored with it. (A .lnk
+            // landing mid-scan then yields a benign next-boot MISS — a stale paint
+            // showing the already-current data — instead of a false HIT that shows
+            // stale data as fresh.)
+            var fingerprint = await Task.Run(ComputeFingerprint);
             var (root, flat) = await DiscoverLiveAsync(CancellationToken.None);
-            bool changed;
+            bool appsChanged;
             await _lock.WaitAsync();
             try
             {
-                changed = _flat is null || !SameApps(_flat, flat);
+                appsChanged = _flat is null || !SameApps(_flat, flat);
                 Apply(root, flat);
             }
             finally
             {
                 _lock.Release();
             }
-            // Only rewrite the cache when the app list actually changed. A
-            // matching backstop — the common case — leaves the existing file
-            // untouched, so the cache is written just on first run and on real
-            // Start-Menu changes, not on every launch. Recompute the
-            // fingerprint so it reflects the state that produced this scan.
-            if (changed)
+
+            // Persist when the app list changed OR the painted snapshot was stale
+            // / the Start Menu changed (forcePersist) — so the next cold boot is a
+            // fingerprint hit, not another rescan. A confirming backstop after a
+            // fresh hit (the common case) leaves the file untouched.
+            if (_settings.Current.UseDiscoveryCache && (appsChanged || forcePersist))
             {
-                DiscoveryCache.Save(root, flat, ComputeFingerprint());
-                HookTrace.Log("Discovery: background refresh updated the app list + cache");
-                Refreshed?.Invoke();
+                DiscoveryCache.Save(root, flat, fingerprint);
+                HookTrace.Log($"Discovery: background refresh {(appsChanged ? "updated the app list + " : "")}rewrote cache");
             }
+            // Rebuild the menu only when the apps actually changed.
+            if (appsChanged) Refreshed?.Invoke();
         }
         catch
         {
-            // Background best-effort; the cached data already painted.
+            // Background best-effort; the painted data already stands.
         }
+        finally
+        {
+            Interlocked.Exchange(ref _refreshInFlight, 0);
+            // A persist-needing request that arrived mid-scan? Run exactly once
+            // more (coalesced). Read-and-clear atomically so any number of piled-up
+            // requests collapse into a single catch-up scan. A request that lands
+            // after this (with the guard now free) wins the CompareExchange and
+            // runs on its own, so it isn't lost either.
+            rerun = Interlocked.Exchange(ref _refreshPending, 0) == 1;
+        }
+        if (rerun) _ = RefreshLiveInBackgroundAsync(forcePersist: true);
     }
 
     private static bool SameApps(List<AppEntry> a, List<AppEntry> b)
