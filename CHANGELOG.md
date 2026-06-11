@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.7](https://github.com/Alpaq92/MenYou/compare/v0.8.6...v0.8.7) (2026-06-11)
+
+
+### Bug Fixes
+
+* **startup:** stale-while-revalidate discovery cache + persist on change ([#49](https://github.com/Alpaq92/MenYou/issues/49)) ([2c0a4fd](https://github.com/Alpaq92/MenYou/commit/2c0a4fded60d456b674c80435981097b8f2051d6))
+
 ## [0.8.6](https://github.com/Alpaq92/MenYou/compare/v0.8.5...v0.8.6) (2026-06-11)
 
 
