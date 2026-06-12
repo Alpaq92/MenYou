@@ -26,4 +26,10 @@ public interface IAppDiscoveryService
     /// actually differs — so the menu can rebuild its surfaces against the
     /// fresh app list. Not raised when the cache was already up to date.
     event Action? Refreshed;
+
+    /// Raised at the start (true) and end (false) of a background catch-up scan
+    /// — one revalidating a stale-painted or just-changed app list — so the UI
+    /// can show a subtle "updating apps" hint. NOT raised for a routine
+    /// confirming backstop after a fresh cache hit.
+    event Action<bool>? RefreshingChanged;
 }

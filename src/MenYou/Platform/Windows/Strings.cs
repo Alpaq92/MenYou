@@ -136,6 +136,10 @@ public static class Strings
     public static string ReadyTitle              => Resolve("ReadyTitle");
     public static string ReadyBody               => Resolve("ReadyBody");
 
+    // "Updating apps…" caption shown beside the All Programs header while a
+    // background discovery refresh catches up a stale-painted list. JSON-only.
+    public static string UpdatingApps            => Resolve("UpdatingApps");
+
     // ---- Settings dialog labels ------------------------------------------
     // Appearance: shell32.dll,-32004 — the classic Display Properties
     // "Wygląd" / "Appearance" tab label.
