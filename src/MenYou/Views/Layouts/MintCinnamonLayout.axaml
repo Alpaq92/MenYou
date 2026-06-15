@@ -5,7 +5,7 @@
   Places, power glyphs) on the left, and Recent + All-Programs in the
   content pane on the right. Derived from
   samples/custom-themes/MintCinnamon.axaml, promoted to a first-class
-  compiled layout so it appears in Settings → Wygląd (Appearance)
+  compiled layout so it appears in Settings → Appearance
   alongside Win7 / Classic / Windows 11.
 
   x:CompileBindings="False" keeps the reflection-style bindings the

@@ -4,7 +4,7 @@
   Pinned grid, scrollable All-Programs section, avatar + power glyphs in
   the bottom bar). Derived from samples/custom-themes/Windows11.axaml,
   promoted to a first-class compiled layout so it shows up in the
-  Settings → Wygląd (Appearance) style picker alongside Win7 / Classic.
+  Settings → Appearance style picker alongside Win7 / Classic.
 
   x:CompileBindings="False" keeps the reflection-style bindings the
   sample was authored with (no x:DataType, untyped `.DataContext.X`
