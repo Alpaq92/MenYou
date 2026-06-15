@@ -72,7 +72,7 @@ The Settings dialog has a **Custom** tab that loads a self-contained AXAML file,
 
 A worked example lives in [`samples/custom-themes/Windows7Square.axaml`](samples/custom-themes/Windows7Square.axaml) — the Modern (Windows 7) layout with every corner squared off, a compact illustration of re-skinning an existing layout by overriding its styles. Load it from Settings → Custom → Load… and edit live. See [`docs/THEMING.md`](docs/THEMING.md) for the authoring constraints (no `x:Class`, no compiled bindings, SVG paths for glyphs).
 
-The Windows 11 and Linux Mint Cinnamon looks that used to ship as custom-theme samples are now **built-in styles** — pick them (alongside Modern (Windows 7), Classic XP and Classic 9x) from **Settings → Wygląd (Appearance)**.
+The Windows 11 and Linux Mint Cinnamon looks that used to ship as custom-theme samples are now **built-in styles** — pick them (alongside Modern (Windows 7), Classic XP and Classic 9x) from **Settings → Appearance**.
 
 ## Documentation
 

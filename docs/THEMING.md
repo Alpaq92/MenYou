@@ -12,7 +12,7 @@ What lets them parse through `AvaloniaRuntimeXamlLoader.Parse<Control>` is that 
 |---|---|
 | [`Windows7Square.axaml`](../samples/custom-themes/Windows7Square.axaml) | A clone of the built-in "Modern (Windows 7)" layout with every corner squared off — pinned tile grid + user header on top, scrollable Recent / All Programs and the shell-shortcut / search-context column in the middle, search box + six power glyphs along the bottom. Re-declares MenYou's rounded control styles (`Button.menu`, the circular power buttons, the search box, list highlights, the round avatar) with `CornerRadius=0`, so the whole interior reads sharp/pointy instead of rounded. |
 
-> **Heads up — the Windows 11 and Linux Mint Cinnamon samples graduated to built-in styles.** They used to ship here as `Windows11.axaml` and `MintCinnamon.axaml`; both are now first-class layouts you pick from **Settings → Wygląd (Appearance)** (alongside Modern (Windows 7), Classic XP and Classic 9x) instead of loading by hand. `Windows7Square` stays as a sample because it's a small, self-contained illustration of the "re-skin an existing layout by overriding its styles" technique.
+> **Heads up — the Windows 11 and Linux Mint Cinnamon samples graduated to built-in styles.** They used to ship here as `Windows11.axaml` and `MintCinnamon.axaml`; both are now first-class layouts you pick from **Settings → Appearance** (alongside Modern (Windows 7), Classic XP and Classic 9x) instead of loading by hand. `Windows7Square` stays as a sample because it's a small, self-contained illustration of the "re-skin an existing layout by overriding its styles" technique.
 
 ## How to load one
 
