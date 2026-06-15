@@ -58,7 +58,7 @@ public partial class SettingsWindow : Window
         ApplyAccentOverride();
 
         // Repaint on Apply — the user might have toggled "Follow Windows"
-        // off and typed a hex, or vice versa. AccentColorService already
+        // off and typed a hex, or vice versa. AccentService already
         // subscribes to the OS ColorValuesChanged event (in Apply), so the
         // live-OS-accent path stays in sync on its own; we only need to
         // react to MenYou's own settings changes here.
@@ -79,7 +79,7 @@ public partial class SettingsWindow : Window
     {
         if (_settings is null) return;
 
-        // AccentColorService publishes the SystemAccentColor* ramp that the
+        // AccentService publishes the SystemAccentColor* ramp that the
         // Fluid theme's accent brushes resolve through. UseSystemAccent
         // clears any override and reverts to the live OS accent — the
         // "Follow Windows" path. SetAccent(<parsed hex>) overrides it and
@@ -91,10 +91,10 @@ public partial class SettingsWindow : Window
         if (_settings.Current.UseSystemAccent
             || !TryParseHexColor(_settings.Current.Accent, out var color))
         {
-            AccentColorService.UseSystemAccent();
+            AccentService.UseSystemAccent();
             return;
         }
-        AccentColorService.SetAccent(color);
+        AccentService.SetAccent(color);
     }
 
     private static bool TryParseHexColor(string? input, out Color color)

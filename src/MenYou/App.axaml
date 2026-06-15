@@ -10,7 +10,7 @@
              Window-scoping it broke composite controls like NumericUpDown,
              which only render correctly when FluidTheme lives in
              Application.Styles. FluidTheme nests Avalonia's FluentTheme and
-             its constructor calls AccentColorService.Apply (OS accent ramp).
+             its constructor calls AccentService.Apply (OS accent ramp).
              The StartMenu opts back out to the stock FluentTheme via its own
              Window.Styles (see StartMenuWindow.axaml) so its carefully tuned
              chrome stays exactly as designed. -->
