@@ -43,6 +43,12 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// XamlStringToControlConverter on the view side.
     [ObservableProperty] private string _customThemeXaml = "";
 
+    /// True while a subtle "Updating apps…" caption should show beside the All
+    /// Programs header — the gated display of a background discovery catch-up
+    /// scan (see <see cref="OnBackgroundRefreshingChanged"/>). Every layout binds
+    /// it. Stays false on a fast/silent refresh so it never flashes.
+    [ObservableProperty] private bool _isRefreshing;
+
     /// Set by the host (App) so the menu can punt to the settings dialog
     /// without taking a view dependency.
     public Action? OpenSettingsRequested { get; set; }
@@ -132,6 +138,11 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         // cheap and only the genuinely-changed tiles move).
         discovery.Refreshed += () =>
             Dispatcher.UIThread.Post(() => _ = LoadAsync());
+        // Surface a subtle "Updating apps…" caption while a stale-painted or
+        // just-changed list is being revalidated in the background. Gated so it
+        // never flashes on a fast refresh (see OnBackgroundRefreshingChanged).
+        discovery.RefreshingChanged += refreshing =>
+            Dispatcher.UIThread.Post(() => OnBackgroundRefreshingChanged(refreshing));
         // The avatar bitmap is the same instance across theme flips, but the
         // dark-mode invert converter needs the binding to re-run when the
         // active theme changes. Re-emit the Avatar property so the converter
@@ -159,6 +170,44 @@ public sealed partial class StartMenuViewModel : ViewModelBase
             Dispatcher.UIThread.Post(() => OnPropertyChanged(nameof(Places)));
 
         _ = LoadAvatarAsync();
+    }
+
+    // --- "Updating apps…" caption gating ------------------------------------
+    // _bgRefreshing is the raw service signal; IsRefreshing is the gated display
+    // state. Show only if a refresh runs past RefreshShowDelayMs (no sub-400 ms
+    // flash), then hold at least RefreshMinVisibleMs (no flicker). Runs on the
+    // UI thread via the posted handler + DispatcherTimer.RunOnce callbacks.
+    private bool _bgRefreshing;
+    private DateTime _refreshShownAtUtc;
+    private const int RefreshShowDelayMs = 400;
+    private const int RefreshMinVisibleMs = 500;
+
+    private void OnBackgroundRefreshingChanged(bool refreshing)
+    {
+        _bgRefreshing = refreshing;
+        if (refreshing)
+        {
+            if (IsRefreshing) return; // already shown
+            DispatcherTimer.RunOnce(() =>
+            {
+                if (_bgRefreshing && !IsRefreshing)
+                {
+                    IsRefreshing = true;
+                    _refreshShownAtUtc = DateTime.UtcNow;
+                }
+            }, TimeSpan.FromMilliseconds(RefreshShowDelayMs));
+        }
+        else
+        {
+            if (!IsRefreshing) return; // never crossed the gate — nothing to hide
+            var remaining = TimeSpan.FromMilliseconds(RefreshMinVisibleMs)
+                            - (DateTime.UtcNow - _refreshShownAtUtc);
+            if (remaining <= TimeSpan.Zero)
+                IsRefreshing = false;
+            else
+                DispatcherTimer.RunOnce(
+                    () => { if (!_bgRefreshing) IsRefreshing = false; }, remaining);
+        }
     }
 
     /// Loads the user's account picture off the UI thread (registry probe +

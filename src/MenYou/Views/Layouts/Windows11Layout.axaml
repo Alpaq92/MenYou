@@ -211,7 +211,12 @@
       </ItemsControl>
 
       <!-- All Programs section header. -->
-      <TextBlock Classes="section-header" Text="{x:Static loc:Strings.AllPrograms}" Margin="0,4,0,0" />
+      <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+        <TextBlock Classes="section-header" Text="{x:Static loc:Strings.AllPrograms}" />
+        <TextBlock Classes="section-header" Text="{x:Static loc:Strings.UpdatingApps}"
+                   IsVisible="{Binding IsRefreshing}" VerticalAlignment="Center"
+                   Margin="10,0,0,0" FontSize="11" FontWeight="Normal" Opacity="0.55" />
+      </StackPanel>
 
       <!-- All Programs as a 4-column uniform grid. Per-DataType
            templates split folders from apps so the auto-disable that

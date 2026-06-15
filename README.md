@@ -9,7 +9,8 @@
   [![Localization](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Alpaq92/MenYou/badges/crowdin-localization.json)](https://crowdin.com/project/menyou)
   See docs/AUTOMATION.md > Translations.
 -->
-[![Build](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/Alpaq92/MenYou/build.yml?branch=main&label=CI)](https://github.com/Alpaq92/MenYou/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/actions/workflow/status/Alpaq92/MenYou/release.yml?label=Release)](https://github.com/Alpaq92/MenYou/actions/workflows/release.yml)
 [![Latest release](https://img.shields.io/github/v/release/Alpaq92/MenYou?label=release&sort=semver)](https://github.com/Alpaq92/MenYou/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Alpaq92/MenYou/total?label=downloads&color=blue&cacheSeconds=300)](https://github.com/Alpaq92/MenYou/releases)
 [![Commit activity](https://img.shields.io/github/commit-activity/m/Alpaq92/MenYou?label=commits%2Fmonth)](https://github.com/Alpaq92/MenYou/commits/main)

@@ -35,7 +35,7 @@
              this window inherits it automatically (no window-scoped theme
              here — window-scoping is what broke composite controls like
              NumericUpDown). The accent override is still driven from
-             code-behind via AccentColorService.SetAccent / UseSystemAccent. -->
+             code-behind via AccentService.SetAccent / UseSystemAccent. -->
 
         <!-- Description paragraph style. MaxWidth removed and
              HorizontalAlignment=Stretch added so TextBlock claims the
