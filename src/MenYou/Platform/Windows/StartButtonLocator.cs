@@ -22,6 +22,18 @@ namespace MenYou.Platform.Windows;
 internal static class StartButtonLocator
 {
     private const int StartButtonWidth = 48;
+    // The left-aligned Win 11 Start button is wider than StartButtonWidth: UI
+    // Automation reports its bounding rect at 55 px wide at 100% DPI ([0,55)),
+    // with the first pinned app (File Explorer) flush at x=55. Swallowing only
+    // the leftmost 48 px left a [48,55) dead sliver (~13% of the button) where a
+    // click fell through to Windows and opened the native Start menu — the
+    // "sometimes the normal Start menu shows up" bug. RECT.Contains is half-open
+    // (x < Right), so 55 covers the whole button yet still excludes File
+    // Explorer's first pixel at x=55: no false positives. (Do NOT widen to 64 —
+    // that swallows ~9 px of File Explorer.) The button scales with DPI, so a
+    // future UI-Automation lookup of the real StartButton rect would be more
+    // durable than this constant; see EnsureRectFresh.
+    private const int LeftAlignedStartWidth = 55;
     private const int CenteredSlop = 40; // a bit wider than the visible button so we don't miss
 
     /// Returns the screen-coordinate rectangle covering the Start button.
@@ -41,7 +53,7 @@ internal static class StartButtonLocator
             {
                 Left = trayRect.Left,
                 Top = trayRect.Top,
-                Right = trayRect.Left + StartButtonWidth,
+                Right = trayRect.Left + LeftAlignedStartWidth,
                 Bottom = trayRect.Bottom
             };
         }
