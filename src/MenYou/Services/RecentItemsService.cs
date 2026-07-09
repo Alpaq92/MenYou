@@ -9,9 +9,15 @@ public sealed class RecentItemsService : IRecentItemsService
 
     public RecentItemsService(ISettingsService settings) => _settings = settings;
 
+    /// Every recorded launch, newest first — UNCAPPED. The renderer caps
+    /// AFTER resolving ids against discovery (join-then-cap, see
+    /// StartMenuViewModel.RebuildRecent): capping here meant that when the
+    /// top-N ids happened to be unresolvable (uninstalled apps, or a
+    /// transiently degraded app list missing its packaged entries), the
+    /// "Recent" section rendered completely empty even though older,
+    /// resolvable launches sat right below the cap.
     public IReadOnlyList<RecentEntry> Recent => _settings.Current.Recent
         .OrderByDescending(r => r.LastUsedUtc)
-        .Take(_settings.Current.MaxRecentItems)
         .ToList();
 
     public void RecordLaunch(string appId)

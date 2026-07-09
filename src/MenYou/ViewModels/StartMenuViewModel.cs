@@ -379,10 +379,17 @@ public sealed partial class StartMenuViewModel : ViewModelBase
 
     private void RebuildRecent()
     {
+        // Join-then-cap: resolve ids against discovery FIRST, then take the
+        // cap. Capping first (the service used to Take before we joined)
+        // meant a few unresolvable ids at the top — uninstalled apps, or a
+        // degraded scan missing its packaged entries — rendered the whole
+        // section blank despite resolvable launches sitting right below
+        // the cap.
         var entries = _recent.Recent
             .Select(r => _discovery.FindById(r.AppId))
             .Where(e => e is not null)
             .Select(e => e!)
+            .Take(_settings.Current.MaxRecentItems)
             .ToList();
         RebuildList(Recent, entries);
     }

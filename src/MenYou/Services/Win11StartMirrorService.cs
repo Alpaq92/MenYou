@@ -174,6 +174,23 @@ public sealed class Win11StartMirrorService : IWin11StartMirror
             LastReadSucceeded = result.Success;
             LastError = result.Error;
 
+            // An empty-but-"successful" export is indistinguishable from the
+            // known Export-StartLayout flake (or from parsing a half-written
+            // start2.bin): ParsePinnedList yields zero entries and Success
+            // stays true. While we still hold pins, trusting it would wipe
+            // the entire Pinned section AND prune every MirrorExclusion in
+            // one sync. Treat it as a failed read — keep the last good pin
+            // set; the next watcher tick re-syncs. (A genuinely empty pin
+            // list on a machine where MenYou also has no pins still flows
+            // through: there is nothing to lose then.)
+            if (result.Success && result.AppIds.Count == 0 && _settings.Current.Pinned.Count > 0)
+            {
+                LastReadSucceeded = false;
+                LastError = "Export-StartLayout returned an empty pin list; keeping the last good pin set.";
+                StatusChanged?.Invoke();
+                return;
+            }
+
             if (result.Success)
             {
                 // Apply the user's local exclusion list — items the user
