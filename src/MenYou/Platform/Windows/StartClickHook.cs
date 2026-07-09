@@ -12,7 +12,7 @@ namespace MenYou.Platform.Windows;
 /// Lives on its own STA thread with a message pump (required for
 /// out-of-context hooks). Re-queries the Start button rect every time it
 /// sees an event so taskbar moves don't desync us; the query is cheap
-/// (Shell_TrayWnd GetWindowRect + a registry read).
+/// (Shell_TrayWnd GetWindowRect + a DPI query + a registry read).
 [SupportedOSPlatform("windows")]
 internal sealed class StartClickHook : IDisposable
 {
