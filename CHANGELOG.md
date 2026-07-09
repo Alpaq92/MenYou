@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.14](https://github.com/Alpaq92/MenYou/compare/v0.8.13...v0.8.14) (2026-07-09)
+
+
+### Bug Fixes
+
+* **pins:** stop transient empty reads from blanking Pinned and Recent ([#69](https://github.com/Alpaq92/MenYou/issues/69)) ([9f599ca](https://github.com/Alpaq92/MenYou/commit/9f599cab0e042d6fd9bf43cef2cab1a6a7263539))
+
 ## [0.8.13](https://github.com/Alpaq92/MenYou/compare/v0.8.12...v0.8.13) (2026-07-09)
 
 
