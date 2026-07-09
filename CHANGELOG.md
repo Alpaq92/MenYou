@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.15](https://github.com/Alpaq92/MenYou/compare/v0.8.14...v0.8.15) (2026-07-09)
+
+
+### Bug Fixes
+
+* **start:** intercept Start clicks on secondary-monitor taskbars ([#71](https://github.com/Alpaq92/MenYou/issues/71)) ([05b41e0](https://github.com/Alpaq92/MenYou/commit/05b41e0a656a1d5db213070090e5e9096b98a24b))
+
 ## [0.8.14](https://github.com/Alpaq92/MenYou/compare/v0.8.13...v0.8.14) (2026-07-09)
 
 
