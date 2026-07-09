@@ -18,7 +18,11 @@ namespace MenYou.Platform.Windows;
 ///     for the click hook a slightly oversized band is fine, and false
 ///     positives are rare in this region). Same DPI scaling as above.
 ///
-/// Refresh the rect whenever the taskbar moves, the alignment toggles, or
+/// With "show my taskbar on all displays" on, each extra monitor gets its own
+/// taskbar (<c>Shell_SecondaryTrayWnd</c>) with its own Start button, so there
+/// is one rect per taskbar, each scaled by its own tray's monitor DPI.
+///
+/// Refresh the rects whenever the taskbar moves, the alignment toggles, or
 /// the display scale changes.
 [SupportedOSPlatform("windows")]
 internal static class StartButtonLocator
@@ -35,24 +39,49 @@ internal static class StartButtonLocator
     // Start menu shows up" bug. RECT.Contains is half-open (x < Right), so 55
     // covers the whole button yet still excludes File Explorer's first pixel at
     // x=55: no false positives. (Do NOT widen to 64 — that swallows ~9 px of
-    // File Explorer.) The button grows with DPI, so Get() scales this by the
-    // tray's monitor DPI, rounding UP (69 px at 125%, 83 at 150%): at a
+    // File Explorer.) The button grows with DPI, so GetStartRect scales this by
+    // the tray's monitor DPI, rounding UP (69 px at 125%, 83 at 150%): at a
     // fractional boundary the shared pixel column goes to Start — the safe
     // side, since the half-open Contains keeps the column at Right excluded
     // either way. A UI-Automation lookup of the real StartButton rect would be
     // more durable still — but it must run OFF the hook thread (a cross-process
     // UIA call can take tens of ms; overrunning the LL-hook timeout gets
     // WH_MOUSE_LL silently removed), never inside StartClickHook.HookProc /
-    // EnsureRectFresh.
+    // EnsureRectsFresh.
     private const int LeftAlignedStartWidth = 55;
     private const int CenteredSlop = 40; // a bit wider than the visible button so we don't miss
 
-    /// Returns the screen-coordinate rectangle covering the Start button.
-    /// Returns an empty rect if Shell_TrayWnd isn't found (Explorer not up).
-    public static RECT Get()
+    /// Fills <paramref name="results"/> with one screen-coordinate rect per
+    /// visible Start button: the primary taskbar (Shell_TrayWnd) plus one per
+    /// secondary-monitor taskbar (Shell_SecondaryTrayWnd). Clears the list
+    /// first; leaves it empty if no taskbar is found (Explorer not up). A tray
+    /// window that dies mid-query is skipped, not treated as fatal. Takes the
+    /// caller's list so the click hook can refresh without allocating.
+    public static void GetAll(List<RECT> results)
     {
+        results.Clear();
+        var align = GetTaskbarAlignment();
+
         var tray = FindWindowW("Shell_TrayWnd", null);
-        if (tray == IntPtr.Zero) return default;
+        if (tray != IntPtr.Zero)
+        {
+            var rect = GetStartRect(tray, align);
+            if (!rect.IsEmpty) results.Add(rect);
+        }
+
+        // Secondary taskbars don't center their icon group on Win 11: Start is
+        // the leftmost element there even when TaskbarAl says centered.
+        var secondary = IntPtr.Zero;
+        while ((secondary = FindWindowExW(IntPtr.Zero, secondary, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero)
+        {
+            var rect = GetStartRect(secondary, align: 0);
+            if (!rect.IsEmpty) results.Add(rect);
+        }
+    }
+
+    /// Start rect for one taskbar window; empty if the window died mid-query.
+    private static RECT GetStartRect(IntPtr tray, int align)
+    {
         if (!GetWindowRect(tray, out var trayRect)) return default;
 
         // The constants above are 96-DPI measurements while trayRect (and the
@@ -60,12 +89,11 @@ internal static class StartButtonLocator
         // so both branches scale by the tray's monitor DPI (Explorer is
         // per-monitor DPI aware). 0 means the tray hwnd died since the
         // GetWindowRect above — return empty like the sibling failure paths so
-        // EnsureRectFresh keeps the last good rect instead of adopting an
+        // EnsureRectsFresh keeps the last good rects instead of adopting an
         // unscaled one.
         var dpi = (int)GetDpiForWindow(tray);
         if (dpi == 0) return default;
 
-        var align = GetTaskbarAlignment();
         if (align == 0)
         {
             // Left-aligned: Start is the leftmost icon. (+95)/96 is integer
@@ -127,6 +155,9 @@ internal static class StartButtonLocator
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr FindWindowW(string? lpClassName, string? lpWindowName);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr FindWindowExW(IntPtr hWndParent, IntPtr hWndChildAfter, string? lpszClass, string? lpszWindow);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
