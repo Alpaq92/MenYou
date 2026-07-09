@@ -12,27 +12,29 @@ namespace MenYou.Platform.Windows;
 [SupportedOSPlatform("windows")]
 internal static class SystemStartMenu
 {
-    private static readonly HashSet<string> HostNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "StartMenuExperienceHost",
-        "SearchHost",
-        "SearchApp",
-        "ShellExperienceHost",
-    };
+    // The Win 11 system Start menu is hosted solely by StartMenuExperienceHost.
+    // Earlier this set also matched SearchHost / SearchApp / ShellExperienceHost,
+    // but those host taskbar Search, Action Center and Quick Settings — so a
+    // Start click made right after using one of those surfaces saw IsOpen()==true,
+    // passed the click through, and opened the *native* Start menu instead of
+    // MenYou. Keying strictly on StartMenuExperienceHost removes that false
+    // positive while still detecting a genuinely-open system Start, so the hooks
+    // can step aside and let Windows toggle it closed.
+    private const string StartHostProcess = "StartMenuExperienceHost";
 
-    /// Cheap to call — single GetForegroundWindow + one Process.GetProcessById
-    /// lookup. No caching: process ids can recycle, and the hook paths that
-    /// call this fire only on click / Win-down, not per-event.
+    /// Cheap to call — GetForegroundWindow + IsWindowVisible + one
+    /// Process.GetProcessById lookup. No caching: process ids can recycle, and
+    /// the hook paths that call this fire only on click / Win-down, not per-event.
     public static bool IsOpen()
     {
         var fg = GetForegroundWindow();
-        if (fg == IntPtr.Zero) return false;
+        if (fg == IntPtr.Zero || !IsWindowVisible(fg)) return false;
         GetWindowThreadProcessId(fg, out var pid);
         if (pid == 0) return false;
         try
         {
             using var p = Process.GetProcessById((int)pid);
-            return HostNames.Contains(p.ProcessName);
+            return string.Equals(p.ProcessName, StartHostProcess, StringComparison.OrdinalIgnoreCase);
         }
         catch
         {
@@ -42,6 +44,10 @@ internal static class SystemStartMenu
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
