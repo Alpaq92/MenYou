@@ -10,9 +10,10 @@ namespace MenYou.Platform.Windows;
 /// menu from opening — no flash.
 ///
 /// Lives on its own STA thread with a message pump (required for
-/// out-of-context hooks). Re-queries the Start button rect every time it
-/// sees an event so taskbar moves don't desync us; the query is cheap
-/// (Shell_TrayWnd GetWindowRect + a DPI query + a registry read).
+/// out-of-context hooks). Re-queries the Start button rects (one per taskbar
+/// — secondary monitors get their own) every time it sees an event so taskbar
+/// moves don't desync us; the query is cheap (a GetWindowRect + DPI query per
+/// taskbar + a registry read).
 [SupportedOSPlatform("windows")]
 internal sealed class StartClickHook : IDisposable
 {
@@ -30,7 +31,11 @@ internal sealed class StartClickHook : IDisposable
     private IntPtr _hHook;
     private uint _threadId;
     private bool _disposed;
-    private StartButtonLocator.RECT _startRect;
+    // Double-buffered so a refresh never allocates on the hook thread: the
+    // scratch list is filled, then the two are swapped. Only the hook thread
+    // touches either list.
+    private List<StartButtonLocator.RECT> _startRects = new();
+    private List<StartButtonLocator.RECT> _scratchRects = new();
     private long _lastRectRefreshTicks;
     private bool _consumeUp;
 
@@ -64,8 +69,8 @@ internal sealed class StartClickHook : IDisposable
             HookTrace.Log($"StartClickHook: SetWindowsHookEx failed err={Marshal.GetLastWin32Error()}");
             return;
         }
-        _startRect = StartButtonLocator.Get();
-        HookTrace.Log($"StartClickHook: initial Start rect {_startRect}");
+        StartButtonLocator.GetAll(_startRects);
+        HookTrace.Log($"StartClickHook: initial Start rects [{string.Join(", ", _startRects)}]");
 
         while (GetMessage(out var msg, IntPtr.Zero, 0, 0))
         {
@@ -76,14 +81,16 @@ internal sealed class StartClickHook : IDisposable
         _hHook = IntPtr.Zero;
     }
 
-    private void EnsureRectFresh()
+    private void EnsureRectsFresh()
     {
         // Refresh at most every 250 ms; the user can't move the taskbar that fast.
         var now = Environment.TickCount64;
         if (now - _lastRectRefreshTicks < 250) return;
         _lastRectRefreshTicks = now;
-        var fresh = StartButtonLocator.Get();
-        if (!fresh.IsEmpty) _startRect = fresh;
+        StartButtonLocator.GetAll(_scratchRects);
+        // Keep the stale rects if the query came up empty (Explorer restarting).
+        if (_scratchRects.Count > 0)
+            (_startRects, _scratchRects) = (_scratchRects, _startRects);
     }
 
     private IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam)
@@ -101,10 +108,13 @@ internal sealed class StartClickHook : IDisposable
             return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);
         HookTrace.Log($"StartClickHook: saw msg=0x{msg:X} at ({data.pt.X},{data.pt.Y}) flags=0x{data.flags:X}");
 
-        EnsureRectFresh();
-        if (_startRect.IsEmpty) return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);
+        EnsureRectsFresh();
+        var rects = _startRects;
+        if (rects.Count == 0) return CallNextHookEx(IntPtr.Zero, code, wParam, lParam);
 
-        var inside = _startRect.Contains(data.pt.X, data.pt.Y);
+        var inside = false;
+        for (var i = 0; i < rects.Count && !inside; i++)
+            inside = rects[i].Contains(data.pt.X, data.pt.Y);
 
         if (msg == WM_LBUTTONDOWN && inside)
         {
