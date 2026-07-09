@@ -10,29 +10,40 @@ namespace MenYou.Platform.Windows;
 /// <c>Windows.UI.Composition.DesktopWindowContentBridge</c> XAML island, so
 /// there's no Win32 HWND to query directly. We fall back to a layout-based
 /// guess driven by the user's <c>TaskbarAl</c> setting:
-///   - 0 (left-aligned)  → first ~48 px of the taskbar from the left
-///   - 1 (centered)      → 48 px centered on the taskbar's midpoint, then
-///     shifted left to land roughly on Start (Start is leftmost of the
-///     centered icon group; without UI Automation we can't be precise, but
-///     for the click hook a slightly oversized rect is fine — false
-///     positives are rare in this region).
+///   - 0 (left-aligned)  → the leftmost <see cref="LeftAlignedStartWidth"/>
+///     px of the taskbar (measured at 100% DPI, scaled by the tray's DPI)
+///   - 1 (centered)      → a band aimed ~7 icon-pitches left of the taskbar
+///     midpoint (Start is leftmost of the centered icon group; without UI
+///     Automation we can't know the group's width, so this stays a guess —
+///     for the click hook a slightly oversized band is fine, and false
+///     positives are rare in this region). Same DPI scaling as above.
 ///
-/// Refresh the rect whenever the taskbar moves or the alignment toggles.
+/// Refresh the rect whenever the taskbar moves, the alignment toggles, or
+/// the display scale changes.
 [SupportedOSPlatform("windows")]
 internal static class StartButtonLocator
 {
-    private const int StartButtonWidth = 48;
-    // The left-aligned Win 11 Start button is wider than StartButtonWidth: UI
-    // Automation reports its bounding rect at 55 px wide at 100% DPI ([0,55)),
-    // with the first pinned app (File Explorer) flush at x=55. Swallowing only
-    // the leftmost 48 px left a [48,55) dead sliver (~13% of the button) where a
-    // click fell through to Windows and opened the native Start menu — the
-    // "sometimes the normal Start menu shows up" bug. RECT.Contains is half-open
-    // (x < Right), so 55 covers the whole button yet still excludes File
-    // Explorer's first pixel at x=55: no false positives. (Do NOT widen to 64 —
-    // that swallows ~9 px of File Explorer.) The button scales with DPI, so a
-    // future UI-Automation lookup of the real StartButton rect would be more
-    // durable than this constant; see EnsureRectFresh.
+    // Icon-pitch unit for the centered-taskbar guess below — the ~48 px stride
+    // between taskbar icons at 100% DPI (scaled at use), NOT the Start
+    // button's real width (that's LeftAlignedStartWidth).
+    private const int CenteredIconStep = 48;
+    // Measured width of the left-aligned Win 11 Start button at 100% DPI: UI
+    // Automation reports its bounding rect as [0,55), with the first pinned app
+    // (File Explorer) flush at x=55. Swallowing only the leftmost 48 px left a
+    // [48,55) dead sliver (~13% of the button) where a click fell through to
+    // Windows and opened the native Start menu — the "sometimes the normal
+    // Start menu shows up" bug. RECT.Contains is half-open (x < Right), so 55
+    // covers the whole button yet still excludes File Explorer's first pixel at
+    // x=55: no false positives. (Do NOT widen to 64 — that swallows ~9 px of
+    // File Explorer.) The button grows with DPI, so Get() scales this by the
+    // tray's monitor DPI, rounding UP (69 px at 125%, 83 at 150%): at a
+    // fractional boundary the shared pixel column goes to Start — the safe
+    // side, since the half-open Contains keeps the column at Right excluded
+    // either way. A UI-Automation lookup of the real StartButton rect would be
+    // more durable still — but it must run OFF the hook thread (a cross-process
+    // UIA call can take tens of ms; overrunning the LL-hook timeout gets
+    // WH_MOUSE_LL silently removed), never inside StartClickHook.HookProc /
+    // EnsureRectFresh.
     private const int LeftAlignedStartWidth = 55;
     private const int CenteredSlop = 40; // a bit wider than the visible button so we don't miss
 
@@ -44,30 +55,46 @@ internal static class StartButtonLocator
         if (tray == IntPtr.Zero) return default;
         if (!GetWindowRect(tray, out var trayRect)) return default;
 
+        // The constants above are 96-DPI measurements while trayRect (and the
+        // hook coordinates this rect is compared against) are physical pixels,
+        // so both branches scale by the tray's monitor DPI (Explorer is
+        // per-monitor DPI aware). 0 means the tray hwnd died since the
+        // GetWindowRect above — return empty like the sibling failure paths so
+        // EnsureRectFresh keeps the last good rect instead of adopting an
+        // unscaled one.
+        var dpi = (int)GetDpiForWindow(tray);
+        if (dpi == 0) return default;
+
         var align = GetTaskbarAlignment();
-        var h = trayRect.Bottom - trayRect.Top;
         if (align == 0)
         {
-            // Left-aligned: Start is the leftmost icon.
+            // Left-aligned: Start is the leftmost icon. (+95)/96 is integer
+            // ceiling — round the scaled width UP so a fractional boundary
+            // column (125% → 68.75) stays with Start rather than leaking the
+            // button's last pixel to Windows; Contains excludes Right itself,
+            // so the first pinned app is never swallowed.
             return new RECT
             {
                 Left = trayRect.Left,
                 Top = trayRect.Top,
-                Right = trayRect.Left + LeftAlignedStartWidth,
+                Right = trayRect.Left + (LeftAlignedStartWidth * dpi + 95) / 96,
                 Bottom = trayRect.Bottom
             };
         }
 
-        // Centered: best-effort. Take a wider band centered on the
-        // centerpoint, shifted slightly left.
+        // Centered: best-effort guess. Start is the leftmost icon of the
+        // centered group; without UI Automation we can't know the group's
+        // width, so aim one icon-pitch-wide band (plus slop) ~7 pitches left
+        // of the taskbar midpoint. Truncation is fine here — the whole branch
+        // is a heuristic, not a measurement.
+        var step = CenteredIconStep * dpi / 96;
         var midX = (trayRect.Left + trayRect.Right) / 2;
-        // Visible Start icon is usually 5-7 icons to the left of dead center.
-        var startX = midX - 7 * StartButtonWidth;
+        var startX = midX - 7 * step;
         return new RECT
         {
             Left = startX,
             Top = trayRect.Top,
-            Right = startX + StartButtonWidth + CenteredSlop,
+            Right = startX + step + CenteredSlop * dpi / 96,
             Bottom = trayRect.Bottom
         };
     }
@@ -78,11 +105,14 @@ internal static class StartButtonLocator
         {
             using var key = Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced");
-            return (int)(key?.GetValue("TaskbarAl") ?? 0);
+            // Win 11's out-of-box taskbar is CENTERED and TaskbarAl is only
+            // written once the user first toggles alignment in Settings — so
+            // a missing value (or an unreadable key) means centered, not left.
+            return (int)(key?.GetValue("TaskbarAl") ?? 1);
         }
         catch
         {
-            return 0;
+            return 1;
         }
     }
 
@@ -101,4 +131,7 @@ internal static class StartButtonLocator
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hWnd);
 }
