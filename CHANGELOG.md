@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.13](https://github.com/Alpaq92/MenYou/compare/v0.8.12...v0.8.13) (2026-07-09)
+
+
+### Bug Fixes
+
+* **start:** DPI-scale the Start-button rect and default to centered alignment ([#67](https://github.com/Alpaq92/MenYou/issues/67)) ([879fcb7](https://github.com/Alpaq92/MenYou/commit/879fcb749d2d4a5080ca60ca2e2c90b168b86460))
+
 ## [0.8.12](https://github.com/Alpaq92/MenYou/compare/v0.8.11...v0.8.12) (2026-07-09)
 
 
