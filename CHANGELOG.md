@@ -8,6 +8,14 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.12](https://github.com/Alpaq92/MenYou/compare/v0.8.11...v0.8.12) (2026-07-09)
+
+
+### Bug Fixes
+
+* Bump Fluid.Avalonia from 1.9.0 to 2.0.1 ([#63](https://github.com/Alpaq92/MenYou/issues/63)) ([346935c](https://github.com/Alpaq92/MenYou/commit/346935cd7eb9983006accd8a6cbfb48720a9a936))
+* **start:** stop the native Start menu leaking on some taskbar clicks ([#64](https://github.com/Alpaq92/MenYou/issues/64)) ([297ca67](https://github.com/Alpaq92/MenYou/commit/297ca679c25242b70e307c58c2d677dd4f1b7e02))
+
 ## [0.8.11](https://github.com/Alpaq92/MenYou/compare/v0.8.10...v0.8.11) (2026-07-01)
 
 
