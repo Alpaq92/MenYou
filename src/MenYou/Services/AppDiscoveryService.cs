@@ -9,7 +9,10 @@ namespace MenYou.Services;
 [SupportedOSPlatform("windows")]
 public sealed class AppDiscoveryService : IAppDiscoveryService
 {
-    private readonly Dictionary<string, AppEntry> _byId = new(StringComparer.OrdinalIgnoreCase);
+    // Published by reference-assignment in Apply() (never mutated in place):
+    // FindById reads it lock-free from the UI thread, so readers must always
+    // see either the complete old map or the complete new one.
+    private Dictionary<string, AppEntry> _byId = new(StringComparer.OrdinalIgnoreCase);
     private MenuFolder? _root;
     private List<AppEntry>? _flat;
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -101,7 +104,8 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
                 {
                     _root = null;
                     _flat = null;
-                    _byId.Clear();
+                    // Fresh map, not Clear() — FindById reads lock-free.
+                    _byId = new Dictionary<string, AppEntry>(StringComparer.OrdinalIgnoreCase);
                 }
                 finally { _lock.Release(); }
             }
@@ -198,10 +202,16 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
                 }
             }
 
-            var (root, flat) = await DiscoverLiveAsync(ct);
+            var (root, flat, uwpOk) = await DiscoverLiveAsync(ct);
+            // Apply even a degraded (UWP-less) list here — this is the no-cache
+            // blocking path, so partial data beats an empty menu — but never
+            // PERSIST it: a poisoned cache would replay the degraded list on
+            // every boot until the fingerprint next changes on disk.
             Apply(root, flat);
-            if (_settings.Current.UseDiscoveryCache)
+            if (_settings.Current.UseDiscoveryCache && uwpOk)
                 await Task.Run(() => DiscoveryCache.Save(root, flat, ComputeFingerprint()), ct);
+            else if (!uwpOk)
+                HookTrace.Log("Discovery: degraded scan (0 uwp) — cache not persisted");
         }
         finally
         {
@@ -214,7 +224,7 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
     /// both COM-heavy, so overlapping them roughly halves the wall time.
     /// Builds entirely local state, so it's safe to call WITHOUT the lock;
     /// the caller commits the result via <see cref="Apply"/>.
-    private async Task<(MenuFolder Root, List<AppEntry> Flat)> DiscoverLiveAsync(CancellationToken ct)
+    private async Task<(MenuFolder Root, List<AppEntry> Flat, bool UwpOk)> DiscoverLiveAsync(CancellationToken ct)
     {
         var sw = System.Diagnostics.Stopwatch.StartNew();
         var root = new MenuFolder { Name = "Programs", Path = "<merged>" };
@@ -239,15 +249,30 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
 
         HookTrace.Log($"Discovery: lnk={lnkMs}ms uwp-join={uwpMs}ms total={sw.ElapsedMilliseconds}ms " +
                       $"({flat.Count} apps, {uwp.Count} uwp)");
-        return (root, flat);
+        // UwpOk=false marks a DEGRADED scan: shell:AppsFolder can never be
+        // genuinely empty on Win 11 (Settings, Store, … are packaged), so zero
+        // entries means the enumeration failed — the enumerator swallows every
+        // failure into an empty list. Callers must not let a degraded list
+        // replace good data or reach the on-disk cache: every packaged-app
+        // pin/recent would fail its FindById join (blank "Pinned"/"Recent"
+        // sections), and a poisoned cache replays that on every boot until
+        // the fingerprint next changes.
+        return (root, flat, uwp.Count > 0);
     }
 
     /// Commits a discovered tree as the active data set. Caller must hold
     /// <see cref="_lock"/>.
     private void Apply(MenuFolder root, List<AppEntry> flat)
     {
-        _byId.Clear();
-        foreach (var a in flat) _byId[a.Id] = a;
+        // Build the id map fully, then publish it with one reference
+        // assignment. FindById reads _byId lock-free (UI-thread rebuilds of
+        // the Pinned/Recent sections), so the previous in-place
+        // Clear()+refill exposed an empty/partial map mid-swap — a rebuild
+        // landing in that window blanked every pin/recent join until the
+        // next menu open.
+        var byId = new Dictionary<string, AppEntry>(flat.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var a in flat) byId[a.Id] = a;
+        _byId = byId;
         _root = root;
         _flat = flat;
     }
@@ -297,11 +322,24 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
             // showing the already-current data — instead of a false HIT that shows
             // stale data as fresh.)
             var fingerprint = await Task.Run(ComputeFingerprint);
-            var (root, flat) = await DiscoverLiveAsync(CancellationToken.None);
+            var (root, flat, uwpOk) = await DiscoverLiveAsync(CancellationToken.None);
             bool appsChanged;
             await _lock.WaitAsync();
             try
             {
+                // A degraded scan (UWP enumeration failed → zero packaged
+                // entries) must never REPLACE data that still has them: the
+                // swap would blank every packaged-app pin/recent join until
+                // the next good scan. Keep the painted data and bail — the
+                // next watcher event or boot retries with a fresh scan. (If
+                // the current data has no packaged entries either, applying
+                // the degraded list loses nothing, so let it through.)
+                if (!uwpOk && _flat is not null && _flat.Any(e =>
+                        e.Kind == AppEntryKind.PackagedApp || !string.IsNullOrEmpty(e.Aumid)))
+                {
+                    HookTrace.Log("Discovery: degraded background scan (0 uwp) discarded — keeping current app list");
+                    return;
+                }
                 appsChanged = _flat is null || !SameApps(_flat, flat);
                 Apply(root, flat);
             }
@@ -313,8 +351,10 @@ public sealed class AppDiscoveryService : IAppDiscoveryService
             // Persist when the app list changed OR the painted snapshot was stale
             // / the Start Menu changed (forcePersist) — so the next cold boot is a
             // fingerprint hit, not another rescan. A confirming backstop after a
-            // fresh hit (the common case) leaves the file untouched.
-            if (_settings.Current.UseDiscoveryCache && (appsChanged || forcePersist))
+            // fresh hit (the common case) leaves the file untouched. Never persist
+            // a degraded (UWP-less) scan: a poisoned cache replays the blank
+            // pins/recents on every boot until the fingerprint next changes.
+            if (_settings.Current.UseDiscoveryCache && uwpOk && (appsChanged || forcePersist))
             {
                 DiscoveryCache.Save(root, flat, fingerprint);
                 HookTrace.Log($"Discovery: background refresh {(appsChanged ? "updated the app list + " : "")}rewrote cache");

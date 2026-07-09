@@ -43,8 +43,18 @@ internal static class UwpAppEnumerator
             TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
+            // An empty result doubles as the failure signal: Win 11 always has
+            // packaged apps (Settings, Store, …), so a genuinely empty
+            // shell:AppsFolder cannot happen — callers treat zero entries as
+            // "enumeration failed" and keep their previous UWP data rather
+            // than swapping in (and persisting) a degraded list. Log the
+            // exception so a transient COM failure is diagnosable.
             try { tcs.SetResult(Enumerate(ct)); }
-            catch { tcs.SetResult(Array.Empty<UwpApp>()); }
+            catch (Exception ex)
+            {
+                HookTrace.Log($"UwpAppEnumerator: enumeration failed — {ex.Message}");
+                tcs.SetResult(Array.Empty<UwpApp>());
+            }
         })
         {
             IsBackground = true,
