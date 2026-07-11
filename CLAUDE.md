@@ -47,6 +47,16 @@ Until that change is made there is no reliable way to batch from the outside;
 the closest is the owner approving all queued fix PRs back-to-back and
 accepting whatever grouping the merge/release race produces.
 
+### ⚠️ `Release-As:` is only parsed from top-level commit messages
+A footer buried inside the **bulleted sub-messages of a multi-commit squash**
+(GitHub's default squash body for a 2+-commit PR) is IGNORED — PR `#73` carried
+`Release-As: 0.9.0` inside its first bullet and release-please still computed
+0.8.16. Pin the version with a commit whose OWN top-level message ends with the
+footer: a **single-commit** PR squash preserves the message verbatim (proven by
+PR `#64`), so a docs/chore micro-PR is the reliable vehicle. Direct pushes to
+`main` are blocked by the ruleset, so the empty-commit approach from
+release-please's docs doesn't work here.
+
 ### ⚠️ `Release-As:` is sticky
 A `Release-As: X.Y.Z` commit footer overrides the computed version on every run
 until the commit carrying it is released. A stale footer pointing at an
