@@ -47,6 +47,20 @@ Until that change is made there is no reliable way to batch from the outside;
 the closest is the owner approving all queued fix PRs back-to-back and
 accepting whatever grouping the merge/release race produces.
 
+**Second confirmed instance (0.9.0 pin, 2026-07-11):** `--disable-auto` is not
+durable even for the narrower goal of landing a `Release-As` pin ahead of the
+release PR. Sequence: disarmed auto-merge on the open release PR (`autoMergeRequest:
+null` confirmed) → opened a docs PR carrying `Release-As: 0.9.0` → before that
+docs PR merged, the release PR re-armed (a `synchronize` event — not
+necessarily one this session caused) and merged on its own, cutting **0.8.16**
+instead of 0.9.0. The `Release-As` pin then landed a few minutes later, so
+release-please correctly opened a follow-up release PR for 0.9.0 on top of
+0.8.16 and *that* shipped — but as two releases 22 minutes apart instead of
+one. Net: treat any window between disarming a release PR and landing the
+commit you're racing it for as unprotected; verify the release PR's state
+again immediately before relying on it still being held, not just once after
+the `--disable-auto` call.
+
 ### ⚠️ `Release-As:` is only parsed from top-level commit messages
 A footer buried inside the **bulleted sub-messages of a multi-commit squash**
 (GitHub's default squash body for a 2+-commit PR) is IGNORED — PR `#73` carried
