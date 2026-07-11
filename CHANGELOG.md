@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.8.16](https://github.com/Alpaq92/MenYou/compare/v0.8.15...v0.8.16) (2026-07-11)
+
+
+### Bug Fixes
+
+* **discovery:** drop uninstall entries and dead-path ghosts from the AppsFolder scan ([#73](https://github.com/Alpaq92/MenYou/issues/73)) ([1870e1a](https://github.com/Alpaq92/MenYou/commit/1870e1aaef7fcc4b0928bb74ca6b4a87d0f94903))
+
 ## [0.8.15](https://github.com/Alpaq92/MenYou/compare/v0.8.14...v0.8.15) (2026-07-09)
 
 
