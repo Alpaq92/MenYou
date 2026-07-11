@@ -197,7 +197,14 @@
                      merged tab still reads as two groupings. -->
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MaxRecentItems}" VerticalAlignment="Center" />
-                    <NumericUpDown Grid.Row="0" Grid.Column="1"
+                    <!-- VerticalAlignment=Center (here and on the two sibling
+                         spinners): a localized label that wraps to two lines
+                         makes the row taller, and a default-Stretch
+                         NumericUpDown then fills that height with its text
+                         stuck at the top ("8" rendered high in the Polish UI).
+                         Centering keeps the control at natural height in any
+                         locale. -->
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
                                    Minimum="0" Maximum="30" Increment="1" FormatString="0"
                                    Value="{Binding MaxRecentItems, Mode=TwoWay}" />
                 </Grid>
@@ -206,7 +213,7 @@
                      context menus. The Win 7 / Classic side panel stays full. -->
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.ContextMenuRecentCount}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <NumericUpDown Grid.Row="0" Grid.Column="1"
+                    <NumericUpDown Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
                                    Minimum="0" Maximum="30" Increment="1" FormatString="0"
                                    Value="{Binding ContextMenuRecentCount, Mode=TwoWay}" />
                 </Grid>
@@ -400,7 +407,7 @@
                         <TextBlock Grid.Column="0"
                                    Text="{x:Static loc:Strings.MaxLogSizeMb}"
                                    VerticalAlignment="Center" />
-                        <NumericUpDown Grid.Column="1"
+                        <NumericUpDown Grid.Column="1" VerticalAlignment="Center"
                                        Minimum="1" Maximum="100" Increment="1" FormatString="0"
                                        Value="{Binding MaxLogSizeMb, Mode=TwoWay}" />
                     </Grid>
