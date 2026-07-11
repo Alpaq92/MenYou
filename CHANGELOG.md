@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.0](https://github.com/Alpaq92/MenYou/compare/v0.8.16...v0.9.0) (2026-07-11)
+
+
+### Documentation
+
+* Release-As must ride a top-level commit message, not a squash bullet ([#76](https://github.com/Alpaq92/MenYou/issues/76)) ([24c43ab](https://github.com/Alpaq92/MenYou/commit/24c43ab29f0f5cc303b5843110fe3e978c45cec3))
+
 ## [0.8.16](https://github.com/Alpaq92/MenYou/compare/v0.8.15...v0.8.16) (2026-07-11)
 
 
