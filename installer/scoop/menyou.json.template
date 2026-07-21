@@ -7,6 +7,10 @@
     "64bit": {
       "url": "@@URL@@",
       "hash": "@@HASH@@"
+    },
+    "arm64": {
+      "url": "@@ARM64_URL@@",
+      "hash": "@@ARM64_HASH@@"
     }
   },
   "installer": {
@@ -31,6 +35,9 @@
     "architecture": {
       "64bit": {
         "url": "https://github.com/Alpaq92/MenYou/releases/download/v$version/MenYou-Setup-$version.exe"
+      },
+      "arm64": {
+        "url": "https://github.com/Alpaq92/MenYou/releases/download/v$version/MenYou-arm64-Setup-$version.exe"
       }
     }
   }

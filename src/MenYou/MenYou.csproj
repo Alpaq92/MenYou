@@ -61,35 +61,53 @@
     TargetFramework bumps (the previous setup hardcoded net8.0-windows in the
     vcxproj and silently stopped shipping the bridge at the net10.0 move).
   -->
-  <PropertyGroup>
-    <BridgeDll>$(MSBuildThisFileDirectory)..\MenYou.Bridge\bin\$(Configuration)\MenYou.Bridge.dll</BridgeDll>
-    <!-- The bridge is x64-only MSVC; non-x64 publishes must not ship a dead
-         x64 DLL. The RID check lives in the TARGETS' conditions (below), not
-         in a property default here: a static property evaluates before the
-         SDK's RuntimeIdentifierInference targets assign the RID, so a
-         `dotnet publish - -self-contained` without -r (inferred RID, e.g. an
-         ARM64 SDK inferring win-arm64) would slip past a property-time
-         check. Target conditions evaluate at execution time, after
-         inference. CI still passes -p:SkipNativeBridge=true explicitly
-         (self-documenting); RID-less builds keep building the bridge. -->
-  </PropertyGroup>
-  <!-- SkipNativeBridge=true (the win-arm64 publish sets it) suppresses the
-       bridge build AND both copies: the vcxproj is x64-only MSVC, and
-       shipping an x64 DLL in an ARM64 package would just make
-       BridgeInjector fail at LoadLibrary — the app then uses its managed
-       hooks, same as when MSVC is absent. -->
-  <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild"
-          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64')">
-    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\build-bridge.ps1&quot; -Configuration $(Configuration)" ContinueOnError="true" IgnoreExitCode="true" />
+  <!-- BridgePlatform/BridgeDll resolve in a TARGET, not a static property:
+       a static property evaluates before the SDK's RuntimeIdentifierInference
+       targets assign the RID, so a `dotnet publish - -self-contained` without
+       -r (inferred RID, e.g. an ARM64 SDK inferring win-arm64) would slip past
+       a property-time check. Targets evaluate at execution time, after
+       inference. RID-less builds fall back to the SDK's own architecture so an
+       ARM64 dev machine's `dotnet build` gets a loadable ARM64 bridge, not a
+       dead x64 one.
+
+       Ordering is BeforeTargets="BeforeBuild;Publish", NOT DependsOnTargets on
+       the consumers: MSBuild evaluates a target's Condition BEFORE running its
+       DependsOnTargets, so the copy targets' Exists('$(BridgeDll)') checks
+       would see an empty property and silently skip whenever this target
+       hadn't already run — verified with `dotnet publish - -no-build`, where
+       BeforeBuild never fires and only the Publish hook resolves the path. -->
+  <Target Name="ResolveNativeBridgeProps" BeforeTargets="BeforeBuild;Publish">
+    <PropertyGroup>
+      <BridgePlatform Condition="'$(RuntimeIdentifier)' == 'win-arm64'">ARM64</BridgePlatform>
+      <BridgePlatform Condition="'$(BridgePlatform)' == '' and '$(RuntimeIdentifier)' == '' and '$(NETCoreSdkRuntimeIdentifier)' == 'win-arm64'">ARM64</BridgePlatform>
+      <BridgePlatform Condition="'$(BridgePlatform)' == ''">x64</BridgePlatform>
+      <BridgeDll>$(MSBuildThisFileDirectory)..\MenYou.Bridge\bin\$(Configuration)\$(BridgePlatform)\MenYou.Bridge.dll</BridgeDll>
+    </PropertyGroup>
+  </Target>
+  <!-- SkipNativeBridge=true suppresses the bridge build AND both copies; the
+       app then uses its managed hooks, same as when MSVC is absent. The
+       vcxproj builds for x64 and ARM64, but release.yml's win-arm64 publish
+       still sets this flag: WH_GETMESSAGE injection into ARM64 Explorer and
+       the 24H2 lone-Win-tap message shape are unverified on real ARM
+       hardware, and blind injection into the shell must not ship. Removing
+       the flag there is the only step left to ship the ARM64 bridge once
+       it's verified on-device. -->
+  <!-- DependsOnTargets (not just the BeforeBuild hook above) because the Exec
+       body expands $(BridgePlatform): dependencies are guaranteed to run
+       before the body, while the relative order of two targets that both hook
+       BeforeTargets="BeforeBuild" is not. -->
+  <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild" DependsOnTargets="ResolveNativeBridgeProps"
+          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-arm64')">
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\build-bridge.ps1&quot; -Configuration $(Configuration) -Platform $(BridgePlatform)" ContinueOnError="true" IgnoreExitCode="true" />
   </Target>
   <Target Name="CopyNativeBridgeToOutput" AfterTargets="Build"
-          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64') and Exists('$(BridgeDll)')">
+          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-arm64') and Exists('$(BridgeDll)')">
     <Copy SourceFiles="$(BridgeDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
-    <Message Importance="normal" Text="MenYou.Bridge: copied to $(OutDir)" />
+    <Message Importance="normal" Text="MenYou.Bridge: copied $(BridgePlatform) build to $(OutDir)" />
   </Target>
   <Target Name="CopyNativeBridgeToPublish" AfterTargets="Publish"
-          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64') and Exists('$(BridgeDll)')">
+          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64' or '$(RuntimeIdentifier)' == 'win-arm64') and Exists('$(BridgeDll)')">
     <Copy SourceFiles="$(BridgeDll)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
-    <Message Importance="high" Text="MenYou.Bridge: copied to publish dir $(PublishDir)" />
+    <Message Importance="high" Text="MenYou.Bridge: copied $(BridgePlatform) build to publish dir $(PublishDir)" />
   </Target>
 </Project>

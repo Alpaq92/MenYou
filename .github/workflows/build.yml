@@ -45,7 +45,32 @@ jobs:
       - name: Build (Release)
         run: dotnet build src/MenYou/MenYou.csproj --no-restore -c Release
 
-      # Dry-compile the Inno installer against a non-portable publish
+      # Smoke-compile the native bridge for ARM64 (the v143 ARM64 cross
+      # tools on this x64 runner). Releases still ship the arm64 package
+      # managed-only (SkipNativeBridge in release.yml) pending on-device
+      # verification, so this step is the only thing keeping the vcxproj's
+      # ARM64 configuration honest until then. build-bridge.ps1 exits 0
+      # even on failure (dev machines without MSVC must keep building), so
+      # the hard assertions live here: the DLL must exist, must actually be
+      # ARM64, and must not have clobbered the x64 DLL the Build step just
+      # produced (the per-platform OutDir is what prevents that).
+      - name: Smoke-compile native bridge (ARM64)
+        shell: pwsh
+        run: |
+          tools/build-bridge.ps1 -Configuration Release -Platform ARM64
+          $dll = "src/MenYou.Bridge/bin/Release/ARM64/MenYou.Bridge.dll"
+          if (-not (Test-Path $dll)) { throw "ARM64 bridge DLL not produced at $dll" }
+          $fs = [System.IO.File]::OpenRead($dll)
+          try {
+            $br = New-Object System.IO.BinaryReader($fs)
+            $fs.Position = 0x3C; $peOffset = $br.ReadUInt32()
+            $fs.Position = $peOffset + 4; $machine = $br.ReadUInt16()
+          } finally { $fs.Dispose() }
+          # IMAGE_FILE_MACHINE_ARM64 = 0xAA64
+          if ($machine -ne 0xAA64) { throw ("Bridge DLL is not ARM64: PE machine 0x{0:X4}" -f $machine) }
+          $x64 = "src/MenYou.Bridge/bin/Release/x64/MenYou.Bridge.dll"
+          if (-not (Test-Path $x64)) { throw "x64 bridge DLL missing after the ARM64 build - per-platform OutDir regressed?" }
+          Write-Host "OK: ARM64 bridge compiled (PE machine 0xAA64), x64 output intact."
       # output. We discard the artifact (the release workflow re-runs
       # publish + compile with the actual version), but failing the build
       # on an iscc error catches missing-file / script issues at PR time.

@@ -218,9 +218,10 @@
                                    Value="{Binding ContextMenuRecentCount, Mode=TwoWay}" />
                 </Grid>
 
-                <!-- Ordering of the "All" section: folders block first (the
-                     classic shape, default), apps block first, or one mixed
-                     alphabetical list. Applies recursively inside folders. -->
+                <!-- Ordering of the "All" section: one mixed alphabetical
+                     list (default — the Win 11 "All apps" reading), folders
+                     block first (the classic shape), or apps block first.
+                     Applies recursively inside folders. -->
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.AllProgramsOrder}" VerticalAlignment="Center" TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"

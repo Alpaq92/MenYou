@@ -3,6 +3,12 @@
 # the native DLL alongside the managed binaries. Exits 0 even on failure so
 # 'dotnet build' doesn't fail on machines without MSVC - MenYou will then
 # fall back to its WinEvent monitor at runtime.
+#
+# -Platform x64 (default) or ARM64. The ARM64 flavor cross-compiles from an
+# x64 host when the "MSVC v143 - ARM64 build tools" component is installed
+# (GitHub's windows-latest images carry it); if the toolset is absent,
+# msbuild fails and this script still exits 0 - same managed fallback.
+# Output lands in src/MenYou.Bridge/bin/<Configuration>/<Platform>/.
 [CmdletBinding()]
 param(
     [string]$Configuration = "Debug",

@@ -114,10 +114,16 @@ jobs:
           -o publish/win-x64
 
       # Windows-on-ARM build. crossgen2 cross-compiles the R2R images for
-      # win-arm64 from the x64 runner, so the same flags apply. The native
-      # bridge is x64-only MSVC — SkipNativeBridge keeps the wrong-arch DLL
-      # out of the package; the app falls back to its managed hooks, same
-      # as a no-MSVC dev build.
+      # win-arm64 from the x64 runner, so the same flags apply. The bridge
+      # build infra supports ARM64 (the vcxproj has ARM64 configs and the
+      # csproj picks the platform by RID; windows-latest carries the ARM64
+      # MSVC cross-compilers), but SkipNativeBridge stays ON: WH_GETMESSAGE
+      # injection into ARM64 Explorer and the 24H2 lone-Win-tap message
+      # shape are unverified on real ARM hardware, and blind injection into
+      # the shell must not ship. The app falls back to its managed hooks,
+      # same as a no-MSVC dev build. Once verified on an ARM64 device,
+      # deleting the SkipNativeBridge line below is the only change needed
+      # to ship the bridge.
       - name: Publish (Release, win-arm64, self-contained)
         run: >
           dotnet publish src/MenYou/MenYou.csproj
@@ -253,12 +259,14 @@ jobs:
 
   # ------------------------------------------------------------------------
   # Package-manager pushes. Each one is independent + continue-on-error so
-  # an outage on one channel doesn't gate the others. winget carries BOTH
-  # architectures (its regex matches both installers and winget-releaser
-  # reads the arch out of each); Scoop and Chocolatey stay x64-only ON
-  # PURPOSE — the x64 installer is ArchitecturesAllowed=x64compatible, so it
-  # installs under emulation on ARM, and MenYou's own updater then pulls
-  # those users to the native arm64 build at the next release.
+  # an outage on one channel doesn't gate the others. winget and Scoop carry
+  # BOTH architectures (winget-releaser reads the arch out of each installer
+  # its regex matches; the Scoop manifest has 64bit + arm64 blocks).
+  # Chocolatey stays x64-only ON PURPOSE — its arm64 support is immature and
+  # x64-under-emulation is the ecosystem norm there. The x64 installer is
+  # ArchitecturesAllowed=x64compatible, so it installs under emulation on
+  # ARM, and MenYou's own updater then pulls those users to the native
+  # arm64 build at the next release.
   # ------------------------------------------------------------------------
   publish_winget:
     name: Publish to winget
@@ -303,19 +311,25 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         uses: actions/checkout@v7
 
-      - name: Compute installer hash
+      - name: Compute installer hashes
         id: hash
         if: steps.gate.outputs.skip != 'true'
         shell: bash
         run: |
           set -euo pipefail
           version="${{ needs.build.outputs.version }}"
-          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${version}/MenYou-Setup-${version}.exe"
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${version}"
+          url="${base}/MenYou-Setup-${version}.exe"
+          arm64_url="${base}/MenYou-arm64-Setup-${version}.exe"
           curl -fL -o setup.exe "$url"
+          curl -fL -o setup-arm64.exe "$arm64_url"
           hash=$(sha256sum setup.exe | awk '{print toupper($1)}')
-          echo "hash=$hash"   >> "$GITHUB_OUTPUT"
-          echo "url=$url"     >> "$GITHUB_OUTPUT"
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          arm64_hash=$(sha256sum setup-arm64.exe | awk '{print toupper($1)}')
+          echo "hash=$hash"             >> "$GITHUB_OUTPUT"
+          echo "url=$url"               >> "$GITHUB_OUTPUT"
+          echo "arm64_hash=$arm64_hash" >> "$GITHUB_OUTPUT"
+          echo "arm64_url=$arm64_url"   >> "$GITHUB_OUTPUT"
+          echo "version=$version"       >> "$GITHUB_OUTPUT"
 
       - name: Render manifest
         if: steps.gate.outputs.skip != 'true'
@@ -326,6 +340,8 @@ jobs:
             -e "s|@@VERSION@@|${{ steps.hash.outputs.version }}|g" \
             -e "s|@@URL@@|${{ steps.hash.outputs.url }}|g" \
             -e "s|@@HASH@@|${{ steps.hash.outputs.hash }}|g" \
+            -e "s|@@ARM64_URL@@|${{ steps.hash.outputs.arm64_url }}|g" \
+            -e "s|@@ARM64_HASH@@|${{ steps.hash.outputs.arm64_hash }}|g" \
             installer/scoop/menyou.json.template > out/menyou.json
           cat out/menyou.json
 
