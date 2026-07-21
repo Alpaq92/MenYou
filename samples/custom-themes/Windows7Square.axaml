@@ -28,6 +28,15 @@
     Search.Query / HasQuery / Selected — search box + results overlay
     Power.*Command / OpenSettingsCommand / OpenAccountSettingsCommand
 
+  Programs.Items arrives pre-ordered per the user's Settings → "All apps
+  order" preference; binding it plainly (as this sample does) inherits
+  that choice. A theme that wants its OWN ordering overrides it with:
+    xmlns:conv="using:MenYou.Views.Converters"
+    ItemsSource="{Binding Programs.Items,
+        Converter={x:Static conv:ProgramsOrderConverter.Instance},
+        ConverterParameter=PureAlphabetical}"   (or FoldersFirst / AppsFirst)
+  See docs/THEMING.md → "Converter toolbox".
+
   Custom controls (resolved against the loaded MenYou assembly):
     ctrl:AppGrid  ctrl:AppList  ctrl:ProgramsTree  ctrl:SearchResultsList
 

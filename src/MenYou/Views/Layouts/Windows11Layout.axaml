@@ -80,6 +80,19 @@
        override below keeps the danger-red fill from collapsing to
        MenuHoverBrush. -->
   <Grid.Styles>
+    <!-- Rounder search box than the shared TextBox.search default
+         (CornerRadius=4, ControlStyles.axaml), scoped here so the Win 7 /
+         Classic layouts keep their squarer boxes. Radius 10 deliberately
+         MATCHES the menu window's own 10 px corner chrome (see
+         CustomThemeCornerRadiusConverter) so the box's curves read as the
+         same corner family as the window — a full 18 px pill was tried and
+         clashed with the outer corners. Wider padding keeps the placeholder
+         off the curved ends. -->
+    <Style Selector="TextBox.search">
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="14,6" />
+    </Style>
     <Style Selector="TextBlock.section-header">
       <Setter Property="Foreground" Value="{DynamicResource Win11SectionHeader}" />
       <Setter Property="FontSize" Value="14" />
@@ -118,7 +131,10 @@
   <!-- ===================================================================
        Row 0: search bar.
        =================================================================== -->
-  <Border Grid.Row="0" Padding="20,14" VerticalAlignment="Center">
+  <!-- Padding 20,12 (not 14): the row is a fixed 60 px, so 14 px vertical
+       padding left only 32 px of inner height and the 36 px search box
+       would clip. 60 − 2×12 = 36 fits it exactly. -->
+  <Border Grid.Row="0" Padding="20,12" VerticalAlignment="Center">
     <TextBox Classes="search"
              Text="{Binding Search.Query, Mode=TwoWay}"
              PlaceholderText="{x:Static loc:Strings.SearchPlaceholder}" />

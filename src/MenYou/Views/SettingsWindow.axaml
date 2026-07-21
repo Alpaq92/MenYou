@@ -218,6 +218,23 @@
                                    Value="{Binding ContextMenuRecentCount, Mode=TwoWay}" />
                 </Grid>
 
+                <!-- Ordering of the "All" section: folders block first (the
+                     classic shape, default), apps block first, or one mixed
+                     alphabetical list. Applies recursively inside folders. -->
+                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.AllProgramsOrder}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
+                              ItemsSource="{Binding ProgramsOrders}"
+                              SelectedItem="{Binding SelectedProgramsOrder, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+
                 <StackPanel Spacing="6">
                     <CheckBox Content="{x:Static loc:Strings.ShowPinned}" IsChecked="{Binding ShowPinned, Mode=TwoWay}" />
                     <CheckBox Content="{x:Static loc:Strings.ShowRecent}" IsChecked="{Binding ShowRecent, Mode=TwoWay}" />

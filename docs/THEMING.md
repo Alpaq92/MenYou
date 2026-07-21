@@ -39,6 +39,56 @@ Either way:
 - **Stick to controls Avalonia ships out of the box** — `Grid`, `StackPanel`, `Border`, `Button`, `TextBlock`, `TextBox`, `ScrollViewer`, `Image`, `Path`, etc. Third-party controls (a library's custom `NavigationView`, charting widgets, …) need their xmlns declared at the root AND need their assemblies to be loaded in the host process, which limits portability.
 - **Use SVG path data for icons** — `Path Data="..."` with a Material Design Icons path (Apache-2.0) is the lightest option. No image files = no asset-path resolution problems.
 
+## Converter toolbox
+
+MenYou ships ten value converters plus the shared context-menu behavior — all usable from a custom theme by declaring their namespaces at the root:
+
+```xml
+xmlns:conv="using:MenYou.Views.Converters"
+xmlns:behaviors="using:MenYou.Views.Behaviors"
+```
+
+| Converter | What it does | Typical use in a theme |
+|---|---|---|
+| `PipelineConverter` | Chains an ordered list of `PipelineStep`s; each step's converter gets the prior step's output and its own `Parameter`. Any step may return `Skip` to short-circuit, passing the original input through untouched. | Compose image transforms without writing one-off compound converters. |
+| `ThemeGateConverter` | Pipeline gate: passes the input through when the active app theme matches its parameter (`Dark`, `Light`, or `All`), otherwise returns `Skip` and the pipeline aborts. | Make any pipeline step conditional on dark/light mode. |
+| `InvertConverter` | Inverts a `Bitmap`'s RGB channels (alpha preserved), cached per source. Theme-agnostic — gate it with `ThemeGateConverter` for dark-only inversion. | The avatar silhouette treatment: `ThemeGate(Dark) → Invert`. |
+| `BrightnessConverter` | Brightens/dims a `Bitmap` by a signed fraction (`Parameter="0.15"`, culture-invariant; useful range ±1.0), cached per (source, amount). | The third stage of the avatar pipeline; any icon dimming. |
+| `EnumEqualsConverter` | `true` when the bound enum equals the parameter (parsed against the bound value's type). | Show/hide theme parts off `MenuStyle` or any VM enum. |
+| `NewItemHighlightConverter` | Bool → `AccentSubtleBrush` (theme-aware, from app resources) or transparent. | The "just installed" accent wash on Pinned/Recent rows. |
+| `CustomThemeCornerRadiusConverter` | Maps `UseCustomTheme` to the menu window's corner radius: built-ins keep the rounded 10 px chrome, a loaded custom theme gets square (0) corners so it owns its own edge. | Already applied at the window level — the reason your square-cornered theme actually renders square. |
+| `ScrollbarReserveHeightConverter` | (multi-value) Returns a `MinHeight` that reserves room for the slim overlay horizontal scrollbar only when content actually overflows (`Extent.Width > Viewport.Width`); 0 otherwise. | Under any horizontal tile strip so it stays compact without a scrollbar. |
+| `XamlStringToControlConverter` | Parses live XAML text into a control via `AvaloniaRuntimeXamlLoader`, rendering a friendly inline error instead of throwing. | Powers the Settings editor's live preview itself; reusable for any text-to-control surface. |
+| `ProgramsOrderConverter` | Re-orders a menu-item collection per a `ProgramsOrder` parameter (`FoldersFirst` / `AppsFirst` / `PureAlphabetical`). Returns a **live view** that re-sorts itself when a background refresh rebuilds the source in place. | Give your theme its own "All" ordering, independent of the user's Settings choice — see below. |
+
+> **Two layers control the "All" ordering — the user's, and yours.** The Settings → "All apps order" preference (*Folders first* default / *Apps first* / *Alphabetical*, the `ProgramsOrder` enum) is applied inside `ProgramsViewModel` when the tree is built, so binding `Programs.Items` plainly inherits the user's choice. A theme that wants its OWN ordering overrides it per-surface with `ProgramsOrderConverter`:
+>
+> ```xml
+> <ItemsControl ItemsSource="{Binding Programs.Items,
+>     Converter={x:Static conv:ProgramsOrderConverter.Instance},
+>     ConverterParameter=PureAlphabetical}" />
+> ```
+>
+> Ordering applies to one level at a time; apply the same converter to `ChildItems` inside your folder item template to order nested levels. The converter returns a live, self-resorting view — a naive sorting converter would go stale on the first background refresh, because `Programs.Items` is one collection instance mutated in place and bindings only re-run a converter when the bound *reference* changes.
+
+**Behaviors:** `behaviors:AppContextMenuBehavior.Enable="True"` on any control whose `DataContext` is an app item gives it MenYou's full right-click menu — launch verbs, Pin/Unpin, and the per-app JumpList (published Tasks + Recent files) — identical to the built-in layouts. Its companion `MenuItemFactory` (used internally) width-caps and ellipsis-trims long entries so a JumpList filename can't stretch the menu off-screen.
+
+Example — the avatar pipeline exactly as the built-in Win 7 layout declares it (the image converters expose `Instance` singletons for `x:Static` use):
+
+```xml
+<UserControl.Resources>
+    <conv:PipelineConverter x:Key="DarkAvatarPipeline">
+        <conv:PipelineStep Converter="{x:Static conv:ThemeGateConverter.Instance}"
+                           Parameter="Dark" />
+        <conv:PipelineStep Converter="{x:Static conv:InvertConverter.Instance}" />
+        <conv:PipelineStep Converter="{x:Static conv:BrightnessConverter.Instance}"
+                           Parameter="0.17" />
+    </conv:PipelineConverter>
+</UserControl.Resources>
+<!-- then: -->
+<ImageBrush Source="{Binding Avatar, Converter={StaticResource DarkAvatarPipeline}}" />
+```
+
 ## License notes
 
 `Windows7Square.axaml` ships no third-party assets of its own — it reuses MenYou's own control styles and Segoe Fluent Icons glyphs, so there's nothing extra you need to attribute.

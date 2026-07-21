@@ -55,5 +55,9 @@
   "Yes": "はい",
   "No": "いいえ",
   "ConfirmEmptyThemeTitle": "空のカスタム テーマを適用しますか？",
-  "ConfirmEmptyThemeBody": "「カスタム テーマを使用」がオンですが、エディターが空のためメニューが空白になります。それでも適用しますか？"
+  "ConfirmEmptyThemeBody": "「カスタム テーマを使用」がオンですが、エディターが空のためメニューが空白になります。それでも適用しますか？",
+  "AllProgramsOrder": "アプリ一覧の並び順",
+  "OrderFoldersFirst": "フォルダーを先に",
+  "OrderAppsFirst": "アプリを先に",
+  "OrderAlphabetical": "名前順"
 }

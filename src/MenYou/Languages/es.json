@@ -55,5 +55,9 @@
   "Yes": "Sí",
   "No": "No",
   "ConfirmEmptyThemeTitle": "¿Aplicar tema personalizado vacío?",
-  "ConfirmEmptyThemeBody": "«Usar tema personalizado» está activado pero el editor está vacío, así que el menú aparecerá en blanco. ¿Aplicar de todos modos?"
+  "ConfirmEmptyThemeBody": "«Usar tema personalizado» está activado pero el editor está vacío, así que el menú aparecerá en blanco. ¿Aplicar de todos modos?",
+  "AllProgramsOrder": "Orden de la lista de aplicaciones",
+  "OrderFoldersFirst": "Carpetas primero",
+  "OrderAppsFirst": "Aplicaciones primero",
+  "OrderAlphabetical": "Alfabético"
 }

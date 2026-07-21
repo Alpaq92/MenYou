@@ -55,5 +55,9 @@
   "Yes": "Ja",
   "No": "Nee",
   "ConfirmEmptyThemeTitle": "Leeg aangepast thema toepassen?",
-  "ConfirmEmptyThemeBody": "'Aangepast thema gebruiken' staat aan maar de editor is leeg, dus het menu wordt leeg weergegeven. Toch toepassen?"
+  "ConfirmEmptyThemeBody": "'Aangepast thema gebruiken' staat aan maar de editor is leeg, dus het menu wordt leeg weergegeven. Toch toepassen?",
+  "AllProgramsOrder": "Volgorde van de app-lijst",
+  "OrderFoldersFirst": "Mappen eerst",
+  "OrderAppsFirst": "Apps eerst",
+  "OrderAlphabetical": "Alfabetisch"
 }

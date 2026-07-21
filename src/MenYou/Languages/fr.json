@@ -55,5 +55,9 @@
   "Yes": "Oui",
   "No": "Non",
   "ConfirmEmptyThemeTitle": "Appliquer un thème personnalisé vide ?",
-  "ConfirmEmptyThemeBody": "« Utiliser un thème personnalisé » est activé mais l'éditeur est vide, donc le menu sera vide. Appliquer quand même ?"
+  "ConfirmEmptyThemeBody": "« Utiliser un thème personnalisé » est activé mais l'éditeur est vide, donc le menu sera vide. Appliquer quand même ?",
+  "AllProgramsOrder": "Ordre de la liste des applications",
+  "OrderFoldersFirst": "Dossiers d'abord",
+  "OrderAppsFirst": "Applications d'abord",
+  "OrderAlphabetical": "Alphabétique"
 }

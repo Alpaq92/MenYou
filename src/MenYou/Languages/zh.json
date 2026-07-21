@@ -55,5 +55,9 @@
   "Yes": "是",
   "No": "否",
   "ConfirmEmptyThemeTitle": "应用空的自定义主题？",
-  "ConfirmEmptyThemeBody": "“使用自定义主题”已开启，但编辑器为空，菜单将显示为空白。仍要应用吗？"
+  "ConfirmEmptyThemeBody": "“使用自定义主题”已开启，但编辑器为空，菜单将显示为空白。仍要应用吗？",
+  "AllProgramsOrder": "应用列表排序",
+  "OrderFoldersFirst": "文件夹在前",
+  "OrderAppsFirst": "应用在前",
+  "OrderAlphabetical": "按名称排序"
 }

@@ -2,7 +2,7 @@
 
 How MenYou is kept fast, and the reasoning behind each change — focused on **startup**, which is what users feel most for a Start-menu replacement that lives in the tray and must be ready the moment they sign in.
 
-This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.7.0**.
+This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across two distinct eras: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task) and the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up).
 
 ---
 
@@ -18,6 +18,21 @@ Cold boot — time from the desktop appearing to MenYou's **process launching** 
 | **0.7.0 — logon task @ PT1S** | **~1 s** | Task trigger delay trimmed PT3S → PT1S. |
 
 Same machine, same binary path — the **launch** dropped **~15 s → ~1 s** purely by changing *how Windows is told to start the app*. Desktop→tray-*usable* followed: ~16 s before, **~2–4 s** on 0.7.0.
+
+A second, independent cold-start regression — in the **data paint**, not the launch — surfaced after 0.7.0 shipped: intermittently the menu opened *empty* for ~15–20 s even though the process launched in ~1 s. That one was fixed in **0.8.7** (stale-while-revalidate, §6), hardened through **0.8.14–0.9.0** (§7), with the remaining visible cost (the icon fill) parallelized in **0.9.2** (§8).
+
+### Results — data-paint era
+
+What the launched process shows, and when. The launch itself stayed ~1 s throughout; the variable is the fingerprint state — whether any Start-Menu entry changed since the last session (a third-party auto-updater rewriting its own `.lnk` is the everyday trigger, which is what made this look random):
+
+| Build | Cold boot, fingerprint **fresh** | Cold boot, fingerprint **stale** |
+|---|---|---|
+| 0.8.5 (pre-SWR) | instant data paint | **empty menu ~15–20 s** — snapshot discarded, live COM scan held behind the ~20 s warm-up hold (§4) |
+| **0.8.7+** | instant data paint | **instant data paint** — stale snapshot shown, background scan corrects + re-persists silently |
+
+The 0.8.5 stale-boot number was measured live on the reporting machine (2026-07-06, the "sometimes MenYou takes longer to show after restart" diagnosis — launch verified fine at ~1.6 s after `explorer.exe`, data absent); the 0.8.7 row is structural — the discard path no longer exists, and the paint is bounded by the eager COM-free file read (~150 ms into startup, §2).
+
+For the **icon fill** (§8), measured on the development machine (143 apps): the visible Pinned/Recent batch went from **~2.1 s to 446 ms** and the full tree fills in ~3 s alongside it. Per-boot numbers come from the `Icons: filled N/M tiles in X ms` trace line added in 0.9.2 (visible in `%TEMP%\menyou-hooks.log` with Developer → Logging on; it slots in as a fifth timestamp in the methodology below).
 
 > **"Was 0.2.0 really no different from 0.5.0?"** For the *launch* number above — yes, provably. The `HKCU\Run` autostart code (`Win32AutostartService`) was **byte-identical across every Run-key release, 0.2.0 through 0.5.6** (sha `07a2825…`); the logon task and the `StartupDelayInMSec` tweak arrived with the task work (the 0.6.0 build at PT3S, trimmed to PT1S for 0.7.0), so nothing could move the ~15 s launch across the Run-key era.
 >
@@ -62,7 +77,7 @@ The decisive insight came from **(3) − (2)**: the gap between the desktop bein
 
 App discovery (enumerating `.lnk` shortcuts, UWP packages, Control Panel and Settings deep-links) is COM-heavy and slow on a cold shell. A few changes keep the menu's data instant:
 
-- **Persisted snapshot** *(0.5.0)* — discovery results are cached at `%AppData%\MenYou\discovery-cache.json`. On launch the menu is served from this plain file read (no shell COM), so it paints instantly on a cold start; a live scan still runs in the background and swaps in if anything changed, guarded by a filesystem fingerprint so a stale snapshot is never shown.
+- **Persisted snapshot** *(0.5.0, reworked 0.8.7)* — discovery results are cached at `%AppData%\MenYou\discovery-cache.json`. On launch the menu is served from this plain file read (no shell COM), so it paints instantly on a cold start — fresh **or stale**: since 0.8.7 the filesystem fingerprint decides only whether the background scan must re-persist a corrected snapshot, not whether the paint happens at all. (0.5.0's original design *discarded* the snapshot on any fingerprint miss — the cold-start regression dissected in §6.)
 - **Parallelized `.lnk` walk** *(0.2.0)* — per-shortcut `ShellLink` + shell-localization COM is fanned out across cores: cold discovery ~640 ms → ~400 ms.
 - **Eager cache preload** — the cache is warmed from disk during sync init (file I/O only, no COM), so the data is ready well before the idle-time warm-up, even for an early first open.
 
@@ -102,12 +117,59 @@ The one-time ~10 s first-install cold load (Defender + cold disk) can't be elimi
 
 ---
 
+## 6. Cold-start regression #2: the stale-cache discard → stale-while-revalidate (0.8.7)
+
+**Symptom.** Intermittent: some reboots painted the menu instantly, others left it **empty for ~15–20 s** — with the process itself launching in ~1 s (§1's win intact). Classic "sometimes slow after restart" report.
+
+**Diagnosis.** The 0.5.0 cache treated its fingerprint as a **validity gate**: on any mismatch the whole snapshot was discarded and the menu blocked on a live COM scan — which on a cold boot is additionally *held ~20 s* behind the warm-up delay (§4). But the fingerprint hashes every Start-Menu entry's path + mtime + size, so **any** shortcut rewrite between sessions — a third-party auto-updater touching its own `.lnk` is the everyday case — flipped the next boot from instant to ~20 s empty. Whether a given reboot was "slow" was literally whether any installed app had updated itself since the last one.
+
+**Fix — stale-while-revalidate.** A non-null snapshot is *structurally* valid (`TryLoad` already rejects wrong-schema files); the fingerprint only says whether it's *current*. So:
+
+- **Paint it either way.** Fresh or stale, the cached list paints instantly. A stale paint is at most one app-shaped diff behind — invisible next to a 20 s empty menu.
+- **Revalidate in the background.** The live scan (after a settle delay so its COM work doesn't fight the post-login storm) swaps in corrections and fires `Refreshed` only when the app list actually changed — a benign confirming pass never rebuilds the menu.
+- **Persist on change.** A stale paint or a Start-Menu watcher event force-persists the corrected snapshot + fresh fingerprint, so the **next** boot is a hit. The watcher previously only dropped the in-memory copy — guaranteeing a miss on the next boot after every install/update; since most app updates land mid-session, that alone kept the misses coming.
+- **Single-flight + coalesce.** The eager preload, the first-open fallback and the watcher can all request the scan; one runs at a time, and a persist-needing request that arrives mid-scan schedules exactly one coalesced re-run instead of being dropped (an app installed during the scan window would otherwise stay missing until the next reboot).
+- **Fingerprint before scan.** The persisted fingerprint is computed *before* the data it describes is scanned, so it can never claim state newer than the snapshot: a `.lnk` landing mid-scan yields a benign next-boot stale-paint, never a false hit presenting stale data as fresh.
+
+**Perception (0.8.8).** During a catch-up scan (stale paint or watcher change — not the routine confirming backstop) a dimmed **"Updating apps…"** caption shows beside the All-Programs header, gated by a 400 ms show-delay + 500 ms minimum-visible so it neither flickers on fast scans nor blinks off mid-read.
+
+---
+
+## 7. Keeping the instant paint truthful (0.8.14 → 0.9.0)
+
+Stale-while-revalidate raises the stakes on cache content: a bad snapshot now replays **instantly on every boot**. A field bug ("Pinned and Last used are sometimes blank" — data intact on disk, sections empty on screen) traced to exactly that, and produced four guards:
+
+- **Degraded-scan quarantine** *(0.8.14)* — the `shell:AppsFolder` enumeration swallows every failure into an empty result, and Win 11 can never genuinely have zero packaged apps — so an empty UWP set now marks the scan **degraded**: it never replaces data that still has packaged entries, and is **never persisted**. Previously one transient COM failure (login-storm timing) blanked every packaged-app pin/recent *and* poisoned the cache until the fingerprint next happened to change.
+- **Atomic id-map publish** *(0.8.14)* — `FindById` (the pin/recent → app join) reads lock-free from the UI thread; the id map is now built fully and swapped by reference instead of Clear()+refill in place, so a rebuild can never join against a half-built map and render both sections empty.
+- **Join-then-cap** *(0.8.14)* — Recent resolves ids against discovery *first*, then applies the display cap; a few dead ids at the top can no longer blank the whole section while resolvable history sits just below the cap.
+- **Ghost filtering** *(0.9.0)* — the shell's app-resolver cache keeps listing uninstalled Win32 apps for a while, reporting a raw exe path as the "AUMID"; the mid-uninstall watcher rescan used to ingest those ghosts and persist them (launching one sent `explorer.exe` to an invalid `shell:AppsFolder` item — which opens Documents). Scans now drop dead-path AUMIDs and "Uninstall …"-named AppsFolder entries, mirroring the filter the `.lnk` scanner always had.
+
+---
+
+## 8. The icon fill: parallel extraction (0.9.2)
+
+With the data paint instant (§6) and truthful (§7), what a cold start *shows* is the *cog → real-icon* fill. That fill was **strictly serial**: ~150–300 shell-COM extractions, each paying its own `Task.Run` hop plus an **awaited** per-icon UI invoke — the last tile filled N × extract-time after the menu opened.
+
+0.9.2 batches the whole fill through one `Parallel.ForEachAsync` (a single outer `Task.Run` keeps every worker off the UI thread — `ForEachAsync` may otherwise run a fully-synchronous body inline on the caller), each icon landing via its own fire-and-forget posted UI update as it completes. An adversarial review of the first cut reshaped the design:
+
+- **Exactly-once extraction** — the Pinned/Recent batch and the Programs-tree batch overlap on every cold start and share most pinned/recent ids, so the naive version extracted those icons **twice** (confirmed). An in-flight `Lazy` map now collapses concurrent same-id requests: losers block on the winner instead of re-running COM. Measured effect on the visible batch: **2086 ms → 446 ms** (143-app machine) — the visible tiles stopped paying for the tree's duplicate work.
+- **DOP capped to half the cores (2–8)** — extraction fans into third-party shell extensions (icon handlers, AV overlays) that had never been hit concurrently before, and the login storm is core-starved already; half-DOP keeps nearly all of the wall-clock win.
+- **Per-item isolation** — `ForEachAsync` stops scheduling after an unhandled throw and every call site discards the batch task, so one corrupt `.ico` would have silently left the rest of the menu on cogs. Each item now catches; a failed extraction is cached as null (cog stays, no per-open retry).
+- **Correctness riders** — tile-list snapshots moved onto the UI thread behind a loud `VerifyAccess` (the old loop enumerated live `ObservableCollection`s inside `Task.Run`, racing rebuilds); a generation guard drops a superseded tree batch's posts; the extraction cache's one lock-free read was closed (parallel writers made the read-during-write real).
+
+**Next lever (planned):** a small on-disk icon cache keyed by entry id, so warm boots skip extraction entirely — gated on per-entry mtime invalidation and negative-result handling (the in-memory cache stores nulls; a disk layer that doesn't would re-extract every icon-less app each boot), plus a measurement pass on the added post-login decode cost.
+
+---
+
 ## Rejected / not pursued
 
 - **`PublishSingleFile`** — see §3 (~54 s cold autostart, unsigned). Kept multi-file.
 - **`PublishTrimmed`** — a trim trial built cleanly but produced **430 trim warnings**, including the two that matter: `System.Text.Json` reflection (settings load/save) and `AvaloniaRuntimeXamlLoader` (custom themes). It would break both features. Doing it safely needs source-generated JSON + trimmer-root descriptors + a full feature-test pass — substantial work for a modest size win, when the startup bottleneck was never the payload size. Deferred.
 - **NativeAOT** — incompatible with the runtime-XAML custom-theme feature (which needs the JIT). ReadyToRun gives most of the startup benefit without that cost.
 - **Optimizing the in-process path *as the cold-start fix*** — an earlier round (warm-up priority tuning, pdb exclusion, single-file revert) targeted MenYou's own init, which was already fast. Necessary polish, but it was the wrong segment for the perceived ~15 s slowness; the measurement in the methodology section is what redirected the effort to the Run-key throttle.
+- **Skeleton placeholder tiles for the empty first frame** — rejected in review: post-SWR (§6) a valid cache exists on essentially every boot after the very first, so the empty frame is a first-ever-run-only event; and the 0.7.0 splash (§5) already demonstrated that a UI-thread veneer gets starved by the very cold load it's meant to cover. The "ready" balloon carries first-run perception instead.
+- **Softening the fingerprint (dropping directory mtimes)** — real but marginal post-SWR: no COM scan is saved (the background backstop runs regardless); it would only trim a redundant cache rewrite + caption on benign-touch boots. Parked as a ride-along for the next cache-schema bump, not its own change.
+- **`Directory.Build.props` to pin publish flags locally** — doesn't close the drift it targets: ReadyToRun needs the `-r win-x64` that CI passes on the command line (not the csproj), and the ~100 MB shape difference is the installer's PDB exclusion, not publish flags. CI stays the single source of truth.
 
 ---
 
@@ -120,3 +182,8 @@ The one-time ~10 s first-install cold load (Defender + cold disk) can't be elimi
 | **0.5.x** | pdb exclusion from the installer; multi-file kept (single-file trialed and reverted). |
 | **0.6.0** | **Run-key → logon scheduled task** at PT3S — autostart off the throttled Run-key: the ~15 s → ~3 s cold-start win, plus self-healing migration and a zeroed-`StartupDelayInMSec` fallback. |
 | **0.7.0** | Trigger delay trimmed PT3S → PT1S (~3 s → ~1 s); first-run native splash + ready balloon; power-button `SeShutdownPrivilege` fix; Settings-window flash→fade; (trimming evaluated and rejected). |
+| **0.8.7** | **Stale-while-revalidate discovery cache** — paint fresh *or* stale, revalidate + persist-on-change in the background (single-flight, coalesced, fingerprint-before-scan): fixed the intermittent ~20 s empty-menu cold start caused by discarding the snapshot on any fingerprint miss. |
+| **0.8.8** | "Updating apps…" caption during catch-up scans (400 ms show-delay / 500 ms min-visible so it never flickers). |
+| **0.8.14** | Truthful-paint guards: degraded-UWP-scan quarantine (empty ≠ success; never persisted), atomic id-map publish for the lock-free pin/recent join, Recent join-then-cap, and the mirror's empty-export wipe guard. |
+| **0.9.0** | Ghost filtering — uninstall-style entries and dead-path AUMIDs dropped from the AppsFolder merge, so uninstalled apps can't persist in the snapshot (and the resolver-cache lag window can't reintroduce them). |
+| **0.9.2** | **Parallel icon fill** — the serial per-icon `Task.Run` + awaited-UI-invoke loop became one capped-DOP `Parallel.ForEachAsync` batch with exactly-once per-id extraction, per-item fault isolation, and per-icon posted updates (visible batch measured 2086 → 446 ms); tile-list snapshots moved on-thread; the icon cache's last lock-free read closed. |

@@ -130,7 +130,7 @@ public sealed partial class StartMenuViewModel : ViewModelBase
             {
                 RebuildPinned();
                 RebuildRecent();
-                _ = Task.Run(LoadIconsAsync);
+                _ = LoadIconsAsync();
             });
         };
         // When the discovery cache's background backstop swaps in a fresher
@@ -153,12 +153,12 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         pin.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             RebuildPinned();
-            _ = Task.Run(LoadIconsAsync);
+            _ = LoadIconsAsync();
         });
         recent.Changed += () => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             RebuildRecent();
-            _ = Task.Run(LoadIconsAsync);
+            _ = LoadIconsAsync();
         });
         // The Mint Cinnamon layout binds the computed Places slice, which —
         // being a plain getter over RightPanel.Shortcuts — can't raise its
@@ -288,7 +288,7 @@ public sealed partial class StartMenuViewModel : ViewModelBase
             RebuildRecent();
             Programs.MarkNew(_newlyInstalledIds);
             _hasLoaded = true;
-            _ = Task.Run(LoadIconsAsync);
+            _ = LoadIconsAsync();
             Platform.Windows.HookTrace.Log(
                 $"RunLoadAsync: programs={progMs}ms +scan={scanMs}ms +rebuild={sw.ElapsedMilliseconds}ms");
         }
@@ -433,13 +433,18 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         return true;
     }
 
-    private async Task LoadIconsAsync()
+    /// Snapshots the pinned/recent tiles ON the UI thread, then fans icon
+    /// extraction across cores; each icon lands via its own posted UI
+    /// update. The old loop awaited one GetIconAsync + one UI invoke per
+    /// tile, so icons filled strictly serially — and Task.Run(LoadIconsAsync)
+    /// enumerated the live observable collections off-thread, racing
+    /// rebuilds. Must be called on the UI thread (all call sites are).
+    private Task LoadIconsAsync()
     {
-        foreach (var item in Pinned.Concat(Recent))
-        {
-            var bmp = await _icons.GetIconAsync(item.Entry);
-            if (bmp is not null)
-                await Dispatcher.UIThread.InvokeAsync(() => item.Icon = bmp);
-        }
+        // Loud, not comment-only (see ProgramsViewModel.LoadIconsAsync).
+        Dispatcher.UIThread.VerifyAccess();
+        var items = Pinned.Concat(Recent).ToList();
+        return _icons.LoadIconsAsync(items, i => i.Entry,
+            (item, bmp) => Dispatcher.UIThread.Post(() => item.Icon = bmp));
     }
 }

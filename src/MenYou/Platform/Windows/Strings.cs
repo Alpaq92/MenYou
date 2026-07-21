@@ -80,6 +80,13 @@ public static class Strings
     // — so the header uses it, system-sourced, no JSON entry needed
     // (aclui.dll ships on every SKU).
     public static string AllPrograms             => Resolve("AllPrograms", $@"@{Sys}\aclui.dll,-56");
+    // "All" ordering picker (Settings → Appearance). MenYou-specific
+    // phrasing — no shell DLL carries these as standalone strings, so they
+    // are JSON-only.
+    public static string AllProgramsOrder        => Resolve("AllProgramsOrder");
+    public static string OrderFoldersFirst       => Resolve("OrderFoldersFirst");
+    public static string OrderAppsFirst          => Resolve("OrderAppsFirst");
+    public static string OrderAlphabetical       => Resolve("OrderAlphabetical");
     // Places: deep-dive of shell32 / ExplorerFrame / twinui revealed no
     // standalone single-noun "Places" / "Miejsca" resource — only phrasal
     // matches (shell32.dll,-9340 "Lokalizacje sieciowe" = "Network
