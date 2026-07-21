@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text.Json;
 using Microsoft.Win32;
@@ -41,6 +42,18 @@ public sealed class GitHubUpdateService : IUpdateService
     private const string InnoUninstallKey =
         @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + InnoAppId + "_is1";
 
+    // ASSET NAMING CONTRACT (canonical home — menyou.iss and release.yml
+    // point here). x64 keeps the historic "MenYou-Setup-<ver>.exe" name:
+    // updaters that predate the arch-aware matcher (<= 0.9.2) download the
+    // FIRST release asset whose name starts with "MenYou-Setup", so that
+    // name must never change — and the Windows-on-ARM installer
+    // ("MenYou-arm64-Setup-<ver>.exe") deliberately does NOT share the
+    // prefix, so those old x64 clients can never pick it up. release.yml
+    // lists both exact filenames in its release step, so a rename fails
+    // the pipeline loudly instead of silently orphaning field updaters.
+    private const string SetupAssetPrefix = "MenYou-Setup";
+    private const string Arm64SetupAssetPrefix = "MenYou-arm64-Setup";
+
     public bool IsPackaged =>
         ReadInstalledVersionString() is not null;
 
@@ -74,23 +87,49 @@ public sealed class GitHubUpdateService : IUpdateService
             var root = doc.RootElement;
 
             var latest = ParseVersion(root.GetProperty("tag_name").GetString());
-            if (latest is null || latest <= current)
+            if (latest is null || latest < current)
                 return (UpdateResult.UpToDate, null);
 
-            // Find the Inno installer asset (MenYou-Setup-<ver>.exe).
-            string? url = null;
-            if (root.TryGetProperty("assets", out var assets))
+            // Pick the installer for THIS machine's architecture (see the
+            // naming-contract note on the prefix constants). An ARM machine
+            // falls back to the x64 installer (runs under emulation) when a
+            // release lacks the native asset; x64 never takes the arm64
+            // asset (the prefixes are disjoint, so its matcher can't even
+            // see it). OSArchitecture reports the TRUE OS arch even from an
+            // emulated x64 process, which powers the migration below.
+            var wantArm64 = RuntimeInformation.OSArchitecture == Architecture.Arm64;
+            string? FindInstaller(string prefix)
             {
+                if (!root.TryGetProperty("assets", out var assets)) return null;
                 foreach (var asset in assets.EnumerateArray())
                 {
                     var name = asset.GetProperty("name").GetString() ?? string.Empty;
-                    if (name.StartsWith("MenYou-Setup", StringComparison.OrdinalIgnoreCase)
+                    if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                         && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                    {
-                        url = asset.GetProperty("browser_download_url").GetString();
-                        break;
-                    }
+                        return asset.GetProperty("browser_download_url").GetString();
                 }
+                return null;
+            }
+            // Same-version pass: normally up-to-date — with one exception. An
+            // ARM machine RUNNING THE X64 BUILD under emulation (a Scoop /
+            // Chocolatey install, or an earlier fallback download) migrates
+            // to the native arm64 asset of the SAME version when one exists.
+            // Loop-safe: once native, ProcessArchitecture is Arm64 and this
+            // never fires again; and when the release has no native asset,
+            // it stays UpToDate rather than pointlessly reinstalling x64.
+            var emulatedOnArm = wantArm64
+                && RuntimeInformation.ProcessArchitecture == Architecture.X64;
+            string? url;
+            if (latest == current)
+            {
+                url = emulatedOnArm ? FindInstaller(Arm64SetupAssetPrefix) : null;
+                if (string.IsNullOrEmpty(url))
+                    return (UpdateResult.UpToDate, null);
+            }
+            else
+            {
+                url = (wantArm64 ? FindInstaller(Arm64SetupAssetPrefix) : null)
+                      ?? FindInstaller(SetupAssetPrefix);
             }
             if (string.IsNullOrEmpty(url))
                 return (UpdateResult.Failed, "no MenYou-Setup .exe asset on the latest release");

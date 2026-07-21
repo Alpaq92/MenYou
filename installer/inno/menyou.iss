@@ -66,7 +66,22 @@ DisableProgramGroupPage=no
 AllowNoIcons=yes
 
 OutputDir=..\..\dist
-OutputBaseFilename=MenYou-Setup-{#MyAppVersion}
+; Per-architecture output; pass /DMyArch=arm64 for the Windows-on-ARM
+; installer (default: x64). The x64 name is a FROZEN compat contract —
+; see the naming-contract note in src/MenYou/Services/GitHubUpdateService.cs.
+; x64 stays x64compatible (= installs under emulation on ARM too: the
+; pre-arm64 status quo and the updater's fallback path); arm64 is native-only.
+#ifndef MyArch
+  #define MyArch "x64"
+#endif
+#if MyArch == "arm64"
+  #define MySetupBaseName "MenYou-arm64-Setup-" + MyAppVersion
+  #define MyArchAllowed "arm64"
+#else
+  #define MySetupBaseName "MenYou-Setup-" + MyAppVersion
+  #define MyArchAllowed "x64compatible"
+#endif
+OutputBaseFilename={#MySetupBaseName}
 SetupIconFile=..\..\icon_v2.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ; Shows the MIT license as an accept/decline page (wpLicense) right after
@@ -77,8 +92,8 @@ Compression=lzma2/max
 SolidCompression=yes
 
 ; .NET 10 self-contained x64 build; Win10+ only (matches the app's TFM).
-ArchitecturesAllowed=x64compatible
-ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed={#MyArchAllowed}
+ArchitecturesInstallIn64BitMode={#MyArchAllowed}
 MinVersion=10.0
 
 ; Restart Manager: when the in-app updater runs this silently while
