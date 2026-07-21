@@ -9,16 +9,85 @@ namespace MenYou.Services;
 public sealed class IconService : IIconService
 {
     private readonly Dictionary<string, Bitmap?> _cache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly SemaphoreSlim _lock = new(1, 1);
+    // Entry-icon extractions currently in flight, keyed by AppEntry.Id.
+    // Guarantees exactly-once extraction under the parallel batch loader:
+    // the Pinned/Recent batch and the Programs-tree batch run concurrently
+    // on every cold start and overlap on most pinned/recent ids (verified
+    // in review), so without this the same icon was extracted twice.
+    // Losers block on the winner's Lazy instead of re-running COM.
+    private readonly Dictionary<string, Lazy<Bitmap?>> _inflight = new(StringComparer.OrdinalIgnoreCase);
 
     public Bitmap? PlaceholderIcon => null;
 
     public Task<Bitmap?> GetIconAsync(AppEntry entry) => Task.Run(() => Extract(entry));
 
+    /// <summary>
+    /// Fans the batch across cores with Parallel.ForEachAsync calling the
+    /// synchronous Extract directly — no per-item Task.Run hop.
+    /// </summary>
+    /// <remarks>
+    /// One outer Task.Run keeps every worker off the caller's (UI) thread:
+    /// ForEachAsync may run a fully-synchronous body inline on the calling
+    /// thread, and a shell-COM extraction must never run there. Concurrent
+    /// same-id requests (the Pinned/Recent batch overlaps the Programs-tree
+    /// batch on every cold start) are collapsed to one extraction by the
+    /// _inflight map inside Extract.
+    /// </remarks>
+    public Task LoadIconsAsync<T>(IReadOnlyList<T> items, Func<T, AppEntry> entryOf, Action<T, Bitmap> apply) =>
+        Task.Run(async () =>
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var loaded = 0;
+            // DOP capped below core count: extraction fans into third-party
+            // shell extensions (icon handlers, AV overlays) that were never
+            // hit concurrently before this batch existed, and the cold-boot
+            // login storm is core-starved already. Half the cores (2..8)
+            // keeps nearly all of the wall-clock win.
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 8),
+            };
+            await Parallel.ForEachAsync(items, options, (item, _) =>
+            {
+                // Per-item isolation: one corrupt .ico or throwing shell
+                // handler must not fault the whole batch — ForEachAsync
+                // stops scheduling after an unhandled throw, and callers
+                // discard this Task, so the rest of the menu would silently
+                // stay on cog placeholders. Exception (not a narrower type)
+                // is deliberate: the failure surface spans COM, GDI+ and
+                // third-party shell extensions; the tile keeps its cog.
+                var entry = entryOf(item);
+                try
+                {
+                    var bmp = Extract(entry);
+                    if (bmp is not null)
+                    {
+                        Interlocked.Increment(ref loaded);
+                        apply(item, bmp);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    HookTrace.Log($"Icons: apply failed for '{entry.DisplayName}' — {ex.Message}");
+                }
+                return ValueTask.CompletedTask;
+            });
+            // The icon fill is the visible tail of a cold start (the data
+            // paints instantly from cache; tiles show cogs until this
+            // completes), so its duration is a first-class startup metric —
+            // OPTIMIZATION.md's methodology reads it from this line.
+            HookTrace.Log($"Icons: filled {loaded}/{items.Count} tiles in {sw.ElapsedMilliseconds} ms");
+        });
+
     public Task<Bitmap?> GetIconForPathAsync(string path) => Task.Run<Bitmap?>(() =>
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
-        if (_cache.TryGetValue(path, out var cached)) return cached;
+        // Locked read: the batch loader hammers _cache from parallel workers,
+        // so the old lock-free TryGetValue here became a read-during-write.
+        lock (_cache)
+        {
+            if (_cache.TryGetValue(path, out var cached)) return cached;
+        }
         var bmp = IconExtractor.ExtractForFile(path);
         lock (_cache) _cache[path] = bmp;
         return bmp;
@@ -103,12 +172,41 @@ public sealed class IconService : IIconService
 
     private Bitmap? Extract(AppEntry entry)
     {
-        var cacheKey = entry.Id;
+        Lazy<Bitmap?> lazy;
         lock (_cache)
         {
-            if (_cache.TryGetValue(cacheKey, out var cached)) return cached;
+            if (_cache.TryGetValue(entry.Id, out var cached)) return cached;
+            if (!_inflight.TryGetValue(entry.Id, out lazy!))
+            {
+                lazy = new Lazy<Bitmap?>(() => ExtractCore(entry),
+                    LazyThreadSafetyMode.ExecutionAndPublication);
+                _inflight[entry.Id] = lazy;
+            }
         }
 
+        // Outside the lock: the winner runs the COM extraction; losers block
+        // here until it finishes instead of extracting the same icon again.
+        // A throwing extraction is treated as icon-less and cached as null so
+        // it isn't retried on every open (the tile keeps its cog fallback).
+        // Exception (not narrower) is deliberate — COM/GDI+/shell-extension
+        // failures surface as many types and all mean the same "no icon".
+        Bitmap? bmp;
+        try { bmp = lazy.Value; }
+        catch (Exception ex)
+        {
+            HookTrace.Log($"Icons: extraction failed for '{entry.DisplayName}' — {ex.Message}");
+            bmp = null;
+        }
+        lock (_cache)
+        {
+            _cache[entry.Id] = bmp;
+            _inflight.Remove(entry.Id);
+        }
+        return bmp;
+    }
+
+    private static Bitmap? ExtractCore(AppEntry entry)
+    {
         Bitmap? bmp = null;
         // UWP / packaged apps: ask the shell for the tile icon associated
         // with shell:AppsFolder\<AUMID>. Don't fall through to TargetPath
@@ -140,7 +238,6 @@ public sealed class IconService : IIconService
         if (bmp is null && !string.IsNullOrWhiteSpace(entry.SourceLnkPath))
             bmp = IconExtractor.ExtractForFile(entry.SourceLnkPath);
 
-        lock (_cache) _cache[cacheKey] = bmp;
         return bmp;
     }
 

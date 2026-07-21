@@ -55,5 +55,9 @@
   "LogSize": "Size",
   "Preview": "Preview",
   "Searching": "Searching…",
-  "SearchResults": "Search results"
+  "SearchResults": "Search results",
+  "AllProgramsOrder": "All apps order",
+  "OrderFoldersFirst": "Folders first",
+  "OrderAppsFirst": "Apps first",
+  "OrderAlphabetical": "Alphabetical"
 }

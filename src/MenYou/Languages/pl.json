@@ -55,5 +55,9 @@
   "LogSize": "Rozmiar",
   "Preview": "Podgląd",
   "Searching": "Trwa wyszukiwanie…",
-  "SearchResults": "Wyniki wyszukiwania"
+  "SearchResults": "Wyniki wyszukiwania",
+  "AllProgramsOrder": "Kolejność listy aplikacji",
+  "OrderFoldersFirst": "Najpierw foldery",
+  "OrderAppsFirst": "Najpierw aplikacje",
+  "OrderAlphabetical": "Alfabetycznie"
 }

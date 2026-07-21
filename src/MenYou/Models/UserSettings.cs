@@ -16,6 +16,21 @@ public enum AppTheme
     System
 }
 
+/// <summary>
+/// How each level of the "All" (All Programs) section orders its entries.
+/// </summary>
+/// <remarks>
+/// Discovery sorts folders and apps alphabetically among themselves; this
+/// decides how the two kinds interleave. Applied recursively — a folder's
+/// children follow the same rule.
+/// </remarks>
+public enum ProgramsOrder
+{
+    FoldersFirst,     // folders block, then apps block (the classic Start-menu shape)
+    AppsFirst,        // apps block, then folders block
+    PureAlphabetical  // one mixed alphabetical list, kind ignored
+}
+
 public sealed class UserSettings
 {
     // Windows 11 is the default look — it's the layout new users expect on a
@@ -25,6 +40,10 @@ public sealed class UserSettings
     // keep their saved value untouched.
     public MenuStyle MenuStyle { get; set; } = MenuStyle.Windows11;
     public AppTheme Theme { get; set; } = AppTheme.System;
+    /// Ordering of the "All" section (see <see cref="Models.ProgramsOrder"/>).
+    /// FoldersFirst matches the behavior every release so far hardcoded, so
+    /// legacy settings.json files (no key) keep their look.
+    public ProgramsOrder ProgramsOrder { get; set; } = ProgramsOrder.FoldersFirst;
     /// When true, the user-supplied <see cref="CustomThemeXaml"/> is
     /// parsed at runtime via AvaloniaRuntimeXamlLoader and the resulting
     /// control is mounted as a live preview inside Settings (same

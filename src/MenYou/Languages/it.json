@@ -55,5 +55,9 @@
   "Yes": "Sì",
   "No": "No",
   "ConfirmEmptyThemeTitle": "Applicare il tema personalizzato vuoto?",
-  "ConfirmEmptyThemeBody": "«Usa tema personalizzato» è attivo ma l'editor è vuoto, quindi il menu apparirà vuoto. Applicare comunque?"
+  "ConfirmEmptyThemeBody": "«Usa tema personalizzato» è attivo ma l'editor è vuoto, quindi il menu apparirà vuoto. Applicare comunque?",
+  "AllProgramsOrder": "Ordine dell'elenco delle app",
+  "OrderFoldersFirst": "Prima le cartelle",
+  "OrderAppsFirst": "Prima le app",
+  "OrderAlphabetical": "Alfabetico"
 }

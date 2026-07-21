@@ -55,5 +55,9 @@
   "Yes": "Sim",
   "No": "Não",
   "ConfirmEmptyThemeTitle": "Aplicar tema personalizado vazio?",
-  "ConfirmEmptyThemeBody": "«Usar tema personalizado» está ativado mas o editor está vazio, portanto o menu aparecerá em branco. Aplicar mesmo assim?"
+  "ConfirmEmptyThemeBody": "«Usar tema personalizado» está ativado mas o editor está vazio, portanto o menu aparecerá em branco. Aplicar mesmo assim?",
+  "AllProgramsOrder": "Ordem da lista de aplicações",
+  "OrderFoldersFirst": "Pastas primeiro",
+  "OrderAppsFirst": "Aplicações primeiro",
+  "OrderAlphabetical": "Alfabética"
 }

@@ -55,5 +55,9 @@
   "Yes": "Ja",
   "No": "Nein",
   "ConfirmEmptyThemeTitle": "Leeres eigenes Design anwenden?",
-  "ConfirmEmptyThemeBody": "„Eigenes Design verwenden“ ist aktiviert, aber der Editor ist leer, daher erscheint das Menü leer. Trotzdem anwenden?"
+  "ConfirmEmptyThemeBody": "„Eigenes Design verwenden“ ist aktiviert, aber der Editor ist leer, daher erscheint das Menü leer. Trotzdem anwenden?",
+  "AllProgramsOrder": "Sortierung der App-Liste",
+  "OrderFoldersFirst": "Ordner zuerst",
+  "OrderAppsFirst": "Apps zuerst",
+  "OrderAlphabetical": "Alphabetisch"
 }

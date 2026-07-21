@@ -171,6 +171,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
         return true;
     }
+    [ObservableProperty] private ProgramsOrder _programsOrder;
     [ObservableProperty] private bool _showRecent;
     [ObservableProperty] private bool _showPinned;
     [ObservableProperty] private bool _showSearch;
@@ -209,6 +210,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public IReadOnlyList<NamedOption<MenuStyle>> MenuStyles => NamedOptions.MenuStyles;
     public IReadOnlyList<NamedOption<AppTheme>> Themes => NamedOptions.Themes;
+    public IReadOnlyList<NamedOption<ProgramsOrder>> ProgramsOrders => NamedOptions.ProgramsOrders;
+
+    public NamedOption<ProgramsOrder> SelectedProgramsOrder
+    {
+        get => ProgramsOrders.First(o => o.Value == ProgramsOrder);
+        set => ProgramsOrder = value.Value;
+    }
+
+    partial void OnProgramsOrderChanged(ProgramsOrder value) =>
+        OnPropertyChanged(nameof(SelectedProgramsOrder));
 
     public NamedOption<MenuStyle> SelectedMenuStyle
     {
@@ -253,6 +264,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         var s = settings.Current;
         _menuStyle = s.MenuStyle;
         _theme = s.Theme;
+        _programsOrder = s.ProgramsOrder;
         _useSystemAccent = s.UseSystemAccent;
         // Surface a clean empty field if the persisted value isn't a real
         // hex color — covers fresh installs (no value), legacy non-hex
@@ -294,6 +306,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         var s = _settings.Current;
         s.MenuStyle = MenuStyle;
         s.Theme = Theme;
+        s.ProgramsOrder = ProgramsOrder;
         s.UseSystemAccent = UseSystemAccent;
         s.Accent = Accent;
         s.UseCustomTheme = UseCustomTheme;

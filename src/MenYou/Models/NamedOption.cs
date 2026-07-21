@@ -37,4 +37,12 @@ public static class NamedOptions
         new NamedOption<AppTheme>(AppTheme.Light,  Strings.Light,  null),
         new NamedOption<AppTheme>(AppTheme.System, Strings.System, Strings.FollowWindowsTheme),
     };
+
+    // FoldersFirst leads because it's the default (see UserSettings.ProgramsOrder).
+    public static IReadOnlyList<NamedOption<ProgramsOrder>> ProgramsOrders => new[]
+    {
+        new NamedOption<ProgramsOrder>(ProgramsOrder.FoldersFirst,     Strings.OrderFoldersFirst, null),
+        new NamedOption<ProgramsOrder>(ProgramsOrder.AppsFirst,        Strings.OrderAppsFirst,    null),
+        new NamedOption<ProgramsOrder>(ProgramsOrder.PureAlphabetical, Strings.OrderAlphabetical, null),
+    };
 }
