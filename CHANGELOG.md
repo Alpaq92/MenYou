@@ -8,6 +8,14 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.4](https://github.com/Alpaq92/MenYou/compare/v0.9.2...v0.9.4) (2026-07-21)
+
+
+### Features
+
+* **release:** ship a native Windows-on-ARM build ([#85](https://github.com/Alpaq92/MenYou/issues/85)) ([82eee16](https://github.com/Alpaq92/MenYou/commit/82eee16d57b280b9207197a2915e87c3ec99e9d0))
+* **update:** arch-aware installer selection with native-ARM migration ([82eee16](https://github.com/Alpaq92/MenYou/commit/82eee16d57b280b9207197a2915e87c3ec99e9d0))
+
 ## [0.9.2](https://github.com/Alpaq92/MenYou/compare/v0.9.1...v0.9.2) (2026-07-21)
 
 
