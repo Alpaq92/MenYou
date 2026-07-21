@@ -63,15 +63,32 @@
   -->
   <PropertyGroup>
     <BridgeDll>$(MSBuildThisFileDirectory)..\MenYou.Bridge\bin\$(Configuration)\MenYou.Bridge.dll</BridgeDll>
+    <!-- The bridge is x64-only MSVC; non-x64 publishes must not ship a dead
+         x64 DLL. The RID check lives in the TARGETS' conditions (below), not
+         in a property default here: a static property evaluates before the
+         SDK's RuntimeIdentifierInference targets assign the RID, so a
+         `dotnet publish - -self-contained` without -r (inferred RID, e.g. an
+         ARM64 SDK inferring win-arm64) would slip past a property-time
+         check. Target conditions evaluate at execution time, after
+         inference. CI still passes -p:SkipNativeBridge=true explicitly
+         (self-documenting); RID-less builds keep building the bridge. -->
   </PropertyGroup>
-  <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild">
+  <!-- SkipNativeBridge=true (the win-arm64 publish sets it) suppresses the
+       bridge build AND both copies: the vcxproj is x64-only MSVC, and
+       shipping an x64 DLL in an ARM64 package would just make
+       BridgeInjector fail at LoadLibrary — the app then uses its managed
+       hooks, same as when MSVC is absent. -->
+  <Target Name="BuildNativeBridge" BeforeTargets="BeforeBuild"
+          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64')">
     <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\tools\build-bridge.ps1&quot; -Configuration $(Configuration)" ContinueOnError="true" IgnoreExitCode="true" />
   </Target>
-  <Target Name="CopyNativeBridgeToOutput" AfterTargets="Build" Condition="Exists('$(BridgeDll)')">
+  <Target Name="CopyNativeBridgeToOutput" AfterTargets="Build"
+          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64') and Exists('$(BridgeDll)')">
     <Copy SourceFiles="$(BridgeDll)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <Message Importance="normal" Text="MenYou.Bridge: copied to $(OutDir)" />
   </Target>
-  <Target Name="CopyNativeBridgeToPublish" AfterTargets="Publish" Condition="Exists('$(BridgeDll)')">
+  <Target Name="CopyNativeBridgeToPublish" AfterTargets="Publish"
+          Condition="'$(SkipNativeBridge)' != 'true' and ('$(RuntimeIdentifier)' == '' or '$(RuntimeIdentifier)' == 'win-x64') and Exists('$(BridgeDll)')">
     <Copy SourceFiles="$(BridgeDll)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="MenYou.Bridge: copied to publish dir $(PublishDir)" />
   </Target>

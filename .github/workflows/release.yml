@@ -5,11 +5,12 @@
 # and on manual workflow_dispatch from the Actions UI.
 #
 # Stages:
-#   1. publish      — `dotnet publish` self-contained win-x64.
-#   2. pack         — Inno Setup (iscc) → dist\MenYou-Setup-<ver>.exe.
-#   3. release      — upload the installer to a fresh GitHub Release for the
+#   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64.
+#   2. pack         — Inno Setup (iscc), two installers: MenYou-Setup-<ver>.exe
+#                     (x64) and MenYou-arm64-Setup-<ver>.exe.
+#   3. release      — upload both installers to a fresh GitHub Release for the
 #                     tag, with a body carrying the unsigned-build note,
-#                     install instructions, the SHA-256, and a CHANGELOG link.
+#                     install instructions, both SHA-256s, and a CHANGELOG link.
 #   4. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
 #                     Chocolatey using each platform's official-ish
 #                     GitHub Action. Each is `continue-on-error: true`
@@ -112,6 +113,22 @@ jobs:
           -p:DebugType=embedded
           -o publish/win-x64
 
+      # Windows-on-ARM build. crossgen2 cross-compiles the R2R images for
+      # win-arm64 from the x64 runner, so the same flags apply. The native
+      # bridge is x64-only MSVC — SkipNativeBridge keeps the wrong-arch DLL
+      # out of the package; the app falls back to its managed hooks, same
+      # as a no-MSVC dev build.
+      - name: Publish (Release, win-arm64, self-contained)
+        run: >
+          dotnet publish src/MenYou/MenYou.csproj
+          -c Release -r win-arm64 --self-contained
+          -p:Version=${{ steps.resolve_version.outputs.version }}
+          -p:PublishSingleFile=false
+          -p:PublishReadyToRun=true
+          -p:DebugType=embedded
+          -p:SkipNativeBridge=true
+          -o publish/win-arm64
+
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup -y --no-progress
@@ -119,24 +136,47 @@ jobs:
       - name: Compile installer (Inno Setup)
         shell: pwsh
         run: |
-          # iscc emits dist\MenYou-Setup-<ver>.exe from the self-contained
-          # publish folder. Relative paths inside the .iss resolve against
-          # the script's own directory (installer\inno), so the publish
-          # folder is passed as an absolute path.
+          # Two iscc passes emit dist\MenYou-Setup-<ver>.exe (x64) and
+          # dist\MenYou-arm64-Setup-<ver>.exe. Relative paths inside the .iss
+          # resolve against the script's own directory (installer\inno), so
+          # the publish folder is passed as an absolute path.
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           & $iscc `
             "/DMyAppVersion=${{ steps.resolve_version.outputs.version }}" `
             "/DMyPublishDir=${{ github.workspace }}\publish\win-x64" `
             "installer\inno\menyou.iss"
-          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "ISCC (x64) failed with exit code $LASTEXITCODE" }
+          # ARM64 pass: /DMyArch=arm64 flips ArchitecturesAllowed and the
+          # output name (the x64 name is a frozen compat contract — see the
+          # naming-contract note in GitHubUpdateService.cs).
+          & $iscc `
+            "/DMyAppVersion=${{ steps.resolve_version.outputs.version }}" `
+            "/DMyPublishDir=${{ github.workspace }}\publish\win-arm64" `
+            "/DMyArch=arm64" `
+            "installer\inno\menyou.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC (arm64) failed with exit code $LASTEXITCODE" }
+          # Enforce the frozen-name contract INSIDE the build job: a drifted
+          # OutputBaseFilename must fail here, loudly. (upload-artifact's
+          # if-no-files-found:error only fires when NOTHING matches, so a
+          # partial upload would sail through it; gh-release's
+          # fail_on_unmatched_files is the final pre-ship gate.)
+          $v = "${{ steps.resolve_version.outputs.version }}"
+          foreach ($required in @("dist\MenYou-Setup-$v.exe", "dist\MenYou-arm64-Setup-$v.exe")) {
+            if (-not (Test-Path $required)) { throw "Naming contract violated: $required not produced (see GitHubUpdateService.cs)" }
+          }
           Get-ChildItem dist
 
       - name: Upload installer (canonical)
         uses: actions/upload-artifact@v7
         with:
           name: menyou-installer
+          # Exact names, not a glob (the x64 name is a compat contract — see
+          # GitHubUpdateService.cs). Note if-no-files-found:error only fires
+          # when NOTHING matches; the per-file enforcement lives in the ISCC
+          # step above and in gh-release's fail_on_unmatched_files.
           path: |
-            dist/MenYou-Setup-*.exe
+            dist/MenYou-Setup-${{ steps.resolve_version.outputs.version }}.exe
+            dist/MenYou-arm64-Setup-${{ steps.resolve_version.outputs.version }}.exe
           if-no-files-found: error
           overwrite: true
 
@@ -158,10 +198,9 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.build.outputs.version }}"
-          # Hash the installer we're about to attach so direct-download users
-          # can verify integrity (not a code signature — see the note below).
-          installer=$(ls dist/MenYou-Setup-*.exe | head -n1)
-          sha256=$(sha256sum "$installer" | awk '{print toupper($1)}')
+          # Hash every installer we're about to attach (x64 + arm64) so
+          # direct-download users can verify integrity (not a code
+          # signature — see the note below).
           {
             echo "## MenYou v$version"
             echo
@@ -178,15 +217,17 @@ jobs:
             echo "choco install menyou"
             echo "\`\`\`"
             echo
-            echo "Direct download: \`MenYou-Setup-${version}.exe\` below."
+            echo "Direct download below: \`MenYou-Setup-${version}.exe\` (x64) or \`MenYou-arm64-Setup-${version}.exe\` (Windows on ARM)."
             echo
             echo "**SHA-256** — verify your download is intact (an integrity check, *not* a code signature):"
             echo
             echo "\`\`\`"
-            echo "$sha256  MenYou-Setup-${version}.exe"
+            for f in dist/MenYou-*.exe; do
+              echo "$(sha256sum "$f" | awk '{print toupper($1)}')  $(basename "$f")"
+            done
             echo "\`\`\`"
             echo
-            echo "Verify in PowerShell: \`(Get-FileHash MenYou-Setup-${version}.exe -Algorithm SHA256).Hash\`"
+            echo "Verify in PowerShell: \`(Get-FileHash <installer>.exe -Algorithm SHA256).Hash\`"
             echo
             echo "### Changes"
             echo
@@ -200,16 +241,24 @@ jobs:
           tag_name: v${{ needs.build.outputs.version }}
           name: MenYou v${{ needs.build.outputs.version }}
           body_path: ${{ steps.body.outputs.path }}
+          # Exact names (not a glob) + fail_on_unmatched_files: a silent
+          # installer rename can never ship — see the naming-contract note
+          # in GitHubUpdateService.cs.
           files: |
-            dist/MenYou-Setup-*.exe
+            dist/MenYou-Setup-${{ needs.build.outputs.version }}.exe
+            dist/MenYou-arm64-Setup-${{ needs.build.outputs.version }}.exe
           draft: false
           prerelease: false
           fail_on_unmatched_files: true
 
   # ------------------------------------------------------------------------
   # Package-manager pushes. Each one is independent + continue-on-error so
-  # an outage on one channel doesn't gate the others. All three target the
-  # same Setup.exe asset that we just uploaded to the GH Release.
+  # an outage on one channel doesn't gate the others. winget carries BOTH
+  # architectures (its regex matches both installers and winget-releaser
+  # reads the arch out of each); Scoop and Chocolatey stay x64-only ON
+  # PURPOSE — the x64 installer is ArchitecturesAllowed=x64compatible, so it
+  # installs under emulation on ARM, and MenYou's own updater then pulls
+  # those users to the native arm64 build at the next release.
   # ------------------------------------------------------------------------
   publish_winget:
     name: Publish to winget
@@ -222,7 +271,9 @@ jobs:
         with:
           identifier: Alpaq.MenYou
           version: ${{ needs.build.outputs.version }}
-          installers-regex: '^MenYou-Setup-.*\.exe$'
+          # Both architectures — winget-releaser reads the arch out of each
+          # installer, so the manifest gets x64 + arm64 entries.
+          installers-regex: '^MenYou-(arm64-)?Setup-.*\.exe$'
           token: ${{ secrets.WINGET_PAT }}
 
   publish_scoop:
