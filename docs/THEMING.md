@@ -61,7 +61,7 @@ xmlns:behaviors="using:MenYou.Views.Behaviors"
 | `XamlStringToControlConverter` | Parses live XAML text into a control via `AvaloniaRuntimeXamlLoader`, rendering a friendly inline error instead of throwing. | Powers the Settings editor's live preview itself; reusable for any text-to-control surface. |
 | `ProgramsOrderConverter` | Re-orders a menu-item collection per a `ProgramsOrder` parameter (`FoldersFirst` / `AppsFirst` / `PureAlphabetical`). Returns a **live view** that re-sorts itself when a background refresh rebuilds the source in place. | Give your theme its own "All" ordering, independent of the user's Settings choice — see below. |
 
-> **Two layers control the "All" ordering — the user's, and yours.** The Settings → "All apps order" preference (*Folders first* default / *Apps first* / *Alphabetical*, the `ProgramsOrder` enum) is applied inside `ProgramsViewModel` when the tree is built, so binding `Programs.Items` plainly inherits the user's choice. A theme that wants its OWN ordering overrides it per-surface with `ProgramsOrderConverter`:
+> **Two layers control the "All" ordering — the user's, and yours.** The Settings → "All apps order" preference (*Alphabetical* default / *Folders first* / *Apps first*, the `ProgramsOrder` enum) is applied inside `ProgramsViewModel` when the tree is built, so binding `Programs.Items` plainly inherits the user's choice. A theme that wants its OWN ordering overrides it per-surface with `ProgramsOrderConverter`:
 >
 > ```xml
 > <ItemsControl ItemsSource="{Binding Programs.Items,

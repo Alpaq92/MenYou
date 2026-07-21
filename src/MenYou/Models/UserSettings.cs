@@ -41,9 +41,12 @@ public sealed class UserSettings
     public MenuStyle MenuStyle { get; set; } = MenuStyle.Windows11;
     public AppTheme Theme { get; set; } = AppTheme.System;
     /// Ordering of the "All" section (see <see cref="Models.ProgramsOrder"/>).
-    /// FoldersFirst matches the behavior every release so far hardcoded, so
-    /// legacy settings.json files (no key) keep their look.
-    public ProgramsOrder ProgramsOrder { get; set; } = ProgramsOrder.FoldersFirst;
+    /// PureAlphabetical is the default as of 0.9.5 — one mixed list, the way
+    /// Win 11's own "All apps" reads. NOTE: settings.json files saved before
+    /// the key existed (≤ 0.9.4) inherit this default too, so untouched
+    /// installs change from the old hardcoded folders-first look on update;
+    /// Settings → "All apps order" → "Folders first" restores it.
+    public ProgramsOrder ProgramsOrder { get; set; } = ProgramsOrder.PureAlphabetical;
     /// When true, the user-supplied <see cref="CustomThemeXaml"/> is
     /// parsed at runtime via AvaloniaRuntimeXamlLoader and the resulting
     /// control is mounted as a live preview inside Settings (same

@@ -28,7 +28,8 @@ namespace MenYou.Views.Converters;
 /// the folder item template (on <c>ChildItems</c>) to order nested levels.
 ///
 /// Parameter: a <see cref="ProgramsOrder"/> value or its string name
-/// (case-insensitive). Missing/unparsable falls back to FoldersFirst.
+/// (case-insensitive). Missing/unparsable falls back to PureAlphabetical
+/// (the app-wide default).
 /// Grouped modes keep each block's incoming relative order; PureAlphabetical
 /// sorts the whole level by DisplayName with the same culture-aware
 /// comparison discovery uses.
@@ -45,7 +46,7 @@ public sealed class ProgramsOrderConverter : IValueConverter
         {
             ProgramsOrder o => o,
             string s when Enum.TryParse<ProgramsOrder>(s, ignoreCase: true, out var parsed) => parsed,
-            _ => ProgramsOrder.FoldersFirst,
+            _ => ProgramsOrder.PureAlphabetical, // app-wide default; see UserSettings
         };
 
         // Live view when the source notifies (the VM's ObservableCollections
