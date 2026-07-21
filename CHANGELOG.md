@@ -8,6 +8,25 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.2](https://github.com/Alpaq92/MenYou/compare/v0.9.1...v0.9.2) (2026-07-21)
+
+
+### Features
+
+* **programs:** configurable "All" ordering + parallel icon fill + theme toolbox ([#83](https://github.com/Alpaq92/MenYou/issues/83)) ([ff53e6c](https://github.com/Alpaq92/MenYou/commit/ff53e6c6670fa0636e5eca32b4f29019a8ac9aa1))
+* **programs:** configurable ordering of the "All" section ([ff53e6c](https://github.com/Alpaq92/MenYou/commit/ff53e6c6670fa0636e5eca32b4f29019a8ac9aa1))
+* **win11:** rounder search box aligned with the window chrome ([ff53e6c](https://github.com/Alpaq92/MenYou/commit/ff53e6c6670fa0636e5eca32b4f29019a8ac9aa1))
+
+
+### Bug Fixes
+
+* **startup:** parallelize the cold-start icon fill ([ff53e6c](https://github.com/Alpaq92/MenYou/commit/ff53e6c6670fa0636e5eca32b4f29019a8ac9aa1))
+
+
+### Documentation
+
+* OPTIMIZATION.md gains the data-paint era (the 0.8.7 SWR ([ff53e6c](https://github.com/Alpaq92/MenYou/commit/ff53e6c6670fa0636e5eca32b4f29019a8ac9aa1))
+
 ## [0.9.1](https://github.com/Alpaq92/MenYou/compare/v0.9.0...v0.9.1) (2026-07-20)
 
 
