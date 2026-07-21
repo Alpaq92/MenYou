@@ -8,6 +8,19 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.5](https://github.com/Alpaq92/MenYou/compare/v0.9.4...v0.9.5) (2026-07-21)
+
+
+### Features
+
+* **programs:** default the "All" section to alphabetical order ([#87](https://github.com/Alpaq92/MenYou/issues/87)) ([69c9f71](https://github.com/Alpaq92/MenYou/commit/69c9f71586d01b88c8467886a166a29418f31cf8))
+* **release:** ship the native arm64 installer through Scoop ([69c9f71](https://github.com/Alpaq92/MenYou/commit/69c9f71586d01b88c8467886a166a29418f31cf8))
+
+
+### Build
+
+* **bridge:** ARM64 bridge build infrastructure, shipped disabled ([69c9f71](https://github.com/Alpaq92/MenYou/commit/69c9f71586d01b88c8467886a166a29418f31cf8))
+
 ## [0.9.4](https://github.com/Alpaq92/MenYou/compare/v0.9.2...v0.9.4) (2026-07-21)
 
 
