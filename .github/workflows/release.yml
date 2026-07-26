@@ -11,27 +11,23 @@
 #   3. release      — upload both installers to a fresh GitHub Release for the
 #                     tag, with a body carrying the unsigned-build note,
 #                     install instructions, both SHA-256s, and a CHANGELOG link.
-#   4. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
-#                     Chocolatey using each platform's official-ish
-#                     GitHub Action. Each is `continue-on-error: true`
-#                     so a flake on one channel doesn't gate the others.
+#   4. publish-pkg  — fire-and-forget pushes to winget and Chocolatey
+#                     using each platform's official-ish GitHub Action.
+#                     Each is `continue-on-error: true` so a flake on one
+#                     channel doesn't gate the others. (Scoop was retired.)
 #
 # Builds are NOT Authenticode-signed — no free signing path clears Windows
 # SmartScreen for an app like this, so MenYou ships unsigned and publishes the
 # installer SHA-256 for integrity instead.
 #
 # Secrets (set under Repo Settings → Secrets → Actions) — all optional. The
-# package-publish jobs are continue-on-error, and the Scoop / Chocolatey jobs
-# short-circuit cleanly when their secret is absent, so a missing secret skips
+# package-publish jobs are continue-on-error, and the Chocolatey job
+# short-circuits cleanly when its secret is absent, so a missing secret skips
 # only that channel and never gates the release:
 #
 #   WINGET_PAT     — GitHub PAT with public_repo scope for the winget
 #                    submission (winget-releaser opens a PR against the
 #                    microsoft/winget-pkgs fork it manages).
-#
-#   SCOOP_PAT      — GitHub PAT for committing manifest updates back to
-#                    the (separate) scoop bucket repo. Without it the
-#                    scoop step is skipped.
 #
 #   CHOCO_API_KEY  — Chocolatey community feed API key. Without it the
 #                    Chocolatey step is skipped.
@@ -218,8 +214,6 @@ jobs:
             echo "\`\`\`pwsh"
             echo "winget install Alpaq.MenYou"
             echo "# or"
-            echo "scoop install menyou"
-            echo "# or"
             echo "choco install menyou"
             echo "\`\`\`"
             echo
@@ -259,14 +253,14 @@ jobs:
 
   # ------------------------------------------------------------------------
   # Package-manager pushes. Each one is independent + continue-on-error so
-  # an outage on one channel doesn't gate the others. winget and Scoop carry
-  # BOTH architectures (winget-releaser reads the arch out of each installer
-  # its regex matches; the Scoop manifest has 64bit + arm64 blocks).
-  # Chocolatey stays x64-only ON PURPOSE — its arm64 support is immature and
-  # x64-under-emulation is the ecosystem norm there. The x64 installer is
-  # ArchitecturesAllowed=x64compatible, so it installs under emulation on
-  # ARM, and MenYou's own updater then pulls those users to the native
-  # arm64 build at the next release.
+  # an outage on one channel doesn't gate the others. winget carries BOTH
+  # architectures (winget-releaser reads the arch out of each installer its
+  # regex matches). Chocolatey stays x64-only ON PURPOSE — its arm64 support
+  # is immature and x64-under-emulation is the ecosystem norm there; the x64
+  # installer is ArchitecturesAllowed=x64compatible, so it installs under
+  # emulation on ARM and MenYou's own updater then pulls those users to the
+  # native arm64 build at the next release. (Scoop was retired — its bucket
+  # repo was deleted; re-add a publish_scoop job if the bucket comes back.)
   # ------------------------------------------------------------------------
   publish_winget:
     name: Publish to winget
@@ -283,84 +277,6 @@ jobs:
           # installer, so the manifest gets x64 + arm64 entries.
           installers-regex: '^MenYou-(arm64-)?Setup-.*\.exe$'
           token: ${{ secrets.WINGET_PAT }}
-
-  publish_scoop:
-    name: Publish to Scoop
-    needs: [build, github_release]
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    # secrets.* can't be referenced in job-level `if`. We check at step
-    # level: if SCOOP_PAT is empty the steps short-circuit, the job
-    # finishes green, and continue-on-error keeps the rest of the
-    # workflow moving even if something does fail.
-    env:
-      SCOOP_PAT: ${{ secrets.SCOOP_PAT }}
-    steps:
-      - name: Skip if SCOOP_PAT missing
-        id: gate
-        shell: bash
-        run: |
-          if [ -z "$SCOOP_PAT" ]; then
-            echo "SCOOP_PAT not set — skipping Scoop publish."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Checkout MenYou (for manifest template)
-        if: steps.gate.outputs.skip != 'true'
-        uses: actions/checkout@v7
-
-      - name: Compute installer hashes
-        id: hash
-        if: steps.gate.outputs.skip != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${{ needs.build.outputs.version }}"
-          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${version}"
-          url="${base}/MenYou-Setup-${version}.exe"
-          arm64_url="${base}/MenYou-arm64-Setup-${version}.exe"
-          curl -fL -o setup.exe "$url"
-          curl -fL -o setup-arm64.exe "$arm64_url"
-          hash=$(sha256sum setup.exe | awk '{print toupper($1)}')
-          arm64_hash=$(sha256sum setup-arm64.exe | awk '{print toupper($1)}')
-          echo "hash=$hash"             >> "$GITHUB_OUTPUT"
-          echo "url=$url"               >> "$GITHUB_OUTPUT"
-          echo "arm64_hash=$arm64_hash" >> "$GITHUB_OUTPUT"
-          echo "arm64_url=$arm64_url"   >> "$GITHUB_OUTPUT"
-          echo "version=$version"       >> "$GITHUB_OUTPUT"
-
-      - name: Render manifest
-        if: steps.gate.outputs.skip != 'true'
-        shell: bash
-        run: |
-          mkdir -p out
-          sed \
-            -e "s|@@VERSION@@|${{ steps.hash.outputs.version }}|g" \
-            -e "s|@@URL@@|${{ steps.hash.outputs.url }}|g" \
-            -e "s|@@HASH@@|${{ steps.hash.outputs.hash }}|g" \
-            -e "s|@@ARM64_URL@@|${{ steps.hash.outputs.arm64_url }}|g" \
-            -e "s|@@ARM64_HASH@@|${{ steps.hash.outputs.arm64_hash }}|g" \
-            installer/scoop/menyou.json.template > out/menyou.json
-          cat out/menyou.json
-
-      # The Scoop bucket lives in a separate repo (e.g. Alpaq92/scoop-menyou).
-      # The PAT pushes the rendered manifest into that bucket's `bucket/`
-      # folder so `scoop install menyou` picks up the new version.
-      - name: Push manifest to Scoop bucket repo
-        if: steps.gate.outputs.skip != 'true'
-        uses: dmnemec/copy_file_to_another_repo_action@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.SCOOP_PAT }}
-        with:
-          source_file: out/menyou.json
-          destination_repo: Alpaq92/scoop-menyou
-          destination_folder: bucket
-          user_email: bot@menyou.app
-          user_name: menyou-release-bot
-          commit_message: |
-            menyou ${{ steps.hash.outputs.version }}
 
   publish_chocolatey:
     name: Publish to Chocolatey

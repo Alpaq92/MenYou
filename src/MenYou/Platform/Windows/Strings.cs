@@ -84,6 +84,11 @@ public static class Strings
     // phrasing — no shell DLL carries these as standalone strings, so they
     // are JSON-only.
     public static string AllProgramsOrder        => Resolve("AllProgramsOrder");
+    // Window-border style picker (Settings → Appearance). MenYou-specific,
+    // JSON-only.
+    public static string WindowBorderLabel       => Resolve("WindowBorderLabel");
+    public static string WindowBorderWin11       => Resolve("WindowBorderWin11");
+    public static string WindowBorderHairline    => Resolve("WindowBorderHairline");
     public static string OrderFoldersFirst       => Resolve("OrderFoldersFirst");
     public static string OrderAppsFirst          => Resolve("OrderAppsFirst");
     public static string OrderAlphabetical       => Resolve("OrderAlphabetical");

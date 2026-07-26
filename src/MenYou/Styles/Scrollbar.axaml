@@ -12,13 +12,16 @@
         Fluent chrome (corner separators, etc.) doesn't fight the slim
         bar.
 
-        Interaction model:
-        - At rest: ScrollBar.AllowAutoHide = False → thin 3 px thumb is
-          permanently visible.
+        Interaction model (Win 11-style overlay — hidden until you're over
+        the scroll area):
+        - At rest: the thumb is fully transparent (Opacity 0), so nothing
+          shows over uniform content. (ScrollBar.AllowAutoHide stays False;
+          it's used purely as the pointer-over state flag below, not for the
+          framework's own fade.)
         - On hover of the parent ScrollViewer: the global selector flips
-          AllowAutoHide = True, which triggers the
-          [AllowAutoHide=True] thumb selector below to grow to 8 px and
-          swap to the hover brush.
+          AllowAutoHide = True, which triggers the [AllowAutoHide=True] thumb
+          selector below to fade in (Opacity 1), grow to 8 px, and swap to
+          the hover brush. Moving off the area fades it back out.
 
         Side-menu (.Stack) variants from the upstream file were dropped
         — they depend on SukiUI's internal converters which we don't
@@ -56,14 +59,16 @@
                                     <ControlTemplate>
                                         <Panel>
                                             <Border Name="ThumbBarVertical"
-                                                    Width="3"
+                                                    Width="5"
                                                     Margin="0,3"
+                                                    Opacity="0"
                                                     Background="{DynamicResource ScrollBarThumbRestBrush}"
                                                     CornerRadius="{DynamicResource ScrollBarThumbCornerRadius}">
                                                 <Border.Transitions>
                                                     <Transitions>
                                                         <BrushTransition Property="Background" Duration="0:0:0.15" />
                                                         <DoubleTransition Property="Width" Duration="0:0:0.1" />
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
                                                     </Transitions>
                                                 </Border.Transitions>
                                             </Border>
@@ -107,14 +112,16 @@
                                     <ControlTemplate>
                                         <Panel>
                                             <Border Name="ThumbBarHorizontal"
-                                                    Height="3"
+                                                    Height="5"
                                                     Margin="3,0"
+                                                    Opacity="0"
                                                     Background="{DynamicResource ScrollBarThumbRestBrush}"
                                                     CornerRadius="10">
                                                 <Border.Transitions>
                                                     <Transitions>
                                                         <BrushTransition Property="Background" Duration="0:0:0.15" />
                                                         <DoubleTransition Property="Height" Duration="0:0:0.1" />
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
                                                     </Transitions>
                                                 </Border.Transitions>
                                             </Border>
@@ -134,13 +141,15 @@
     </Style>
 
     <Style Selector="ScrollBar[AllowAutoHide=True] Border#ThumbBarVertical">
+        <Setter Property="Opacity" Value="1" />
         <Setter Property="Background" Value="{DynamicResource ScrollBarThumbHoverBrush}" />
-        <Setter Property="Width" Value="8" />
+        <Setter Property="Width" Value="5" />
     </Style>
 
     <Style Selector="ScrollBar[AllowAutoHide=True] Border#ThumbBarHorizontal">
+        <Setter Property="Opacity" Value="1" />
         <Setter Property="Background" Value="{DynamicResource ScrollBarThumbHoverBrush}" />
-        <Setter Property="Height" Value="8" />
+        <Setter Property="Height" Value="5" />
     </Style>
 
     <Style Selector="ScrollViewer">

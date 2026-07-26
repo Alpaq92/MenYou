@@ -5,6 +5,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using MenYou.Models;
 using MenYou.Platform.Windows;
 using MenYou.Services;
 using MenYou.ViewModels;
@@ -126,7 +127,7 @@ public partial class StartMenuWindow : Window
                     // hides the window; don't resurrect it.
                     if (!IsVisible) { _revealing = false; return; }
                     PositionAtTaskbar();
-                    ApplyDwmRoundedCorners();
+                    ApplyDwmWindowChrome();
                     ForceForeground();
                     FindFirstSearchBox()?.Focus();
                     Opacity = 1;
@@ -151,23 +152,73 @@ public partial class StartMenuWindow : Window
         }, DispatcherPriority.Loaded);
     }
 
-    /// Ask DWM to round the window itself (Win 11 22H2+). The inner Border's
-    /// CornerRadius still draws our content rounded; this rounds the actual
-    /// window rect so the transparent-window fallback doesn't leak square
-    /// corners when AcrylicBlur isn't honored by the compositor.
-    private void ApplyDwmRoundedCorners()
+    /// Give the menu the full Win 11 window treatment via DWM (22H2+): rounded
+    /// corners, the system border color, and — the piece that makes it read as
+    /// a floating window like File Explorer rather than a flat panel — the
+    /// native drop shadow. A borderless (WindowDecorations=None → WS_POPUP)
+    /// window gets no shadow by default; DwmExtendFrameIntoClientArea with a
+    /// hairline bottom margin makes DWM treat it as framed and draw the shadow,
+    /// with no visible glass (our opaque content covers the client area). The
+    /// inner Border's CornerRadius still clips content to the rounded shape;
+    /// this rounds the actual window rect to match. Custom themes opt out (they
+    /// own their edge, and many are square) — same contract as the corner /
+    /// border-thickness converters.
+    private void ApplyDwmWindowChrome()
     {
         var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (hwnd == IntPtr.Zero) return;
-        int pref = DWMWCP_ROUND;
+
+        var vm = DataContext as StartMenuViewModel;
+        var custom = vm?.UseCustomTheme == true;
+        // Read the edge preference live so switching it in Settings takes
+        // effect on the next open (chrome is re-applied every ShowMenu).
+        var style = App.Services.GetRequiredService<ISettingsService>().Current.WindowBorder;
+        // Windows11 mode adds the native drop shadow (float); both built-in
+        // modes draw the visible theme hairline below. Custom themes own
+        // their edge (often square) — no hairline, no shadow.
+        var win11 = !custom && style == WindowBorder.Windows11;
+
+        // Corners: round for every built-in edge style; square for custom.
+        int pref = custom ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
         _ = DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
+
+        // Leave the DWM system border OFF: DWMWA_BORDER_COLOR=DEFAULT proved too
+        // faint to read on the dark menu ("I don't see the border"). We draw our
+        // own visible MenuBorderBrush hairline (RootBorder, below) in both
+        // built-in modes instead.
+        int border = unchecked((int)DWMWA_COLOR_NONE);
+        _ = DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
+
+        // Native drop shadow (Windows11 mode only). A 1 px bottom margin makes
+        // DWM treat this borderless window as framed and draw the shadow, with
+        // no glass showing (our opaque content covers the sliver); 0 margins
+        // removes it again for the Hairline / custom flat look.
+        var margins = win11 ? new MARGINS { cyBottomHeight = 1 } : default;
+        _ = DwmExtendFrameIntoClientArea(hwnd, ref margins);
+
+        // Visible 1 px theme hairline for both built-in edge modes (the actual
+        // border you see); custom themes own their edge, so 0 there.
+        RootBorder.BorderThickness = new Thickness(custom ? 0 : 1);
     }
 
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+    private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWCP_ROUND = 2;
+    private const int DWMWCP_DONOTROUND = 1;
+    private const uint DWMWA_COLOR_DEFAULT = 0xFFFFFFFF;
+    private const uint DWMWA_COLOR_NONE = 0xFFFFFFFE;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MARGINS
+    {
+        public int cxLeftWidth, cxRightWidth, cyTopHeight, cyBottomHeight;
+    }
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
 
     public void HideMenu()
     {

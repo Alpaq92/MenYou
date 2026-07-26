@@ -190,6 +190,22 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- Window edge: native Win 11 border + shadow, or a flat
+                     in-app hairline. Applied in StartMenuWindow via DWM. -->
+                <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.WindowBorderLabel}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <ComboBox Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
+                              ItemsSource="{Binding WindowBorders}"
+                              SelectedItem="{Binding SelectedWindowBorder, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </Grid>
+
                 <Separator />
 
                 <!-- Layout controls follow Appearance under the same

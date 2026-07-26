@@ -172,6 +172,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         return true;
     }
     [ObservableProperty] private ProgramsOrder _programsOrder;
+    [ObservableProperty] private WindowBorder _windowBorder;
     [ObservableProperty] private bool _showRecent;
     [ObservableProperty] private bool _showPinned;
     [ObservableProperty] private bool _showSearch;
@@ -221,6 +222,17 @@ public sealed partial class SettingsViewModel : ViewModelBase
     partial void OnProgramsOrderChanged(ProgramsOrder value) =>
         OnPropertyChanged(nameof(SelectedProgramsOrder));
 
+    public IReadOnlyList<NamedOption<WindowBorder>> WindowBorders => NamedOptions.WindowBorders;
+
+    public NamedOption<WindowBorder> SelectedWindowBorder
+    {
+        get => WindowBorders.First(o => o.Value == WindowBorder);
+        set => WindowBorder = value.Value;
+    }
+
+    partial void OnWindowBorderChanged(WindowBorder value) =>
+        OnPropertyChanged(nameof(SelectedWindowBorder));
+
     public NamedOption<MenuStyle> SelectedMenuStyle
     {
         get => MenuStyles.First(o => o.Value == MenuStyle);
@@ -265,6 +277,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _menuStyle = s.MenuStyle;
         _theme = s.Theme;
         _programsOrder = s.ProgramsOrder;
+        _windowBorder = s.WindowBorder;
         _useSystemAccent = s.UseSystemAccent;
         // Surface a clean empty field if the persisted value isn't a real
         // hex color — covers fresh installs (no value), legacy non-hex
@@ -307,6 +320,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         s.MenuStyle = MenuStyle;
         s.Theme = Theme;
         s.ProgramsOrder = ProgramsOrder;
+        s.WindowBorder = WindowBorder;
         s.UseSystemAccent = UseSystemAccent;
         s.Accent = Accent;
         s.UseCustomTheme = UseCustomTheme;

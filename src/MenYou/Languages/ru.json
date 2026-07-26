@@ -59,5 +59,8 @@
   "AllProgramsOrder": "Порядок списка приложений",
   "OrderFoldersFirst": "Сначала папки",
   "OrderAppsFirst": "Сначала приложения",
-  "OrderAlphabetical": "По алфавиту"
+  "OrderAlphabetical": "По алфавиту",
+  "WindowBorderLabel": "Граница окна",
+  "WindowBorderWin11": "Windows 11 (граница + тень)",
+  "WindowBorderHairline": "Тонкая линия"
 }

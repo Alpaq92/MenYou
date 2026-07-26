@@ -36,8 +36,16 @@
         <c:EnumEqualsConverter x:Key="EnumEquals" />
     </Window.Resources>
 
-    <Border CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
+    <!-- Edge treatment is applied per the WindowBorder setting in
+         ApplyDwmWindowChrome (code-behind): Windows11 mode leaves this
+         thickness 0 and lets DWM draw the system border + shadow;
+         Hairline mode sets thickness to 1 so this theme-aware
+         MenuBorderBrush line shows instead. BorderBrush is always bound
+         (harmless at thickness 0). -->
+    <Border x:Name="RootBorder"
+            CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
             BorderThickness="0"
+            BorderBrush="{DynamicResource MenuBorderBrush}"
             Background="{DynamicResource MenuBackgroundBrush}"
             ClipToBounds="True">
         <!-- Nested rounded Border acts as the real clip mask. Without

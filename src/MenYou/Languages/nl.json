@@ -59,5 +59,8 @@
   "AllProgramsOrder": "Volgorde van de app-lijst",
   "OrderFoldersFirst": "Mappen eerst",
   "OrderAppsFirst": "Apps eerst",
-  "OrderAlphabetical": "Alfabetisch"
+  "OrderAlphabetical": "Alfabetisch",
+  "WindowBorderLabel": "Vensterrand",
+  "WindowBorderWin11": "Windows 11 (rand + schaduw)",
+  "WindowBorderHairline": "Haarlijn"
 }

@@ -17,6 +17,20 @@ public enum AppTheme
 }
 
 /// <summary>
+/// How the menu window draws its edge against the desktop.
+public enum WindowBorder
+{
+    /// A visible 1 px theme hairline plus the native DWM drop shadow, so the
+    /// menu floats like File Explorer. (The shadow is drawn by the compositor
+    /// outside the window rect, so it costs nothing in layout/positioning; the
+    /// DWM system-border color was too faint on the dark menu, hence the
+    /// explicit hairline.)
+    Windows11,
+    /// The same visible 1 px theme hairline, but no shadow — a flatter look
+    /// for those who don't want the floating drop shadow.
+    Hairline,
+}
+
 /// How each level of the "All" (All Programs) section orders its entries.
 /// </summary>
 /// <remarks>
@@ -40,6 +54,11 @@ public sealed class UserSettings
     // keep their saved value untouched.
     public MenuStyle MenuStyle { get; set; } = MenuStyle.Windows11;
     public AppTheme Theme { get; set; } = AppTheme.System;
+    /// Menu-window edge treatment (see <see cref="Models.WindowBorder"/>).
+    /// Defaults to the native Win 11 border + shadow — releases through 0.9.5
+    /// had no border at all, so untouched installs gain the floating look on
+    /// update; switch to Hairline in Settings for the flat in-app line.
+    public WindowBorder WindowBorder { get; set; } = WindowBorder.Windows11;
     /// Ordering of the "All" section (see <see cref="Models.ProgramsOrder"/>).
     /// PureAlphabetical is the default as of 0.9.5 — one mixed list, the way
     /// Win 11's own "All apps" reads. NOTE: settings.json files saved before

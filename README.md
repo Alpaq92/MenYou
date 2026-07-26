@@ -39,7 +39,6 @@ This started with a debloated Windows 11 ([Tiny11](https://github.com/ntdevlabs/
 | Channel | Command |
 |---|---|
 | **GitHub Releases** | [Latest release](https://github.com/Alpaq92/MenYou/releases/latest) — download `MenYou-Setup-<version>.exe` |
-| **Scoop** | `scoop bucket add menyou https://github.com/Alpaq92/scoop-menyou`<br>`scoop install menyou` |
 | **winget** | _coming soon_ |
 | **Chocolatey** | _coming soon_ |
 

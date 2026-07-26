@@ -59,5 +59,8 @@
   "AllProgramsOrder": "アプリ一覧の並び順",
   "OrderFoldersFirst": "フォルダーを先に",
   "OrderAppsFirst": "アプリを先に",
-  "OrderAlphabetical": "名前順"
+  "OrderAlphabetical": "名前順",
+  "WindowBorderLabel": "ウィンドウの境界線",
+  "WindowBorderWin11": "Windows 11（境界線 + 影）",
+  "WindowBorderHairline": "細線"
 }
