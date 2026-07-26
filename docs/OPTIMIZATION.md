@@ -91,6 +91,25 @@ MenYou ships **unsigned, self-contained** (.NET runtime bundled). On a fresh ins
 - **No PDBs in the installer.** The native SkiaSharp + HarfBuzz symbol files (`libSkiaSharp.pdb` ~80 MB, `libHarfBuzzSharp.pdb` ~20 MB) are ~100 MB / ~44 % of the publish output yet never loaded at runtime. Excluding them (`Excludes: "*.pdb"` in the Inno script) drops the installed footprint to ~52 MB and removes 100 MB from Defender's first-run scan. MenYou's own symbols are embedded (`DebugType=embedded`), so no managed debugging is lost.
 - The cold first-run cost that remains (~10 s, one-time, as Defender scans the fresh DLLs the first time) is a perception problem, handled in §5.
 
+### Two publish variants: self-contained vs framework-dependent
+
+The self-contained payload's cold **runtime page-in** — the OS faulting the bundled CoreCLR + framework DLLs into memory the first time they're touched — is a large share of what a cold start pays before MenYou's own code runs. The lever is simply *shipping fewer bytes of runtime*, which `PublishTrimmed` can't safely do here (it breaks the JSON-reflection and runtime-XAML paths — see Rejected). So MenYou now ships **two** x64 installers off the same code, and the user picks the trade-off:
+
+| Variant | Publish | Installed | DLLs | Prerequisite |
+|---|---|---|---|---|
+| **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~134 MB | ~230 | none (runtime bundled) |
+| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~50 MB | ~41 | .NET 10 Desktop Runtime |
+
+Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload and, with it, the cold page-in. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
+
+Choices that keep this from becoming a footgun:
+
+- **SC stays the default and the only package-manager channel.** Zero prerequisites, so a Scoop/winget/Chocolatey install can never land a runtime-less machine on a non-launching app. FD is **direct-download only** for v1.
+- **The FD installer refuses to install without the runtime.** Its Inno `[Code]` `PrepareToInstall` checks for a 10.x .NET runtime — `dotnet --list-runtimes` first, then the `HKLM\SOFTWARE\dotnet\Setup\InstalledVersions` registry as a fallback — and aborts with a localized message + the [download link](https://dotnet.microsoft.com/download/dotnet/10.0) rather than laying down a broken app. Detection accepts either `Microsoft.NETCore.App` **or** `Microsoft.WindowsDesktop.App` at 10.x: MenYou's `runtimeconfig` actually binds to the **base** runtime (`net10.0-windows` with `UseWPF`/`UseWindowsForms` off ⇒ no WindowsDesktop framework reference), and the Desktop Runtime is a superset that always brings the base one — so accepting either is correct, while checking only WindowsDesktop would wrongly block a base-runtime-only machine.
+- **Updates stay on-variant.** The in-app updater detects which variant is installed by the presence of `coreclr.dll` beside `MenYou.exe` (SC has it, FD doesn't) and picks the matching release asset, so an FD install updates to FD and an SC install to SC — the runtime model never silently flips under a user. Both installers share the same Inno `AppId`, so this is one product with two payloads, not two parallel installs.
+
+**No bundled bootstrapper (v1).** The FD installer links the runtime download but doesn't silently fetch/install it — that's a deliberate v1 scope line (chaining the Microsoft runtime installer, elevation, and offline handling is a separate piece of work).
+
 ---
 
 ## 4. In-process startup & first open
