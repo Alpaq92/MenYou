@@ -6,22 +6,30 @@
         gray "TrackRect" when the bar enters its expanded state on
         pointer-over, and the theme keys that control it are hard to
         override cleanly. SukiUI sidesteps that by replacing the entire
-        ScrollBar ControlTemplate with a 3 px Border thumb that grows to
-        8 px when the parent ScrollViewer is pointer-over. The
+        ScrollBar ControlTemplate with a slim Border thumb. The
         ScrollViewer template is also overridden so the surrounding
         Fluent chrome (corner separators, etc.) doesn't fight the slim
         bar.
 
-        Interaction model (Win 11-style overlay — hidden until you're over
-        the scroll area):
-        - At rest: the thumb is fully transparent (Opacity 0), so nothing
-          shows over uniform content. (ScrollBar.AllowAutoHide stays False;
-          it's used purely as the pointer-over state flag below, not for the
-          framework's own fade.)
-        - On hover of the parent ScrollViewer: the global selector flips
-          AllowAutoHide = True, which triggers the [AllowAutoHide=True] thumb
-          selector below to fade in (Opacity 1), grow to 8 px, and swap to
-          the hover brush. Moving off the area fades it back out.
+        Interaction model (slim, focus-driven — the thumb stays a constant
+        5 px and never grows):
+        - Focused: the thumb is visible (Opacity 1) at its slim 5 px width
+          whenever the scroll area can scroll — always there while you're
+          using the menu, so you can see and grab it without hunting.
+        - Pointer over the scroll area: the thumb only BRIGHTENS to the
+          hover brush. AllowAutoHide is used purely as that pointer-over
+          state flag (set precisely via /template/ so a hovered OUTER
+          ScrollViewer doesn't brighten a nested inner one); it stays False
+          otherwise, so the framework's own auto-hide fade never runs. Width
+          is unchanged.
+        - Host window not focused: StartMenuWindow toggles the
+          "window-unfocused" class (code-behind OnActivated / OnDeactivated),
+          and the Window.window-unfocused rules below fade the thumb out
+          (Opacity 0). Those rules are intentionally LAST — Avalonia style
+          precedence is order-based, so a later Opacity=0 wins over the
+          default Opacity=1 while the window is inactive. Other windows
+          (Settings) never set the class, so their slim bar is simply always
+          visible.
 
         Side-menu (.Stack) variants from the upstream file were dropped
         — they depend on SukiUI's internal converters which we don't
@@ -61,7 +69,7 @@
                                             <Border Name="ThumbBarVertical"
                                                     Width="5"
                                                     Margin="0,3"
-                                                    Opacity="0"
+                                                    Opacity="1"
                                                     Background="{DynamicResource ScrollBarThumbRestBrush}"
                                                     CornerRadius="{DynamicResource ScrollBarThumbCornerRadius}">
                                                 <Border.Transitions>
@@ -114,7 +122,7 @@
                                             <Border Name="ThumbBarHorizontal"
                                                     Height="5"
                                                     Margin="3,0"
-                                                    Opacity="0"
+                                                    Opacity="1"
                                                     Background="{DynamicResource ScrollBarThumbRestBrush}"
                                                     CornerRadius="10">
                                                 <Border.Transitions>
@@ -136,20 +144,37 @@
         </Setter>
     </Style>
 
+    <!-- Pointer-over BRIGHTEN only (slim 5 px width unchanged). /template/ sets
+         the flag on the ScrollViewer's OWN bar precisely (one hop), so a hovered
+         outer ScrollViewer doesn't also brighten a nested inner one. -->
     <Style Selector="ScrollViewer:pointerover /template/ ScrollBar">
         <Setter Property="AllowAutoHide" Value="True" />
     </Style>
 
     <Style Selector="ScrollBar[AllowAutoHide=True] Border#ThumbBarVertical">
-        <Setter Property="Opacity" Value="1" />
         <Setter Property="Background" Value="{DynamicResource ScrollBarThumbHoverBrush}" />
-        <Setter Property="Width" Value="5" />
     </Style>
 
     <Style Selector="ScrollBar[AllowAutoHide=True] Border#ThumbBarHorizontal">
-        <Setter Property="Opacity" Value="1" />
         <Setter Property="Background" Value="{DynamicResource ScrollBarThumbHoverBrush}" />
-        <Setter Property="Height" Value="5" />
+    </Style>
+
+    <!-- Hidden while the host window isn't focused (StartMenuWindow toggles the
+         "window-unfocused" class in OnActivated / OnDeactivated). MUST stay after
+         the rules above: Avalonia style precedence is order-based, so this later
+         Opacity=0 overrides the default Opacity=1 while the window is inactive.
+         Reuses the thumb's Opacity DoubleTransition for a smooth fade. Only
+         StartMenuWindow sets the class; other windows keep the slim bar visible. -->
+    <!-- :is(Window) — NOT bare "Window": a bare type name is an exact-type
+         (OfType) selector, and the live control is the subclass StartMenuWindow,
+         so "Window" would never match and the hide would silently never fire.
+         :is(Window) matches Window and its subclasses. -->
+    <Style Selector=":is(Window).window-unfocused Border#ThumbBarVertical">
+        <Setter Property="Opacity" Value="0" />
+    </Style>
+
+    <Style Selector=":is(Window).window-unfocused Border#ThumbBarHorizontal">
+        <Setter Property="Opacity" Value="0" />
     </Style>
 
     <Style Selector="ScrollViewer">
@@ -157,10 +182,12 @@
             <ControlTemplate>
                 <!-- Single-cell Grid so the scrollbars overlay the content
                      rather than reserving their own row/column. The slim
-                     3 px bars sit at the bottom/right edge of the viewport
+                     5 px bars sit at the bottom/right edge of the viewport
                      instead of carving out a permanent strip beneath the
-                     content (which read as a stray gray line under the
-                     Pinned tile row). -->
+                     content (which would read as a stray gray line under the
+                     Pinned tile row). Overlaying is what lets the bar be
+                     visible-when-focused without shifting or squeezing the
+                     content beside it. -->
                 <Grid>
                     <ScrollContentPresenter Name="PART_ContentPresenter"
                                             Padding="{TemplateBinding Padding}"

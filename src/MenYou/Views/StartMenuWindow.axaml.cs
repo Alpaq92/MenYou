@@ -28,6 +28,10 @@ public partial class StartMenuWindow : Window
     private void OnActivated(object? sender, EventArgs e)
     {
         HookTrace.Log("StartMenuWindow: Activated");
+        // Focused → show the slim scrollbar. See the Window.window-unfocused
+        // rules in Styles/Scrollbar.axaml: the bar is a constant slim 5 px and
+        // visible whenever the menu has focus, and fades out when it doesn't.
+        Classes.Set("window-unfocused", false);
     }
 
     /// Wall-clock instant up to which auto-hide signals
@@ -303,6 +307,12 @@ public partial class StartMenuWindow : Window
             return;
         }
         HookTrace.Log($"StartMenuWindow: Deactivated (HideOnFocusLost={settings.Current.HideOnFocusLost})");
+        // Not focused → fade the slim scrollbar out (Scrollbar.axaml
+        // Window.window-unfocused rules). Gated by the settling early-return
+        // above, so a spurious Deactivated during the show settle can't blink
+        // the bar. When HideOnFocusLost is on the whole window hides anyway;
+        // this is what matters when it's off — the menu stays up but unfocused.
+        Classes.Set("window-unfocused", true);
         if (settings.Current.HideOnFocusLost) HideMenu();
     }
 
