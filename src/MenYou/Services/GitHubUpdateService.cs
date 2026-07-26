@@ -61,8 +61,8 @@ public sealed class GitHubUpdateService : IUpdateService
     // Framework-dependent installer (needs the .NET 10 Desktop Runtime; ~half
     // the payload). Its prefix is DISJOINT from "MenYou-Setup" for the same
     // reason the arm64 one is: a pre-variant-aware "first MenYou-Setup*"
-    // matcher must never grab it. Direct-download only for v1 (not in
-    // winget/scoop/choco). Only an FD install (detected via coreclr.dll's
+    // matcher must never grab it. Direct-download only (not in
+    // winget/choco). Only an FD install (detected via coreclr.dll's
     // absence) ever selects this asset — see IsFrameworkDependent().
     private const string FdSetupAssetPrefix = "MenYou-fd-Setup";
 
@@ -133,7 +133,7 @@ public sealed class GitHubUpdateService : IUpdateService
             }
             // Same-version pass: normally up-to-date — with one exception (SC
             // only). An ARM machine RUNNING THE X64 BUILD under emulation (a
-            // Scoop / Chocolatey install, or an earlier fallback download)
+            // Chocolatey install, or an earlier fallback download)
             // migrates to the native arm64 asset of the SAME version when one
             // exists. Loop-safe: once native, ProcessArchitecture is Arm64 and
             // this never fires again; and when the release has no native

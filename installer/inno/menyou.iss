@@ -94,7 +94,7 @@ OutputDir=..\..\dist
 ; MenYou-fd-Setup is DISJOINT from "MenYou-Setup" on purpose (same rule the
 ; arm64 name follows): a pre-arch/variant-aware updater that grabs the first
 ; "MenYou-Setup*" asset can never pick up the FD installer. The FD variant is
-; x64-only for v1 (direct-download; not in winget/scoop/choco), so it doesn't
+; x64-only for v1 (direct-download; not in winget/choco), so it doesn't
 ; combine with /DMyArch=arm64.
 #if MyVariant == "fd"
   #define MySetupBaseName "MenYou-fd-Setup-" + MyAppVersion

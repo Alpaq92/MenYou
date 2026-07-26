@@ -98,7 +98,13 @@ internal sealed class IconDiskCache
                 Directory.CreateDirectory(_dir);
                 var dst = Path.Combine(_dir, file);
                 var tmp = dst + ".tmp";
+                // Bitmap.Save(Stream) is [Obsolete] in Avalonia 12.1 in favour
+                // of an encoder-options overload for tuning output — but the
+                // cache stores lossless PNGs where the defaults are exactly what
+                // we want, so the plain overload is correct here.
+#pragma warning disable CS0618
                 using (var s = File.Create(tmp)) bmp.Save(s);
+#pragma warning restore CS0618
                 File.Move(tmp, dst, overwrite: true);
             }
             catch
