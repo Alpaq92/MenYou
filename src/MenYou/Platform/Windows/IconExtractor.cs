@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -50,6 +51,9 @@ internal static class IconExtractor
             ?? ExtractForFile(path);
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2050",
+        Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
+            "built-in COM marshalling is intrinsic and preserved under trimming.")]
     private static AvBitmap? ExtractViaShellItemImageFactory(string path, int size)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
@@ -168,6 +172,9 @@ internal static class IconExtractor
     [DllImport("gdi32.dll")]
     private static extern int GetObject(IntPtr hgdiobj, int cbBuffer, ref BITMAP lpvObject);
 
+    [UnconditionalSuppressMessage("Trimming", "IL2050",
+        Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
+            "built-in COM marshalling is intrinsic and preserved under trimming.")]
     private static AvBitmap? GetIconFromSystemImageList(int index, bool jumbo)
     {
         var listKind = jumbo ? SHIL_JUMBO : SHIL_EXTRALARGE;

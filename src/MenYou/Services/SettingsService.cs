@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using MenYou.Models;
 
 namespace MenYou.Services;
@@ -9,13 +8,6 @@ public sealed class SettingsService : ISettingsService
     private static readonly string FilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "MenYou", "settings.json");
-
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() }
-    };
 
     public UserSettings Current { get; private set; } = new();
     public event Action? Changed;
@@ -41,7 +33,7 @@ public sealed class SettingsService : ISettingsService
         try
         {
             var json = File.ReadAllText(FilePath);
-            var s = JsonSerializer.Deserialize<UserSettings>(json, JsonOptions);
+            var s = JsonSerializer.Deserialize(json, SettingsJsonContext.Default.UserSettings);
             if (s is not null) Current = s;
         }
         catch
@@ -59,7 +51,7 @@ public sealed class SettingsService : ISettingsService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(Current, JsonOptions));
+            File.WriteAllText(FilePath, JsonSerializer.Serialize(Current, SettingsJsonContext.Default.UserSettings));
             Changed?.Invoke();
         }
         catch

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -65,6 +66,9 @@ internal static class UwpAppEnumerator
         return tcs.Task;
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2050",
+        Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
+            "built-in COM marshalling is intrinsic and preserved under trimming.")]
     private static List<UwpApp> Enumerate(CancellationToken ct)
     {
         var result = new List<UwpApp>(128);

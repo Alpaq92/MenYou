@@ -6,12 +6,13 @@
   promoted to a first-class compiled layout so it shows up in the
   Settings → Appearance style picker alongside Win7 / Classic.
 
-  x:CompileBindings="False" keeps the reflection-style bindings the
-  sample was authored with (no x:DataType, untyped `.DataContext.X`
-  paths in the Places flyout). The project default is compiled
-  bindings; disabling it for this file lets the proven sample markup
-  compile verbatim. DataContext is StartMenuViewModel, same as the
-  other layouts.
+  Compiled bindings (x:DataType=StartMenuViewModel) throughout: required
+  for a trim-safe publish — reflection bindings go through
+  ReflectionBindingExtension, which is RequiresUnreferencedCode and warns
+  under PublishTrimmed. Every DataTemplate carries its own x:DataType, and
+  the Places flyout casts the ItemsControl's DataContext back to
+  StartMenuViewModel to reach RightPanel.OpenCommand. DataContext is
+  StartMenuViewModel, same as the other layouts.
 
   Bindings (all against StartMenuViewModel): Avatar, UserName, Pinned,
   Recent, Programs.Items, Search.Query/HasQuery, Power.*Command,
@@ -24,9 +25,10 @@
              xmlns:ctrl="using:MenYou.Views.Controls"
              xmlns:loc="using:MenYou.Platform.Windows"
              xmlns:items="using:MenYou.ViewModels.Items"
+             xmlns:vm="using:MenYou.ViewModels"
              xmlns:behaviors="using:MenYou.Views.Behaviors"
              x:Class="MenYou.Views.Layouts.Windows11Layout"
-             x:CompileBindings="False">
+             x:DataType="vm:StartMenuViewModel">
   <Grid Width="560" Height="640"
         RowDefinitions="60,*,60"
         ColumnDefinitions="*">
@@ -162,7 +164,7 @@
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
-          <DataTemplate>
+          <DataTemplate x:DataType="items:AppItemViewModel">
             <Button Classes="menu"
                     Padding="8,12"
                     Margin="4"
@@ -201,7 +203,7 @@
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
-          <DataTemplate>
+          <DataTemplate x:DataType="items:AppItemViewModel">
             <Button Classes="menu"
                     Padding="8,12"
                     Margin="4"
@@ -416,13 +418,13 @@
               <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}"
                             MinWidth="240">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate>
+                  <DataTemplate x:DataType="vm:RightPanelViewModel+ShellShortcut">
                     <Button Classes="menu"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Left"
                             Margin="0,1"
                             Padding="8,6"
-                            Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                            Command="{Binding $parent[ItemsControl].((vm:StartMenuViewModel)DataContext).RightPanel.OpenCommand}"
                             CommandParameter="{Binding}">
                       <Grid ColumnDefinitions="Auto,*">
                         <Image Grid.Column="0" Source="{Binding Icon}"

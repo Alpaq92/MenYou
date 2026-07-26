@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Runtime.Versioning;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using MenYou.Models;
+using MenYou.Services;
 using Microsoft.Win32;
 
 namespace MenYou.Platform.Windows;
@@ -34,7 +36,7 @@ internal static class StartPinsPolicyWriter
     {
         try
         {
-            var entries = new List<object>();
+            var entries = new List<StartPinEntry>();
             var skipped = 0;
             foreach (var app in pinned)
             {
@@ -43,15 +45,8 @@ internal static class StartPinsPolicyWriter
                 entries.Add(entry);
             }
 
-            var payload = new
-            {
-                pinnedList = entries,
-                applyOnce = true,
-            };
-            var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
-            {
-                WriteIndented = false,
-            });
+            var payload = new StartPinsPayload(entries, ApplyOnce: true);
+            var json = JsonSerializer.Serialize(payload, MachineJsonContext.Default.StartPinsPayload);
 
             using var key = Registry.CurrentUser.CreateSubKey(PolicyKey, writable: true);
             if (key is null)
@@ -85,20 +80,36 @@ internal static class StartPinsPolicyWriter
         }
     }
 
-    private static object? ToPolicyEntry(AppEntry app)
+    private static StartPinEntry? ToPolicyEntry(AppEntry app)
     {
         // Prefer the .lnk path if we have one — that's the most reliable
         // form Windows accepts. desktopAppLink is documented to take both
         // %ENVVAR% and absolute paths.
         if (!string.IsNullOrEmpty(app.SourceLnkPath))
-            return new { desktopAppLink = app.SourceLnkPath };
+            return new StartPinEntry(DesktopAppLink: app.SourceLnkPath);
 
         // Fall back to a raw exe path via desktopAppId. The CSP expects
         // an AUMID, but Windows treats a plain exe filename as a valid
         // discriminator for legacy desktop apps in most builds.
         if (!string.IsNullOrEmpty(app.TargetPath))
-            return new { desktopAppId = app.TargetPath };
+            return new StartPinEntry(DesktopAppId: app.TargetPath);
 
         return null;
     }
 }
+
+/// Shape of one entry in the <c>ConfigureStartPins</c> policy's
+/// <c>pinnedList</c>. Exactly one property is set per entry; WhenWritingNull
+/// (see <see cref="MenYou.Services.MachineJsonContext"/>) omits the other so
+/// the emitted JSON matches the CSP's documented
+/// <c>{ "desktopAppLink": … }</c> / <c>{ "desktopAppId": … }</c> forms.
+/// Named records (not anonymous types) so the payload can serialize through
+/// the source-generated context — a prerequisite for a trim-safe publish.
+internal sealed record StartPinEntry(
+    [property: JsonPropertyName("desktopAppLink")] string? DesktopAppLink = null,
+    [property: JsonPropertyName("desktopAppId")] string? DesktopAppId = null);
+
+/// Root document written to the <c>ConfigureStartPins</c> policy value.
+internal sealed record StartPinsPayload(
+    [property: JsonPropertyName("pinnedList")] List<StartPinEntry> PinnedList,
+    [property: JsonPropertyName("applyOnce")] bool ApplyOnce);

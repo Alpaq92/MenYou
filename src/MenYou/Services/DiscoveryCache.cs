@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using MenYou.Models;
 
 namespace MenYou.Services;
@@ -21,12 +20,6 @@ internal static class DiscoveryCache
 
     public sealed record Snapshot(int Version, string Fingerprint, MenuFolder Root, List<AppEntry> Flat);
 
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
-
     private static string CachePath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "MenYou", "discovery-cache.json");
@@ -41,7 +34,7 @@ internal static class DiscoveryCache
             var path = CachePath;
             if (!File.Exists(path)) return null;
             using var stream = File.OpenRead(path);
-            var snap = JsonSerializer.Deserialize<Snapshot>(stream, Options);
+            var snap = JsonSerializer.Deserialize(stream, MachineJsonContext.Default.Snapshot);
             if (snap is null || snap.Version != SchemaVersion) return null;
             if (snap.Root is null || snap.Flat is null || snap.Flat.Count == 0) return null;
             return snap;
@@ -64,7 +57,7 @@ internal static class DiscoveryCache
             // fails to parse on the next launch.
             var tmp = path + ".tmp";
             using (var stream = File.Create(tmp))
-                JsonSerializer.Serialize(stream, snap, Options);
+                JsonSerializer.Serialize(stream, snap, MachineJsonContext.Default.Snapshot);
             File.Move(tmp, path, overwrite: true);
         }
         catch

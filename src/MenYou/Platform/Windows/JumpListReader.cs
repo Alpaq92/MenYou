@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -88,6 +89,9 @@ internal static class JumpListReader
         }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2072",
+        Justification = "Activator.CreateInstance on a shell COM CLSID does CoCreateInstance " +
+            "on a native object; no managed members are reflected, so trimming is unaffected.")]
     private static IReadOnlyList<JumpTask> ReadTasksInternal(string aumid)
     {
         var type = Type.GetTypeFromCLSID(CLSID_DestinationList);
@@ -242,6 +246,9 @@ internal static class JumpListReader
 
     // ── IAutomaticDestinationList -----------------------------------------
 
+    [UnconditionalSuppressMessage("Trimming", "IL2072",
+        Justification = "Activator.CreateInstance on a shell COM CLSID does CoCreateInstance " +
+            "on a native object; no managed members are reflected, so trimming is unaffected.")]
     private static IReadOnlyList<Destination> ReadViaAutomaticDestinationList(string aumid, int listType, int max)
     {
         var type = Type.GetTypeFromCLSID(CLSID_AutomaticDestinationList);
@@ -319,6 +326,9 @@ internal static class JumpListReader
 
     // ── AUMID resolution: PKEY_AppUserModel_ID then IApplicationResolver --
 
+    [UnconditionalSuppressMessage("Trimming", "IL2050",
+        Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
+            "built-in COM marshalling is intrinsic and preserved under trimming.")]
     private static string? TryGetAumidFromPropertyStore(string lnkPath)
     {
         try
@@ -342,6 +352,12 @@ internal static class JumpListReader
         catch { return null; }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2050",
+        Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
+            "built-in COM marshalling is intrinsic and preserved under trimming.")]
+    [UnconditionalSuppressMessage("Trimming", "IL2072",
+        Justification = "Activator.CreateInstance on a shell COM CLSID does CoCreateInstance " +
+            "on a native object; no managed members are reflected, so trimming is unaffected.")]
     private static string? TryGetAumidFromAppResolver(string lnkPath)
     {
         // Build an IShellItem from the .lnk path, then ask

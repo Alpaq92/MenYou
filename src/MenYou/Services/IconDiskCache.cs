@@ -22,10 +22,12 @@ internal sealed class IconDiskCache
     /// (e.g. a different icon size or PNG encoding).
     private const int SchemaVersion = 1;
 
-    private sealed record Entry(long Stamp, string? File);
-    private sealed record IndexFile(int Version, Dictionary<string, Entry> Entries);
-
-    private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
+    // internal (not private) so the source-generated MachineJsonContext can
+    // reference IndexFile — the reflection-based JsonSerializer paths were
+    // replaced with source-gen to keep the trimmed publish warning-clean and
+    // never strip these records (see Services/AppJsonSerializerContext.cs).
+    internal sealed record Entry(long Stamp, string? File);
+    internal sealed record IndexFile(int Version, Dictionary<string, Entry> Entries);
 
     private readonly string _dir;
     private readonly string _indexPath;
@@ -46,7 +48,7 @@ internal sealed class IconDiskCache
         try
         {
             if (!File.Exists(_indexPath)) return;
-            var idx = JsonSerializer.Deserialize<IndexFile>(File.ReadAllText(_indexPath), Options);
+            var idx = JsonSerializer.Deserialize(File.ReadAllText(_indexPath), MachineJsonContext.Default.IndexFile);
             // Wrong schema → ignore (leaves stale PNGs on disk; they're
             // overwritten as icons re-extract, and pruning isn't worth it).
             if (idx is null || idx.Version != SchemaVersion || idx.Entries is null) return;
@@ -133,7 +135,7 @@ internal sealed class IconDiskCache
         {
             Directory.CreateDirectory(_dir);
             var tmp = _indexPath + ".tmp";
-            using (var s = File.Create(tmp)) JsonSerializer.Serialize(s, snapshot, Options);
+            using (var s = File.Create(tmp)) JsonSerializer.Serialize(s, snapshot, MachineJsonContext.Default.IndexFile);
             File.Move(tmp, _indexPath, overwrite: true);
         }
         catch
