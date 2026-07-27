@@ -103,8 +103,24 @@ internal static class UwpAppEnumerator
                     var item = items[0]!;
                     try
                     {
-                        if (item.GetDisplayName(SIGDN_NORMALDISPLAY, out var name) != 0)
+                        // Marshal the returned strings ourselves via raw IntPtr
+                        // out-params instead of [MarshalAs(LPWStr)] out string.
+                        // The built-in out-string marshaller frees the returned
+                        // pointer with CoTaskMemFree AFTER the call regardless of
+                        // the HRESULT — but a broken/updating package can return a
+                        // FAILURE from GetDisplayName while leaving ppszName
+                        // uninitialized, so freeing that garbage pointer
+                        // access-violates (0xC0000005). An AV is a corrupted-state
+                        // exception that BYPASSES the catch below and terminates
+                        // the whole process. Only touching the pointer on S_OK —
+                        // and freeing it ourselves — makes a bad item a skip, not
+                        // a crash.
+                        if (item.GetDisplayName(SIGDN_NORMALDISPLAY, out var pName) != 0
+                            || pName == IntPtr.Zero)
                             continue;
+                        string? name;
+                        try { name = Marshal.PtrToStringUni(pName); }
+                        finally { Marshal.FreeCoTaskMem(pName); }
                         if (string.IsNullOrEmpty(name)) continue;
 
                         // QI to IShellItem2 to read the AUMID property.
@@ -115,10 +131,15 @@ internal static class UwpAppEnumerator
                         if (item is not IShellItem2 item2) continue;
 
                         var key = PKEY_AppUserModel_ID;
-                        if (item2.GetString(ref key, out var aumid) != 0) continue;
+                        if (item2.GetString(ref key, out var pAumid) != 0
+                            || pAumid == IntPtr.Zero)
+                            continue;
+                        string? aumid;
+                        try { aumid = Marshal.PtrToStringUni(pAumid); }
+                        finally { Marshal.FreeCoTaskMem(pAumid); }
                         if (string.IsNullOrEmpty(aumid)) continue;
 
-                        result.Add(new UwpApp(name!, aumid!));
+                        result.Add(new UwpApp(name, aumid));
                     }
                     catch
                     {
@@ -166,8 +187,7 @@ internal static class UwpAppEnumerator
         [PreserveSig] int BindToHandler(IntPtr pbc, [In] ref Guid bhid, [In] ref Guid riid,
             [MarshalAs(UnmanagedType.IUnknown)] out object? ppv);
         [PreserveSig] int GetParent(out IShellItem? ppsi);
-        [PreserveSig] int GetDisplayName(uint sigdnName,
-            [MarshalAs(UnmanagedType.LPWStr)] out string? ppszName);
+        [PreserveSig] int GetDisplayName(uint sigdnName, out IntPtr ppszName);
         [PreserveSig] int GetAttributes(uint sfgaoMask, out uint psfgaoAttribs);
         [PreserveSig] int Compare(IShellItem psi, uint hint, out int piOrder);
     }
@@ -181,8 +201,7 @@ internal static class UwpAppEnumerator
         [PreserveSig] int BindToHandler(IntPtr pbc, [In] ref Guid bhid, [In] ref Guid riid,
             [MarshalAs(UnmanagedType.IUnknown)] out object? ppv);
         [PreserveSig] int GetParent(out IShellItem? ppsi);
-        [PreserveSig] int GetDisplayName(uint sigdnName,
-            [MarshalAs(UnmanagedType.LPWStr)] out string? ppszName);
+        [PreserveSig] int GetDisplayName(uint sigdnName, out IntPtr ppszName);
         [PreserveSig] int GetAttributes(uint sfgaoMask, out uint psfgaoAttribs);
         [PreserveSig] int Compare(IShellItem psi, uint hint, out int piOrder);
 
@@ -201,8 +220,7 @@ internal static class UwpAppEnumerator
         [PreserveSig] int GetCLSID([In] ref PROPERTYKEY key, out Guid pclsid);
         [PreserveSig] int GetFileTime([In] ref PROPERTYKEY key, out long pft);
         [PreserveSig] int GetInt32([In] ref PROPERTYKEY key, out int pi);
-        [PreserveSig] int GetString([In] ref PROPERTYKEY key,
-            [MarshalAs(UnmanagedType.LPWStr)] out string? ppsz);
+        [PreserveSig] int GetString([In] ref PROPERTYKEY key, out IntPtr ppsz);
         [PreserveSig] int GetUInt32([In] ref PROPERTYKEY key, out uint pui);
         [PreserveSig] int GetUInt64([In] ref PROPERTYKEY key, out ulong pull);
         [PreserveSig] int GetBool([In] ref PROPERTYKEY key, out int pf);
