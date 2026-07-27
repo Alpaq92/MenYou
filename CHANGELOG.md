@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.7](https://github.com/Alpaq92/MenYou/compare/v0.9.6...v0.9.7) (2026-07-27)
+
+
+### Bug Fixes
+
+* **uwp:** don't crash on a shell item that fails GetDisplayName ([#91](https://github.com/Alpaq92/MenYou/issues/91)) ([956869f](https://github.com/Alpaq92/MenYou/commit/956869f3be0ba976194c61099e179c49c9585c9e))
+
 ## [0.9.6](https://github.com/Alpaq92/MenYou/compare/v0.9.5...v0.9.6) (2026-07-27)
 
 
