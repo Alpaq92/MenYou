@@ -71,6 +71,11 @@ internal sealed class IconDiskCache
             if (!_index.TryGetValue(id, out e) || e.Stamp != stamp) return false;
         }
         if (e.File is null) return true; // negative result cached
+        // Defensive: the index is ours, but never let its File value resolve
+        // outside the icons dir. Ids are 16-char hex hashes, so the names we
+        // write are always bare; this guards the read path against a
+        // hand-edited index.json redirecting a decode elsewhere (traversal).
+        if (!IsBareFileName(e.File)) return false;
         try
         {
             var png = Path.Combine(_dir, e.File);
@@ -145,4 +150,11 @@ internal sealed class IconDiskCache
             lock (_lock) _dirty = true; // retry on the next flush
         }
     }
+
+    /// True only for a plain filename with no directory component, so a value
+    /// read from the on-disk index can never resolve outside the icons dir.
+    private static bool IsBareFileName(string name) =>
+        name.Length > 0
+        && name.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
+        && string.Equals(name, Path.GetFileName(name), StringComparison.Ordinal);
 }
