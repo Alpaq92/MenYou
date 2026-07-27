@@ -40,9 +40,11 @@ public sealed class GitHubUpdateService : IUpdateService
 
     // Must match the [Setup] AppId in installer/inno/menyou.iss. Inno
     // records its uninstall entry under "<AppId>_is1" in the Uninstall
-    // hive; the presence of that key (and its DisplayVersion) is how we
-    // tell an installed build from a dev / `dotnet run` / portable extract
-    // — and it's the authoritative "currently-installed version".
+    // hive; the PRESENCE of that key is how we tell an installed build from a
+    // dev / `dotnet run` / portable extract (see IsPackaged). Its DisplayVersion
+    // is NOT used to decide the current version — in-place upgrades leave it
+    // stale — so the actual "currently-installed version" comes from the running
+    // assembly version instead (see ReadInstalledVersion).
     private const string InnoAppId = "{A9F2C7E4-3B6D-4F8A-9C1E-5D7B2A4F6E83}";
     private const string InnoUninstallKey =
         @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + InnoAppId + "_is1";
