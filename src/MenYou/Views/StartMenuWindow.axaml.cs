@@ -156,17 +156,13 @@ public partial class StartMenuWindow : Window
         }, DispatcherPriority.Loaded);
     }
 
-    /// Give the menu the full Win 11 window treatment via DWM (22H2+): rounded
-    /// corners, the system border color, and — the piece that makes it read as
-    /// a floating window like File Explorer rather than a flat panel — the
-    /// native drop shadow. A borderless (WindowDecorations=None → WS_POPUP)
-    /// window gets no shadow by default; DwmExtendFrameIntoClientArea with a
-    /// hairline bottom margin makes DWM treat it as framed and draw the shadow,
-    /// with no visible glass (our opaque content covers the client area). The
-    /// inner Border's CornerRadius still clips content to the rounded shape;
-    /// this rounds the actual window rect to match. Custom themes opt out (they
-    /// own their edge, and many are square) — same contract as the corner /
-    /// border-thickness converters.
+    /// Give the menu the Win 11 window treatment via DWM (22H2+): rounded
+    /// corners and the border color, rounding the actual window rect to match
+    /// the inner Border's CornerRadius. The floating drop shadow is NOT done
+    /// here — a borderless transparent popup can't receive a native DWM shadow,
+    /// so it's an Avalonia BoxShadow on the card (see MenuShadow / the AXAML).
+    /// Custom themes opt out (they own their edge, and many are square) — same
+    /// contract as the corner / border-thickness converters.
     private void ApplyDwmWindowChrome()
     {
         var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
@@ -174,13 +170,6 @@ public partial class StartMenuWindow : Window
 
         var vm = DataContext as StartMenuViewModel;
         var custom = vm?.UseCustomTheme == true;
-        // Read the edge preference live so switching it in Settings takes
-        // effect on the next open (chrome is re-applied every ShowMenu).
-        var style = App.Services.GetRequiredService<ISettingsService>().Current.WindowBorder;
-        // Windows11 mode adds the native drop shadow (float); both built-in
-        // modes draw the visible theme hairline below. Custom themes own
-        // their edge (often square) — no hairline, no shadow.
-        var win11 = !custom && style == WindowBorder.Windows11;
 
         // Corners: round for every built-in edge style; square for custom.
         int pref = custom ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
@@ -193,12 +182,12 @@ public partial class StartMenuWindow : Window
         int border = unchecked((int)DWMWA_COLOR_NONE);
         _ = DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
 
-        // Native drop shadow (Windows11 mode only). A 1 px bottom margin makes
-        // DWM treat this borderless window as framed and draw the shadow, with
-        // no glass showing (our opaque content covers the sliver); 0 margins
-        // removes it again for the Hairline / custom flat look.
-        var margins = win11 ? new MARGINS { cyBottomHeight = 1 } : default;
-        _ = DwmExtendFrameIntoClientArea(hwnd, ref margins);
+        // The drop shadow is NOT a DWM shadow: this window is transparent
+        // (WS_EX_NOREDIRECTIONBITMAP) and DWM won't cast a shadow on such a
+        // popup — the earlier DwmExtendFrameIntoClientArea margin-trick never
+        // actually rendered ("frame, but no shade"). The floating shadow is now
+        // an Avalonia BoxShadow on RootBorder (bound to MenuShadow), drawn into
+        // the transparent ShadowMargin band. See StartMenuWindow.axaml.
 
         // Visible 1 px theme hairline for both built-in edge modes (the actual
         // border you see); custom themes own their edge, so 0 there.
@@ -212,17 +201,8 @@ public partial class StartMenuWindow : Window
     private const uint DWMWA_COLOR_DEFAULT = 0xFFFFFFFF;
     private const uint DWMWA_COLOR_NONE = 0xFFFFFFFE;
 
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MARGINS
-    {
-        public int cxLeftWidth, cxRightWidth, cyTopHeight, cyBottomHeight;
-    }
-
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
-
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS margins);
 
     public void HideMenu()
     {
@@ -376,16 +356,23 @@ public partial class StartMenuWindow : Window
         var work = screen.WorkingArea;
         var scale = DesktopScaling;
         var pixelHeight = (int)(Bounds.Height * scale);
-        // Offset from the taskbar/screen edge so the desktop background
-        // shows around the menu — matches how Win 11's Start menu floats
-        // rather than sitting flush. Custom themes get no margin: they own
-        // their own (often square) chrome — e.g. Windows7Square — and
-        // should read as "anchored into the corner" like the classic
-        // Start menu, not as a floating card.
-        int margin = (DataContext as StartMenuViewModel)?.UseCustomTheme == true ? 0 : 16;
+        var vm = DataContext as StartMenuViewModel;
+        // Offset the CARD from the taskbar/screen corner so the desktop shows
+        // around the menu — matches how Win 11's Start floats rather than
+        // sitting flush. Custom themes get no gap: they own their own (often
+        // square) chrome — e.g. Windows7Square — and read as "anchored into the
+        // corner" like the classic Start menu.
+        int gap = vm?.UseCustomTheme == true ? 0 : 16;
+        // Bounds now includes the transparent ShadowMargin band the drop shadow
+        // renders into, so the window is larger than the visible card by
+        // shadowPx per edge. Shift the window out by the band so the CARD keeps
+        // its corner gap and the band just spills past the corner (transparent —
+        // only the blur shows). Hairline / custom have shadowPx = 0 and reduce
+        // to the plain corner-gap placement, unchanged from before.
+        int shadowPx = (int)((vm?.ShadowMarginDip ?? 0) * scale);
         Position = new PixelPoint(
-            work.X + margin,
-            work.Y + work.Height - pixelHeight - margin);
+            work.X + gap - shadowPx,
+            work.Y + work.Height - pixelHeight - gap + shadowPx);
     }
 
     /// Win 11 focus-stealing prevention means a plain Show/Activate may leave

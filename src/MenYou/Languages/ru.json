@@ -62,5 +62,6 @@
   "OrderAlphabetical": "По алфавиту",
   "WindowBorderLabel": "Граница окна",
   "WindowBorderWin11": "Windows 11 (граница + тень)",
+  "WindowBorderSubtleShadow": "Лёгкая тень",
   "WindowBorderHairline": "Тонкая линия"
 }

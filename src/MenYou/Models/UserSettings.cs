@@ -20,12 +20,14 @@ public enum AppTheme
 /// How the menu window draws its edge against the desktop.
 public enum WindowBorder
 {
-    /// A visible 1 px theme hairline plus the native DWM drop shadow, so the
-    /// menu floats like File Explorer. (The shadow is drawn by the compositor
-    /// outside the window rect, so it costs nothing in layout/positioning; the
-    /// DWM system-border color was too faint on the dark menu, hence the
-    /// explicit hairline.)
+    /// A visible 1 px theme hairline plus a soft drop shadow, so the menu
+    /// floats like File Explorer. The shadow is rendered by the menu itself
+    /// (a BoxShadow on the card, drawn into a transparent margin) because the
+    /// transparent popup window can't receive a native DWM shadow.
     Windows11,
+    /// The same hairline plus a lighter, tighter drop shadow — a gentler lift
+    /// than the full Windows 11 shadow.
+    Subtle,
     /// The same visible 1 px theme hairline, but no shadow — a flatter look
     /// for those who don't want the floating drop shadow.
     Hairline,

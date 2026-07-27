@@ -400,6 +400,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
         Accent = LooksLikeHexColor(s.Accent) ? s.Accent : "";
         UseCustomTheme = s.UseCustomTheme;
         CustomThemeXaml = s.CustomThemeXaml;
+        WindowBorder = s.WindowBorder;
+        ProgramsOrder = s.ProgramsOrder;
         ShowRecent = s.ShowRecent;
         ShowPinned = s.ShowPinned;
         ShowSearch = s.ShowSearch;

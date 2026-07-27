@@ -62,5 +62,6 @@
   "OrderAlphabetical": "按名称排序",
   "WindowBorderLabel": "窗口边框",
   "WindowBorderWin11": "Windows 11（边框 + 阴影）",
+  "WindowBorderSubtleShadow": "轻微阴影",
   "WindowBorderHairline": "细线"
 }
