@@ -59,5 +59,8 @@
   "AllProgramsOrder": "앱 목록 정렬 순서",
   "OrderFoldersFirst": "폴더 먼저",
   "OrderAppsFirst": "앱 먼저",
-  "OrderAlphabetical": "이름순"
+  "OrderAlphabetical": "이름순",
+  "WindowBorderLabel": "창 테두리",
+  "WindowBorderWin11": "Windows 11(테두리 + 그림자)",
+  "WindowBorderHairline": "가는 선"
 }

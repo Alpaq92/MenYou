@@ -8,10 +8,12 @@
   compiled layout so it appears in Settings → Appearance
   alongside Win7 / Classic / Windows 11.
 
-  x:CompileBindings="False" keeps the reflection-style bindings the
-  sample was authored with (no x:DataType; the Places rows use an
-  untyped `$parent[ItemsControl].DataContext.RightPanel.OpenCommand`
-  path). DataContext is StartMenuViewModel, same as the other layouts.
+  Compiled bindings (x:DataType=StartMenuViewModel): required for a
+  trim-safe publish — reflection bindings go through
+  ReflectionBindingExtension (RequiresUnreferencedCode), which warns under
+  PublishTrimmed. The Places rows cast the ItemsControl's DataContext back
+  to StartMenuViewModel to reach RightPanel.OpenCommand. DataContext is
+  StartMenuViewModel, same as the other layouts.
 
   ctrl:AppList renders Pinned + Recent rows; ctrl:ProgramsTree drives
   the All-Programs cascade; ctrl:SearchResultsList is the search overlay.
@@ -20,8 +22,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ctrl="using:MenYou.Views.Controls"
              xmlns:loc="using:MenYou.Platform.Windows"
+             xmlns:vm="using:MenYou.ViewModels"
              x:Class="MenYou.Views.Layouts.MintCinnamonLayout"
-             x:CompileBindings="False">
+             x:DataType="vm:StartMenuViewModel">
   <Grid Width="680" Height="480"
         RowDefinitions="*,56"
         ColumnDefinitions="260,*">
@@ -170,11 +173,11 @@
         <Border Height="1" Margin="8,4,8,6" Background="{DynamicResource MintSidebarDivider}" />
         <ItemsControl ItemsSource="{Binding Places}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate>
+            <DataTemplate x:DataType="vm:RightPanelViewModel+ShellShortcut">
               <Button Classes="menu"
                       HorizontalAlignment="Stretch"
                       Margin="6,1"
-                      Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                      Command="{Binding $parent[ItemsControl].((vm:StartMenuViewModel)DataContext).RightPanel.OpenCommand}"
                       CommandParameter="{Binding}">
                 <Grid ColumnDefinitions="9,Auto,*">
                   <!-- Column 0 (9 px) and Column 1 (20 px + 10 px right

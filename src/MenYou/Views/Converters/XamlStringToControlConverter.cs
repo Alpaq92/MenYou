@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -26,6 +27,11 @@ public sealed class XamlStringToControlConverter : IValueConverter
         "<Grid xmlns=\"https://github.com/avaloniaui\" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">";
     private const string RootClose = "</Grid>";
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026",
+        Justification = "Custom themes parse user-authored XAML at runtime via " +
+            "AvaloniaRuntimeXamlLoader (inherently reflection/JIT). The Avalonia XAML-loadable " +
+            "assemblies are rooted via TrimmerRootAssembly in MenYou.csproj so the control/style " +
+            "types a theme may reference survive trimming. See docs/OPTIMIZATION.md.")]
     public object? Convert(object? value, System.Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is not string xaml || string.IsNullOrWhiteSpace(xaml))

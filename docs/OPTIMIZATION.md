@@ -91,6 +91,25 @@ MenYou ships **unsigned, self-contained** (.NET runtime bundled). On a fresh ins
 - **No PDBs in the installer.** The native SkiaSharp + HarfBuzz symbol files (`libSkiaSharp.pdb` ~80 MB, `libHarfBuzzSharp.pdb` ~20 MB) are ~100 MB / ~44 % of the publish output yet never loaded at runtime. Excluding them (`Excludes: "*.pdb"` in the Inno script) drops the installed footprint to ~52 MB and removes 100 MB from Defender's first-run scan. MenYou's own symbols are embedded (`DebugType=embedded`), so no managed debugging is lost.
 - The cold first-run cost that remains (~10 s, one-time, as Defender scans the fresh DLLs the first time) is a perception problem, handled in §5.
 
+### Two publish variants: self-contained vs framework-dependent
+
+The self-contained payload's cold **runtime page-in** — the OS faulting the bundled CoreCLR + framework DLLs into memory the first time they're touched — is a large share of what a cold start pays before MenYou's own code runs. The lever is simply *shipping fewer bytes of runtime*, which `PublishTrimmed` can't safely do here (it breaks the JSON-reflection and runtime-XAML paths — see Rejected). So MenYou now ships **two** x64 installers off the same code, and the user picks the trade-off:
+
+| Variant | Publish | Installed | DLLs | Prerequisite |
+|---|---|---|---|---|
+| **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~134 MB | ~230 | none (runtime bundled) |
+| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~50 MB | ~41 | .NET 10 Desktop Runtime |
+
+Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload and, with it, the cold page-in. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
+
+Choices that keep this from becoming a footgun:
+
+- **SC stays the default and the only package-manager channel.** Zero prerequisites, so a winget/Chocolatey install can never land a runtime-less machine on a non-launching app. FD is **direct-download only**.
+- **The FD installer refuses to install without the runtime.** Its Inno `[Code]` `PrepareToInstall` checks for a 10.x .NET runtime — `dotnet --list-runtimes` first, then the `HKLM\SOFTWARE\dotnet\Setup\InstalledVersions` registry as a fallback — and aborts with a localized message + the [download link](https://dotnet.microsoft.com/download/dotnet/10.0) rather than laying down a broken app. Detection accepts either `Microsoft.NETCore.App` **or** `Microsoft.WindowsDesktop.App` at 10.x: MenYou's `runtimeconfig` actually binds to the **base** runtime (`net10.0-windows` with `UseWPF`/`UseWindowsForms` off ⇒ no WindowsDesktop framework reference), and the Desktop Runtime is a superset that always brings the base one — so accepting either is correct, while checking only WindowsDesktop would wrongly block a base-runtime-only machine.
+- **Updates stay on-variant.** The in-app updater detects which variant is installed by the presence of `coreclr.dll` beside `MenYou.exe` (SC has it, FD doesn't) and picks the matching release asset, so an FD install updates to FD and an SC install to SC — the runtime model never silently flips under a user. Both installers share the same Inno `AppId`, so this is one product with two payloads, not two parallel installs.
+
+**No bundled bootstrapper (v1).** The FD installer links the runtime download but doesn't silently fetch/install it — that's a deliberate v1 scope line (chaining the Microsoft runtime installer, elevation, and offline handling is a separate piece of work).
+
 ---
 
 ## 4. In-process startup & first open
@@ -161,10 +180,29 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 
 ---
 
+## 9. Trimming the self-contained payload (0.9.x)
+
+**What.** `PublishTrimmed=true` (kept alongside ReadyToRun) shrinks the self-contained install from **125.8 MB → 77.1 MB** (PDBs excluded; **−39 %**) and **231 → 112 files**, cutting the cold-start runtime page-in — without adding the framework-dependent variant's separate .NET-runtime prerequisite. Orthogonal to §3's multi-file decision: the tiny apphost still launches immediately; there are simply fewer/smaller DLLs behind it to page in and scan.
+
+**Why it was deferred, and what making it safe took.** A raw trim built cleanly but emitted **412** trim-analysis warnings (IL2026/IL2050/IL2072) — reflection paths that would break at runtime if their types were trimmed away. Driven to **zero**, in order:
+
+1. **Source-generated JSON** — `SettingsJsonContext` + `MachineJsonContext` replace every reflection-based `System.Text.Json` path (settings, discovery cache, localization bundles, Start-pins policy). Behaviour is preserved deliberately: settings keep string enums + indentation; the discovery cache keeps *numeric* enums and PascalCase, so old caches still load and **no schema bump / cold rescan** is forced. The Start-pins anonymous types became named records (`StartPinEntry` / `StartPinsPayload`) so they can go through source-gen.
+2. **Compiled bindings** for the two built-in layouts authored with `x:CompileBindings="False"` (`Windows11Layout`, `MintCinnamonLayout`) — reflection bindings run through `ReflectionBindingExtension`, which is `RequiresUnreferencedCode`. Every `DataTemplate` gained an `x:DataType`; the Places flyout casts the `ItemsControl` `DataContext` back to `StartMenuViewModel`.
+3. **Explicit IDispatch COM** in `ControlPanelEnumerator`, replacing `dynamic` Shell.Application. `dynamic`-over-COM actually dispatches through IDispatch (so it *would* run trimmed) but drags the C# runtime binder + DLR into the payload and warns; the explicit late-bound interfaces drop `Microsoft.CSharp` from the output entirely.
+4. **Per-site justifications** (`[UnconditionalSuppressMessage]`) on the hand-written shell-COM interop that is intrinsically trim-flagged but safe — `JumpListReader`, `IconExtractor`, `UwpAppEnumerator`, `ControlPanelEnumerator` (COM activation / marshalling), and the runtime-XAML loader call site in `XamlStringToControlConverter`.
+5. **Trimmer roots** (`<TrimmerRootAssembly>`) for the Avalonia XAML-loadable assemblies (`Avalonia.Base`, `Avalonia.Controls`, `Avalonia.Markup.Xaml`, `Avalonia.Markup.Xaml.Loader`, `Avalonia.Themes.Fluent`) so **custom themes** — arbitrary user XAML parsed at runtime via `AvaloniaRuntimeXamlLoader` — can still resolve any control/style type. This is what keeps the size win from silently costing the custom-theme feature; it adds only ~4 MB back versus a raw (unsafe) trim (73 → 77 MB).
+6. A trimmed-only `<NoWarn>IL2026;IL2037;IL2104>` covering the residual **framework-emitted** plumbing that has no MenYou call site to annotate: Avalonia's defensive per-view `[CompilerDynamicDependencies] → ReflectionBindingExtension` dependency (≈280, so runtime XAML can use reflection bindings), XamlX, and the built-in-COM `ComActivator`. All *hand-written* reflection stays individually attributed (step 4); the blanket covers only framework plumbing. Trade-off: new hand-written reflection won't be flagged by the trimmer in a release build, so keep the per-site `[UnconditionalSuppressMessage]` convention and rely on review + the feature pass.
+
+**NativeAOT stays ruled out** — it removes the JIT the runtime-XAML custom themes require. Trimming retains the JIT (via ReadyToRun), so custom themes are unaffected.
+
+**Verification.** The trimmed publish is warning-clean (412 → 0) and builds. Because a trimmed build can compile cleanly yet still remove a type only reflection reaches, the **runtime feature pass is mandatory before shipping**: settings load/save round-trip, custom-theme load + render (Settings → Custom, and as the active theme), all localization bundles, Control Panel search + launch, jump lists, Start-pins policy, and icon extraction.
+
+---
+
 ## Rejected / not pursued
 
 - **`PublishSingleFile`** — see §3 (~54 s cold autostart, unsigned). Kept multi-file.
-- **`PublishTrimmed`** — a trim trial built cleanly but produced **430 trim warnings**, including the two that matter: `System.Text.Json` reflection (settings load/save) and `AvaloniaRuntimeXamlLoader` (custom themes). It would break both features. Doing it safely needs source-generated JSON + trimmer-root descriptors + a full feature-test pass — substantial work for a modest size win, when the startup bottleneck was never the payload size. Deferred.
+- **`PublishTrimmed`** — was deferred (a raw trim's 412 warnings would break settings load/save + custom themes). **Now shipped and made safe** — see §9 (−39 % payload, warnings driven to zero).
 - **NativeAOT** — incompatible with the runtime-XAML custom-theme feature (which needs the JIT). ReadyToRun gives most of the startup benefit without that cost.
 - **Optimizing the in-process path *as the cold-start fix*** — an earlier round (warm-up priority tuning, pdb exclusion, single-file revert) targeted MenYou's own init, which was already fast. Necessary polish, but it was the wrong segment for the perceived ~15 s slowness; the measurement in the methodology section is what redirected the effort to the Run-key throttle.
 - **Skeleton placeholder tiles for the empty first frame** — rejected in review: post-SWR (§6) a valid cache exists on essentially every boot after the very first, so the empty frame is a first-ever-run-only event; and the 0.7.0 splash (§5) already demonstrated that a UI-thread veneer gets starved by the very cold load it's meant to cover. The "ready" balloon carries first-run perception instead.

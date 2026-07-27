@@ -59,5 +59,8 @@
   "AllProgramsOrder": "应用列表排序",
   "OrderFoldersFirst": "文件夹在前",
   "OrderAppsFirst": "应用在前",
-  "OrderAlphabetical": "按名称排序"
+  "OrderAlphabetical": "按名称排序",
+  "WindowBorderLabel": "窗口边框",
+  "WindowBorderWin11": "Windows 11（边框 + 阴影）",
+  "WindowBorderHairline": "细线"
 }

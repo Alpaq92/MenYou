@@ -17,6 +17,16 @@ public sealed class IconService : IIconService
     // Losers block on the winner's Lazy instead of re-running COM.
     private readonly Dictionary<string, Lazy<Bitmap?>> _inflight = new(StringComparer.OrdinalIgnoreCase);
 
+    // On-disk PNG cache (null when the "app-list cache" Developer toggle is
+    // off — same umbrella, so disabling caching disables both). Lets a cold
+    // boot decode cached PNGs instead of re-running ~N shell-COM extractions.
+    private readonly IconDiskCache? _disk;
+
+    public IconService(ISettingsService settings)
+    {
+        _disk = settings.Current.UseDiscoveryCache ? new IconDiskCache() : null;
+    }
+
     public Bitmap? PlaceholderIcon => null;
 
     public Task<Bitmap?> GetIconAsync(AppEntry entry) => Task.Run(() => Extract(entry));
@@ -72,6 +82,9 @@ public sealed class IconService : IIconService
                 }
                 return ValueTask.CompletedTask;
             });
+            // Persist the disk-cache index once for the whole batch (Put
+            // wrote the PNGs already; this writes the id→stamp index).
+            _disk?.Flush();
             // The icon fill is the visible tail of a cold start (the data
             // paints instantly from cache; tiles show cogs until this
             // completes), so its duration is a first-class startup metric —
@@ -178,7 +191,7 @@ public sealed class IconService : IIconService
             if (_cache.TryGetValue(entry.Id, out var cached)) return cached;
             if (!_inflight.TryGetValue(entry.Id, out lazy!))
             {
-                lazy = new Lazy<Bitmap?>(() => ExtractCore(entry),
+                lazy = new Lazy<Bitmap?>(() => LoadOrExtract(entry),
                     LazyThreadSafetyMode.ExecutionAndPublication);
                 _inflight[entry.Id] = lazy;
             }
@@ -203,6 +216,39 @@ public sealed class IconService : IIconService
             _inflight.Remove(entry.Id);
         }
         return bmp;
+    }
+
+    /// The Lazy factory: consult the on-disk PNG cache first (keyed by id +
+    /// icon-source mtime), and only run the shell-COM extraction on a miss,
+    /// persisting the result (icon OR "no icon") back to disk. With the disk
+    /// cache off it's just ExtractCore.
+    private Bitmap? LoadOrExtract(AppEntry entry)
+    {
+        if (_disk is null) return ExtractCore(entry);
+        var stamp = SourceStamp(entry);
+        if (_disk.TryGet(entry.Id, stamp, out var cached)) return cached;
+        var bmp = ExtractCore(entry);
+        _disk.Put(entry.Id, stamp, bmp);
+        return bmp;
+    }
+
+    /// Last-write time (ticks) of the file an entry's icon comes from, so an
+    /// in-place update invalidates just that cached icon. 0 when no on-disk
+    /// source exists (e.g. a packaged app addressed only by AUMID) — those
+    /// cache under stamp 0 and refresh only on a schema bump or cache clear.
+    private static long SourceStamp(AppEntry entry)
+    {
+        try
+        {
+            var iconPath = ExpandEnv(entry.IconPath);
+            string? src =
+                !string.IsNullOrWhiteSpace(iconPath) && File.Exists(iconPath) ? iconPath :
+                !string.IsNullOrWhiteSpace(entry.SourceLnkPath) && File.Exists(entry.SourceLnkPath) ? entry.SourceLnkPath :
+                !string.IsNullOrWhiteSpace(entry.TargetPath) && File.Exists(entry.TargetPath) ? entry.TargetPath :
+                null;
+            return src is null ? 0L : File.GetLastWriteTimeUtc(src).Ticks;
+        }
+        catch { return 0L; }
     }
 
     private static Bitmap? ExtractCore(AppEntry entry)

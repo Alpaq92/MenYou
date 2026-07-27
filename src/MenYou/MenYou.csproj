@@ -34,6 +34,48 @@
     <PackageReference Include="System.Drawing.Common" Version="10.0.10" />
   </ItemGroup>
 
+  <!-- Trimming (PublishTrimmed, set in release.yml) — keep the runtime-XAML
+       custom-theme feature safe. AvaloniaRuntimeXamlLoader parses arbitrary
+       user-authored XAML at runtime (see
+       Views\Converters\XamlStringToControlConverter.cs), so the trimmer must
+       not strip a control / style / markup type a user theme might reference.
+       Rooting these assemblies keeps them whole AND silences the loader's
+       internal trim-analysis warnings (it is analysed as "copy", not linked).
+       This is the documented cost of the feature (docs\OPTIMIZATION.md): the
+       trimmed payload is a little larger than a raw trim would be, but custom
+       themes keep working. Items are only consumed by the trimmer, so the
+       condition just documents intent. -->
+  <PropertyGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <!-- Silence the FRAMEWORK-emitted trim-analysis warnings that are inherent
+         to two features we deliberately keep and have made safe:
+         • Runtime-XAML custom themes — Avalonia's XAML compiler stamps every
+           compiled view with a defensive [CompilerDynamicDependencies] ->
+           ReflectionBindingExtension dependency (so runtime-loaded XAML can use
+           reflection bindings), and AvaloniaRuntimeXamlLoader / XamlX are RUC.
+           ~280 of these; they originate in framework code (ILLink :), not at any
+           MenYou call site, so they can't be annotated per-member. Safe because
+           the Avalonia XAML-loadable assemblies are rooted (below), so the
+           control/style types a theme resolves survive trimming.
+         • Built-in COM interop (ComActivator) — shell integration; the COM
+           marshalling is intrinsic and preserved under trimming.
+         IMPORTANT: this blanket covers ONLY framework-origin plumbing. Every
+         HAND-WRITTEN reflection / COM site is suppressed individually at its
+         member with a justification ([UnconditionalSuppressMessage] in
+         Platform\Windows\*.cs and Views\Converters\XamlStringToControlConverter.cs)
+         — keep that convention for new reflection code, since this NoWarn means
+         the trimmer will not flag it. Only applies to trimmed publishes. See
+         docs\OPTIMIZATION.md. -->
+    <NoWarn>$(NoWarn);IL2026;IL2037;IL2104</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <TrimmerRootAssembly Include="Avalonia.Base" />
+    <TrimmerRootAssembly Include="Avalonia.Controls" />
+    <TrimmerRootAssembly Include="Avalonia.Markup.Xaml" />
+    <TrimmerRootAssembly Include="Avalonia.Markup.Xaml.Loader" />
+    <TrimmerRootAssembly Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
     <!-- Localization JSON files load via AssetLoader from

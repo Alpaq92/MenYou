@@ -13,8 +13,17 @@
 ;  for LOCAL signing pass /DMySignTool="<signtool cmd $f>" and Inno will
 ;  sign the installer + uninstaller itself.
 ;
+;  Two build variants share this one script (see MyVariant below):
+;    * SC (default) — self-contained: bundles the .NET runtime, no prereq.
+;    * FD (/DMyVariant=fd) — framework-dependent: ~half the payload, but the
+;      target must have the .NET 10 Desktop Runtime. Point /DMyPublishDir at a
+;      `--self-contained false` publish; the output is MenYou-fd-Setup-<ver>.exe
+;      and [Code] gates the install on the runtime being present.
+;
 ;  The in-app updater (GitHubUpdateService) downloads this .exe from the
-;  GitHub release and runs it with /SILENT to upgrade in place.
+;  GitHub release and runs it with /SILENT to upgrade in place. It picks the
+;  asset matching the installed variant (coreclr.dll presence), so an FD
+;  install updates to FD and an SC install to SC.
 ; ============================================================================
 
 ; --- identity ---------------------------------------------------------------
@@ -28,6 +37,9 @@
 #define MyAppPublisher "Alpaq"
 #define MyAppURL "https://github.com/Alpaq92/MenYou"
 #define MyAppExeName "MenYou.exe"
+; .NET 10 runtime download, surfaced by the FD installer's runtime precheck
+; (unused by the SC build). Keep in sync with the README / release-body links.
+#define MyDotNetRuntimeUrl "https://dotnet.microsoft.com/download/dotnet/10.0"
 
 ; Version + source dir are supplied by CI; defaults keep a bare `iscc`
 ; from failing during local experimentation.
@@ -66,15 +78,28 @@ DisableProgramGroupPage=no
 AllowNoIcons=yes
 
 OutputDir=..\..\dist
-; Per-architecture output; pass /DMyArch=arm64 for the Windows-on-ARM
-; installer (default: x64). The x64 name is a FROZEN compat contract —
-; see the naming-contract note in src/MenYou/Services/GitHubUpdateService.cs.
-; x64 stays x64compatible (= installs under emulation on ARM too: the
-; pre-arm64 status quo and the updater's fallback path); arm64 is native-only.
+; Per-architecture / per-variant output. Pass /DMyArch=arm64 for the
+; Windows-on-ARM installer (default: x64) and /DMyVariant=fd for the
+; framework-dependent installer (default: sc = self-contained). Every output
+; name is a FROZEN compat contract — see the naming-contract note in
+; src/MenYou/Services/GitHubUpdateService.cs. x64 stays x64compatible
+; (= installs under emulation on ARM too: the pre-arm64 status quo and the
+; updater's fallback path); arm64 is native-only.
 #ifndef MyArch
   #define MyArch "x64"
 #endif
-#if MyArch == "arm64"
+#ifndef MyVariant
+  #define MyVariant "sc"
+#endif
+; MenYou-fd-Setup is DISJOINT from "MenYou-Setup" on purpose (same rule the
+; arm64 name follows): a pre-arch/variant-aware updater that grabs the first
+; "MenYou-Setup*" asset can never pick up the FD installer. The FD variant is
+; x64-only for v1 (direct-download; not in winget/choco), so it doesn't
+; combine with /DMyArch=arm64.
+#if MyVariant == "fd"
+  #define MySetupBaseName "MenYou-fd-Setup-" + MyAppVersion
+  #define MyArchAllowed "x64compatible"
+#elif MyArch == "arm64"
   #define MySetupBaseName "MenYou-arm64-Setup-" + MyAppVersion
   #define MyArchAllowed "arm64"
 #else
@@ -91,7 +116,9 @@ WizardStyle=modern
 Compression=lzma2/max
 SolidCompression=yes
 
-; .NET 10 self-contained x64 build; Win10+ only (matches the app's TFM).
+; .NET 10 build; Win10+ only (matches the app's TFM). The FD variant
+; additionally requires the .NET 10 Desktop Runtime — enforced in [Code]
+; (PrepareToInstall), since Inno has no "runtime present" architecture gate.
 ArchitecturesAllowed={#MyArchAllowed}
 ArchitecturesInstallIn64BitMode={#MyArchAllowed}
 MinVersion=10.0
@@ -122,6 +149,21 @@ SignedUninstaller=yes
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "polish";  MessagesFile: "compiler:Languages\Polish.isl"
+
+[CustomMessages]
+; Shown by the FD installer's [Code] runtime precheck when the .NET 10 runtime
+; is absent (unused by the SC build, which bundles the runtime). %1 is the
+; download URL. Recommends the Desktop Runtime (the conventional superset for a
+; Windows GUI app) even though MenYou only needs the base .NET 10 runtime
+; (Microsoft.NETCore.App); either satisfies the check.
+;
+; ASCII-only ON PURPOSE: this .iss has no UTF-8 BOM, so Inno reads it via the
+; system ANSI code page — non-ASCII here would compile to mojibake in the
+; message. The Polish text is therefore diacritic-free (matching this file's
+; existing transliterated-Polish convention, e.g. "Wystapil blad" below). To
+; restore diacritics, save the whole script as UTF-8 WITH BOM.
+english.DotNetRuntimeMissing=MenYou (framework-dependent edition) needs the .NET 10 Desktop Runtime, which is not installed on this PC.%n%nDownload and install it from:%n%1%n%nThen run this installer again, or use the self-contained MenYou-Setup installer instead, which bundles the runtime and needs no prerequisite.
+polish.DotNetRuntimeMissing=MenYou (edycja zalezna od srodowiska uruchomieniowego) wymaga srodowiska .NET 10 Desktop Runtime, ktore nie jest zainstalowane na tym komputerze.%n%nPobierz je i zainstaluj ze strony:%n%1%n%nNastepnie uruchom ponownie ten instalator lub uzyj samodzielnego instalatora MenYou-Setup, ktory zawiera srodowisko uruchomieniowe i nie wymaga zadnych wymagan wstepnych.
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -250,6 +292,104 @@ begin
   end;
 end;
 
+#if MyVariant == "fd"
+{ === Framework-dependent variant: .NET 10 runtime precheck ===
+
+  The FD build ships WITHOUT the bundled runtime, so it can only launch if the
+  target already has .NET 10. MenYou targets net10.0-windows with UseWPF =
+  UseWindowsForms = false, so its runtimeconfig binds to Microsoft.NETCore.App
+  (the BASE runtime), NOT Microsoft.WindowsDesktop.App — verified from the FD
+  publish's MenYou.runtimeconfig.json, whose framework name is
+  "Microsoft.NETCore.App" at version 10.0.0. (Aside: a literal closing-brace
+  character inside a Pascal comment ends it early, so keep braces out of here.)
+
+  So we accept EITHER framework at 10.x: the base runtime is the real
+  requirement, and the Desktop Runtime is a superset that always installs the
+  base runtime alongside it. Matching either is correct; matching only
+  WindowsDesktop.App would wrongly BLOCK a machine that has just the base .NET
+  10 runtime — a false "missing" is the worst outcome here (it turns a working
+  install away), so detection is deliberately permissive and layered:
+    1. `dotnet --list-runtimes` — authoritative when dotnet is on PATH; then
+    2. the InstalledVersions registry — per-framework sharedfx keys, falling
+       back to the sharedhost host-version (current 10.x installs record only
+       that). All under the x64 (64-bit) view, where the x64 runtime registers.
+
+  The check runs in PrepareToInstall (below): a non-empty return aborts the
+  install with the message rather than laying down an app that can't run. }
+
+{ True if a `dotnet --list-runtimes` line reports a 10.x .NET runtime. }
+function ListRuntimesHasNet10(): Boolean;
+var
+  TmpFile: String;
+  Lines: TArrayOfString;
+  I, Rc: Integer;
+begin
+  Result := False;
+  TmpFile := ExpandConstant('{tmp}\menyou-dotnet-runtimes.txt');
+  { cmd /C performs the PATH lookup + redirection; if dotnet is absent cmd
+    exits nonzero and the file holds only an error line, which won't match.
+    The command does not start with a quote, so cmd's /C quote-stripping
+    leaves it intact even though the temp path is quoted. }
+  if Exec(ExpandConstant('{cmd}'),
+          '/C dotnet --list-runtimes > "' + TmpFile + '" 2>&1',
+          '', SW_HIDE, ewWaitUntilTerminated, Rc) then
+  begin
+    if LoadStringsFromFile(TmpFile, Lines) then
+      for I := 0 to GetArrayLength(Lines) - 1 do
+        { A runtime line looks like:
+          "Microsoft.NETCore.App 10.0.3 [C:\Program Files\dotnet\shared\...]" }
+        if (Pos('Microsoft.NETCore.App 10.', Lines[I]) > 0)
+           or (Pos('Microsoft.WindowsDesktop.App 10.', Lines[I]) > 0) then
+        begin
+          Result := True;
+          Break;
+        end;
+  end;
+  DeleteFile(TmpFile);
+end;
+
+{ True if any version listed under the given InstalledVersions sharedfx
+  framework key is 10.x. HKLM64: the x64 runtime registers in the 64-bit view,
+  and the FD installer only ever runs 64-bit (x64compatible arch gate). }
+function SharedFxHas10(const Framework: String): Boolean;
+var
+  Names: TArrayOfString;
+  I: Integer;
+begin
+  Result := False;
+  if RegGetValueNames(HKLM64,
+       'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedfx\' + Framework,
+       Names) then
+    for I := 0 to GetArrayLength(Names) - 1 do
+      if Copy(Names[I], 1, 3) = '10.' then
+      begin
+        Result := True;
+        Exit;
+      end;
+end;
+
+{ Registry fallback for when dotnet isn't on PATH. }
+function RegistryHasNet10(): Boolean;
+var
+  Ver: String;
+begin
+  { Per-framework layout: base runtime, or the Desktop Runtime superset. }
+  Result := SharedFxHas10('Microsoft.NETCore.App')
+            or SharedFxHas10('Microsoft.WindowsDesktop.App');
+  if Result then Exit;
+  { Host-only layout: current 10.x installs may record just sharedhost\Version.
+    A 10.x host is installed alongside a 10.x runtime, so treat it as present. }
+  if RegQueryStringValue(HKLM64,
+       'SOFTWARE\dotnet\Setup\InstalledVersions\x64\sharedhost', 'Version', Ver) then
+    Result := Copy(Ver, 1, 3) = '10.';
+end;
+
+function HasDotNet10Runtime(): Boolean;
+begin
+  Result := ListRuntimesHasNet10() or RegistryHasNet10();
+end;
+#endif
+
 { Runs right before files are installed. Older MenYou builds (< 0.8.0) injected
   MenYou.Bridge.dll into explorer.exe with a hook OWNED BY EXPLORER, so the DLL
   stayed mapped — and its file locked — even after MenYou closed. Replacing it
@@ -268,6 +408,20 @@ var
   Rc: Integer;
 begin
   Result := '';
+#if MyVariant == "fd"
+  { FD ships without the runtime — refuse (with a localized, actionable
+    message carrying the download link) rather than installing an app that
+    can't launch. A non-empty Result stops the install here. On an in-app
+    update this never fires: the running FD app proves the runtime is present. }
+  if not HasDotNet10Runtime() then
+  begin
+    { Keep the FmtMessage args on this line: Inno reads any line whose first
+      non-blank char is '[' as a section header, so a wrapped '[...]' open-array
+      would be misparsed as an "invalid section tag". }
+    Result := FmtMessage(CustomMessage('DotNetRuntimeMissing'), ['{#MyDotNetRuntimeUrl}']);
+    Exit;
+  end;
+#endif
   Dll := ExpandConstant('{app}\MenYou.Bridge.dll');
   if FileExists(Dll) and (not DeleteFile(Dll)) then
   begin

@@ -59,5 +59,8 @@
   "AllProgramsOrder": "Порядок списку застосунків",
   "OrderFoldersFirst": "Спочатку папки",
   "OrderAppsFirst": "Спочатку застосунки",
-  "OrderAlphabetical": "За алфавітом"
+  "OrderAlphabetical": "За алфавітом",
+  "WindowBorderLabel": "Межа вікна",
+  "WindowBorderWin11": "Windows 11 (межа + тінь)",
+  "WindowBorderHairline": "Тонка лінія"
 }

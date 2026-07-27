@@ -59,5 +59,8 @@
   "AllProgramsOrder": "All apps order",
   "OrderFoldersFirst": "Folders first",
   "OrderAppsFirst": "Apps first",
-  "OrderAlphabetical": "Alphabetical"
+  "OrderAlphabetical": "Alphabetical",
+  "WindowBorderLabel": "Window border",
+  "WindowBorderWin11": "Windows 11 (border + shadow)",
+  "WindowBorderHairline": "Hairline"
 }

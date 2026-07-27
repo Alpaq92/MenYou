@@ -93,7 +93,20 @@ jobs:
             "/DMyAppVersion=0.0.0" `
             "/DMyPublishDir=${{ github.workspace }}\publish\win-x64" `
             "installer\inno\menyou.iss"
-          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "ISCC (default/self-contained) failed with exit code $LASTEXITCODE" }
+          # Also dry-compile the framework-dependent variant so its extra
+          # [Code] (the .NET 10 runtime precheck, behind #if MyVariant=="fd")
+          # is compiler-checked at PR time — the preprocessor skips that block
+          # in the SC pass above, so only this pass would catch a Pascal-script
+          # error in it before a real release build hits it. Reuses the same
+          # publish dir: this is a script/missing-file check, and the FD vs SC
+          # payload difference is irrelevant to whether the .iss compiles.
+          & $iscc `
+            "/DMyAppVersion=0.0.0" `
+            "/DMyPublishDir=${{ github.workspace }}\publish\win-x64" `
+            "/DMyVariant=fd" `
+            "installer\inno\menyou.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC (framework-dependent) failed with exit code $LASTEXITCODE" }
 
       - name: Upload publish output as artifact (for inspection)
         if: failure()

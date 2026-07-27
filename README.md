@@ -39,11 +39,21 @@ This started with a debloated Windows 11 ([Tiny11](https://github.com/ntdevlabs/
 | Channel | Command |
 |---|---|
 | **GitHub Releases** | [Latest release](https://github.com/Alpaq92/MenYou/releases/latest) — download `MenYou-Setup-<version>.exe` |
-| **Scoop** | `scoop bucket add menyou https://github.com/Alpaq92/scoop-menyou`<br>`scoop install menyou` |
 | **winget** | _coming soon_ |
 | **Chocolatey** | _coming soon_ |
 
-The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) — a standard setup wizard where you can override the install location, Start-Menu folder, and shortcuts (per-user by default, with a per-machine option). Updates are checked in-app against GitHub Releases: **Settings → Sprawdź aktualizacje** downloads the latest installer and runs it to upgrade in place. Code-signing status (SignPath Foundation when available, otherwise unsigned) is noted in the release body — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the deployment pipeline.
+### Which installer?
+
+The GitHub release carries two x64 builds (plus a native Windows-on-ARM one). Pick by trade-off:
+
+| Installer | Size | Cold start | Needs |
+|---|---|---|---|
+| `MenYou-Setup-<version>.exe` — **self-contained** (default) | ~134 MB | baseline | nothing — the .NET runtime is bundled |
+| `MenYou-fd-Setup-<version>.exe` — **framework-dependent** | ~50 MB | ~half the cold runtime page-in | the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+
+The self-contained build is the zero-prerequisite default and what the package-manager channels (winget/Chocolatey) install. The framework-dependent build is a smaller, faster-cold-start alternative for people who already have (or don't mind installing) the .NET 10 runtime — it's **direct-download only**. If the runtime is missing, its installer stops with a download link instead of laying down an app that can't launch. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging) for the measurements behind the split.
+
+The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) — a standard setup wizard where you can override the install location, Start-Menu folder, and shortcuts (per-user by default, with a per-machine option). Updates are checked in-app against GitHub Releases: **Settings → Sprawdź aktualizacje** downloads the latest installer and runs it to upgrade in place — and it stays on your variant (a framework-dependent install updates to framework-dependent, self-contained to self-contained). Code-signing status (SignPath Foundation when available, otherwise unsigned) is noted in the release body — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the deployment pipeline.
 
 ## Build from source
 

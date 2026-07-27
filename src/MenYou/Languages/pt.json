@@ -59,5 +59,8 @@
   "AllProgramsOrder": "Ordem da lista de aplicações",
   "OrderFoldersFirst": "Pastas primeiro",
   "OrderAppsFirst": "Aplicações primeiro",
-  "OrderAlphabetical": "Alfabética"
+  "OrderAlphabetical": "Alfabética",
+  "WindowBorderLabel": "Borda da janela",
+  "WindowBorderWin11": "Windows 11 (borda + sombra)",
+  "WindowBorderHairline": "Linha fina"
 }

@@ -5,33 +5,33 @@
 # and on manual workflow_dispatch from the Actions UI.
 #
 # Stages:
-#   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64.
-#   2. pack         — Inno Setup (iscc), two installers: MenYou-Setup-<ver>.exe
-#                     (x64) and MenYou-arm64-Setup-<ver>.exe.
-#   3. release      — upload both installers to a fresh GitHub Release for the
-#                     tag, with a body carrying the unsigned-build note,
-#                     install instructions, both SHA-256s, and a CHANGELOG link.
-#   4. publish-pkg  — fire-and-forget pushes to winget, Scoop, and
-#                     Chocolatey using each platform's official-ish
-#                     GitHub Action. Each is `continue-on-error: true`
-#                     so a flake on one channel doesn't gate the others.
+#   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64,
+#                     plus a framework-dependent win-x64 build (needs the .NET
+#                     10 Desktop Runtime; ~half the payload + cold page-in).
+#   2. pack         — Inno Setup (iscc), three installers: MenYou-Setup-<ver>.exe
+#                     (x64, self-contained), MenYou-arm64-Setup-<ver>.exe, and
+#                     MenYou-fd-Setup-<ver>.exe (x64, framework-dependent).
+#   3. release      — upload all three installers to a fresh GitHub Release for
+#                     the tag, with a body carrying the unsigned-build note,
+#                     install instructions, every SHA-256, and a CHANGELOG link.
+#   4. publish-pkg  — fire-and-forget pushes to winget and Chocolatey
+#                     using each platform's official-ish GitHub Action.
+#                     Each is `continue-on-error: true` so a flake on one
+#                     channel doesn't gate the others. Self-contained x64
+#                     only — arm64 + FD are direct-download. (Scoop retired.)
 #
 # Builds are NOT Authenticode-signed — no free signing path clears Windows
 # SmartScreen for an app like this, so MenYou ships unsigned and publishes the
 # installer SHA-256 for integrity instead.
 #
 # Secrets (set under Repo Settings → Secrets → Actions) — all optional. The
-# package-publish jobs are continue-on-error, and the Scoop / Chocolatey jobs
-# short-circuit cleanly when their secret is absent, so a missing secret skips
+# package-publish jobs are continue-on-error, and the Chocolatey job
+# short-circuits cleanly when its secret is absent, so a missing secret skips
 # only that channel and never gates the release:
 #
 #   WINGET_PAT     — GitHub PAT with public_repo scope for the winget
 #                    submission (winget-releaser opens a PR against the
 #                    microsoft/winget-pkgs fork it manages).
-#
-#   SCOOP_PAT      — GitHub PAT for committing manifest updates back to
-#                    the (separate) scoop bucket repo. Without it the
-#                    scoop step is skipped.
 #
 #   CHOCO_API_KEY  — Chocolatey community feed API key. Without it the
 #                    Chocolatey step is skipped.
@@ -103,6 +103,17 @@ jobs:
       # the tray + menu come up far sooner on a cold boot. Net: single-file
       # trades a lower file COUNT for a much worse first-launch LATENCY on an
       # unsigned self-contained app — not worth it. Kept false.
+      # PublishTrimmed: trims the self-contained payload (~126 MB -> ~75 MB
+      # installed, PDBs excluded; ~130 fewer files), which cuts the cold-start
+      # page-in without needing the framework-dependent variant's .NET-runtime
+      # prerequisite. Made safe by moving all System.Text.Json to
+      # source-generation, converting the built-in layouts to compiled
+      # bindings, replacing the Control Panel `dynamic` COM with explicit
+      # IDispatch interfaces, and rooting the Avalonia XAML-loadable assemblies
+      # so runtime-XAML custom themes still resolve arbitrary control/style
+      # types (src/MenYou/MenYou.csproj). ReadyToRun is kept — the JIT stays in
+      # the image, so custom themes are unaffected (NativeAOT would break them).
+      # See docs/OPTIMIZATION.md.
       - name: Publish (Release, win-x64, self-contained)
         run: >
           dotnet publish src/MenYou/MenYou.csproj
@@ -110,6 +121,7 @@ jobs:
           -p:Version=${{ steps.resolve_version.outputs.version }}
           -p:PublishSingleFile=false
           -p:PublishReadyToRun=true
+          -p:PublishTrimmed=true
           -p:DebugType=embedded
           -o publish/win-x64
 
@@ -131,9 +143,30 @@ jobs:
           -p:Version=${{ steps.resolve_version.outputs.version }}
           -p:PublishSingleFile=false
           -p:PublishReadyToRun=true
+          -p:PublishTrimmed=true
           -p:DebugType=embedded
           -p:SkipNativeBridge=true
           -o publish/win-arm64
+
+      # Framework-dependent x64 build — the SECOND, optional asset
+      # (MenYou-fd-Setup, direct-download only). --self-contained false drops
+      # the bundled .NET runtime: ~230 DLLs -> ~41, ~134 MB -> ~50 MB installed,
+      # which roughly halves the ~15 s cold runtime page-in (see
+      # docs/OPTIMIZATION.md). The trade-off is a prerequisite: the target must
+      # have the .NET 10 Desktop Runtime — the FD installer checks for it in
+      # [Code] and aborts with a download link rather than installing a broken
+      # app (see installer/inno/menyou.iss). Same ReadyToRun + embedded symbols
+      # + native bridge as the SC x64 build above; only the runtime bundling
+      # differs, so the managed payload is byte-identical.
+      - name: Publish (Release, win-x64, framework-dependent)
+        run: >
+          dotnet publish src/MenYou/MenYou.csproj
+          -c Release -r win-x64 --self-contained false
+          -p:Version=${{ steps.resolve_version.outputs.version }}
+          -p:PublishSingleFile=false
+          -p:PublishReadyToRun=true
+          -p:DebugType=embedded
+          -o publish/win-x64-fd
 
       - name: Install Inno Setup
         shell: pwsh
@@ -142,10 +175,11 @@ jobs:
       - name: Compile installer (Inno Setup)
         shell: pwsh
         run: |
-          # Two iscc passes emit dist\MenYou-Setup-<ver>.exe (x64) and
-          # dist\MenYou-arm64-Setup-<ver>.exe. Relative paths inside the .iss
-          # resolve against the script's own directory (installer\inno), so
-          # the publish folder is passed as an absolute path.
+          # Three iscc passes emit dist\MenYou-Setup-<ver>.exe (x64, SC),
+          # dist\MenYou-arm64-Setup-<ver>.exe, and dist\MenYou-fd-Setup-<ver>.exe
+          # (x64, framework-dependent). Relative paths inside the .iss resolve
+          # against the script's own directory (installer\inno), so the publish
+          # folder is passed as an absolute path.
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           & $iscc `
             "/DMyAppVersion=${{ steps.resolve_version.outputs.version }}" `
@@ -161,13 +195,24 @@ jobs:
             "/DMyArch=arm64" `
             "installer\inno\menyou.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC (arm64) failed with exit code $LASTEXITCODE" }
+          # Framework-dependent pass: /DMyVariant=fd points at the FD publish
+          # dir, flips the output name to MenYou-fd-Setup-<ver> (disjoint from
+          # the frozen MenYou-Setup contract, so pre-arch/variant-aware updaters
+          # can never grab it — see GitHubUpdateService.cs), and turns on the
+          # installer's .NET 10 runtime precheck in [Code].
+          & $iscc `
+            "/DMyAppVersion=${{ steps.resolve_version.outputs.version }}" `
+            "/DMyPublishDir=${{ github.workspace }}\publish\win-x64-fd" `
+            "/DMyVariant=fd" `
+            "installer\inno\menyou.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC (fd) failed with exit code $LASTEXITCODE" }
           # Enforce the frozen-name contract INSIDE the build job: a drifted
           # OutputBaseFilename must fail here, loudly. (upload-artifact's
           # if-no-files-found:error only fires when NOTHING matches, so a
           # partial upload would sail through it; gh-release's
           # fail_on_unmatched_files is the final pre-ship gate.)
           $v = "${{ steps.resolve_version.outputs.version }}"
-          foreach ($required in @("dist\MenYou-Setup-$v.exe", "dist\MenYou-arm64-Setup-$v.exe")) {
+          foreach ($required in @("dist\MenYou-Setup-$v.exe", "dist\MenYou-arm64-Setup-$v.exe", "dist\MenYou-fd-Setup-$v.exe")) {
             if (-not (Test-Path $required)) { throw "Naming contract violated: $required not produced (see GitHubUpdateService.cs)" }
           }
           Get-ChildItem dist
@@ -183,6 +228,7 @@ jobs:
           path: |
             dist/MenYou-Setup-${{ steps.resolve_version.outputs.version }}.exe
             dist/MenYou-arm64-Setup-${{ steps.resolve_version.outputs.version }}.exe
+            dist/MenYou-fd-Setup-${{ steps.resolve_version.outputs.version }}.exe
           if-no-files-found: error
           overwrite: true
 
@@ -218,12 +264,12 @@ jobs:
             echo "\`\`\`pwsh"
             echo "winget install Alpaq.MenYou"
             echo "# or"
-            echo "scoop install menyou"
-            echo "# or"
             echo "choco install menyou"
             echo "\`\`\`"
             echo
-            echo "Direct download below: \`MenYou-Setup-${version}.exe\` (x64) or \`MenYou-arm64-Setup-${version}.exe\` (Windows on ARM)."
+            echo "Direct download below: \`MenYou-Setup-${version}.exe\` (x64) or \`MenYou-arm64-Setup-${version}.exe\` (Windows on ARM). Both are **self-contained** — no prerequisites."
+            echo
+            echo "Smaller / faster cold start: \`MenYou-fd-Setup-${version}.exe\` (x64, **framework-dependent**) — about half the size and cold page-in, but requires the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (the installer checks and links it if missing). Direct download only; not on winget/Chocolatey."
             echo
             echo "**SHA-256** — verify your download is intact (an integrity check, *not* a code signature):"
             echo
@@ -253,20 +299,31 @@ jobs:
           files: |
             dist/MenYou-Setup-${{ needs.build.outputs.version }}.exe
             dist/MenYou-arm64-Setup-${{ needs.build.outputs.version }}.exe
+            dist/MenYou-fd-Setup-${{ needs.build.outputs.version }}.exe
           draft: false
           prerelease: false
           fail_on_unmatched_files: true
 
   # ------------------------------------------------------------------------
   # Package-manager pushes. Each one is independent + continue-on-error so
-  # an outage on one channel doesn't gate the others. winget and Scoop carry
-  # BOTH architectures (winget-releaser reads the arch out of each installer
-  # its regex matches; the Scoop manifest has 64bit + arm64 blocks).
-  # Chocolatey stays x64-only ON PURPOSE — its arm64 support is immature and
-  # x64-under-emulation is the ecosystem norm there. The x64 installer is
-  # ArchitecturesAllowed=x64compatible, so it installs under emulation on
-  # ARM, and MenYou's own updater then pulls those users to the native
-  # arm64 build at the next release.
+  # an outage on one channel doesn't gate the others. winget carries BOTH
+  # architectures (winget-releaser reads the arch out of each installer its
+  # regex matches). Chocolatey stays x64-only ON PURPOSE — its arm64 support
+  # is immature and x64-under-emulation is the ecosystem norm there; the x64
+  # installer is ArchitecturesAllowed=x64compatible, so it installs under
+  # emulation on ARM and MenYou's own updater then pulls those users to the
+  # native arm64 build at the next release. (Scoop was retired — its bucket
+  # repo was deleted; re-add a publish_scoop job if the bucket comes back.)
+  #
+  # The framework-dependent installer (MenYou-fd-Setup) is DIRECT-DOWNLOAD
+  # ONLY — deliberately absent from both channels to avoid manifest
+  # arch/variant complexity (a runtime dependency + a second x64 entry). It
+  # falls out for free: winget's installers-regex (^MenYou-(arm64-)?Setup-…)
+  # doesn't match "MenYou-fd-Setup-", and the Chocolatey job fetches the
+  # fixed MenYou-Setup URL, so neither ever sees the FD asset even though
+  # it's on the release. In-app updates keep an FD install on FD
+  # (variant-matched by the updater), so a channel serving SC never crosses
+  # a user over.
   # ------------------------------------------------------------------------
   publish_winget:
     name: Publish to winget
@@ -283,84 +340,6 @@ jobs:
           # installer, so the manifest gets x64 + arm64 entries.
           installers-regex: '^MenYou-(arm64-)?Setup-.*\.exe$'
           token: ${{ secrets.WINGET_PAT }}
-
-  publish_scoop:
-    name: Publish to Scoop
-    needs: [build, github_release]
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    # secrets.* can't be referenced in job-level `if`. We check at step
-    # level: if SCOOP_PAT is empty the steps short-circuit, the job
-    # finishes green, and continue-on-error keeps the rest of the
-    # workflow moving even if something does fail.
-    env:
-      SCOOP_PAT: ${{ secrets.SCOOP_PAT }}
-    steps:
-      - name: Skip if SCOOP_PAT missing
-        id: gate
-        shell: bash
-        run: |
-          if [ -z "$SCOOP_PAT" ]; then
-            echo "SCOOP_PAT not set — skipping Scoop publish."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Checkout MenYou (for manifest template)
-        if: steps.gate.outputs.skip != 'true'
-        uses: actions/checkout@v7
-
-      - name: Compute installer hashes
-        id: hash
-        if: steps.gate.outputs.skip != 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="${{ needs.build.outputs.version }}"
-          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${version}"
-          url="${base}/MenYou-Setup-${version}.exe"
-          arm64_url="${base}/MenYou-arm64-Setup-${version}.exe"
-          curl -fL -o setup.exe "$url"
-          curl -fL -o setup-arm64.exe "$arm64_url"
-          hash=$(sha256sum setup.exe | awk '{print toupper($1)}')
-          arm64_hash=$(sha256sum setup-arm64.exe | awk '{print toupper($1)}')
-          echo "hash=$hash"             >> "$GITHUB_OUTPUT"
-          echo "url=$url"               >> "$GITHUB_OUTPUT"
-          echo "arm64_hash=$arm64_hash" >> "$GITHUB_OUTPUT"
-          echo "arm64_url=$arm64_url"   >> "$GITHUB_OUTPUT"
-          echo "version=$version"       >> "$GITHUB_OUTPUT"
-
-      - name: Render manifest
-        if: steps.gate.outputs.skip != 'true'
-        shell: bash
-        run: |
-          mkdir -p out
-          sed \
-            -e "s|@@VERSION@@|${{ steps.hash.outputs.version }}|g" \
-            -e "s|@@URL@@|${{ steps.hash.outputs.url }}|g" \
-            -e "s|@@HASH@@|${{ steps.hash.outputs.hash }}|g" \
-            -e "s|@@ARM64_URL@@|${{ steps.hash.outputs.arm64_url }}|g" \
-            -e "s|@@ARM64_HASH@@|${{ steps.hash.outputs.arm64_hash }}|g" \
-            installer/scoop/menyou.json.template > out/menyou.json
-          cat out/menyou.json
-
-      # The Scoop bucket lives in a separate repo (e.g. Alpaq92/scoop-menyou).
-      # The PAT pushes the rendered manifest into that bucket's `bucket/`
-      # folder so `scoop install menyou` picks up the new version.
-      - name: Push manifest to Scoop bucket repo
-        if: steps.gate.outputs.skip != 'true'
-        uses: dmnemec/copy_file_to_another_repo_action@main
-        env:
-          API_TOKEN_GITHUB: ${{ secrets.SCOOP_PAT }}
-        with:
-          source_file: out/menyou.json
-          destination_repo: Alpaq92/scoop-menyou
-          destination_folder: bucket
-          user_email: bot@menyou.app
-          user_name: menyou-release-bot
-          commit_message: |
-            menyou ${{ steps.hash.outputs.version }}
 
   publish_chocolatey:
     name: Publish to Chocolatey

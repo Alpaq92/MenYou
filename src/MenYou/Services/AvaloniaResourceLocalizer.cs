@@ -90,7 +90,7 @@ public sealed class AvaloniaResourceLocalizer : BaseLocalizer
         try
         {
             using var stream = AssetLoader.Open(uri);
-            return JsonSerializer.Deserialize<Dictionary<string, string>>(stream);
+            return JsonSerializer.Deserialize(stream, MachineJsonContext.Default.DictionaryStringString);
         }
         catch
         {

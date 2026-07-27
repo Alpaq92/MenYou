@@ -22,9 +22,11 @@ open a PR
            queues it for auto-merge; on merge pushes tag vX.Y.Z
               │
         tag vX.Y.Z → release.yml
-              ├─ publish (win-x64, self-contained) → Inno installer
-              ├─ GitHub Release (installer asset + SHA-256, unsigned)
-              └─ fan-out: winget · Scoop · Chocolatey  (each continue-on-error)
+              ├─ publish → 3 Inno installers: win-x64 (self-contained),
+              │            win-arm64, win-x64 (framework-dependent, MenYou-fd-Setup)
+              ├─ GitHub Release (all installer assets + SHA-256, unsigned)
+              └─ fan-out: winget · Chocolatey  (each continue-on-error;
+                          self-contained x64 only — arm64 + FD are direct-download)
 ```
 
 ## Workflows
@@ -65,7 +67,7 @@ Push to `main` + `workflow_dispatch`. Reads Conventional Commits since the last 
 Cron `0 6 1 * *` (1st of each month) + `workflow_dispatch`. Upgrades NuGet packages to their latest **minor/patch** (`dotnet outdated --upgrade --version-lock Major`; majors are left to deliberate review), opens a `fix(deps): monthly dependency refresh` PR, and enables auto-merge. The `fix(deps):` commit then drives release-please to cut a patch release — a maintained, re-released build every month. It also runs the **Crowdin two-way sync** (pull translations into the same PR, push `en.json` sources at the end — see Translations below). Needs `RELEASE_PLEASE_PAT` to run the PR's CI and the merge/release unattended (a `GITHUB_TOKEN`-created PR doesn't trigger workflows); the Crowdin steps additionally need the `CROWDIN_*` secrets and skip without them.
 
 ### `release.yml`
-Tag push `v*.*.*` + `workflow_dispatch`. Publishes the self-contained x64 build **with ReadyToRun** (`-p:PublishReadyToRun=true`) — crossgen2 AOT-compiles the app + Avalonia to native images so startup skips JITing those paths (measured ~halved framework startup; ~16 MB larger). The JIT stays as a fallback, so the runtime-XAML custom-theme feature is unaffected (unlike NativeAOT, which would break it). Then it compiles the Inno installer, creates the GitHub Release (with the installer's SHA-256 in the body), and fans out to winget / Scoop / Chocolatey (each `continue-on-error`, so one channel's flake doesn't block the rest). Builds ship **unsigned** — see Code signing below. (ReadyToRun, the pdb exclusion, and the rest of the startup/packaging tuning are written up in [`OPTIMIZATION.md`](OPTIMIZATION.md).)
+Tag push `v*.*.*` + `workflow_dispatch`. Publishes three builds — self-contained x64, native win-arm64, and a **framework-dependent** x64 (`--self-contained false`) — all **with ReadyToRun** (`-p:PublishReadyToRun=true`), which crossgen2 AOT-compiles the app + Avalonia to native images so startup skips JITing those paths (measured ~halved framework startup; ~16 MB larger). The JIT stays as a fallback, so the runtime-XAML custom-theme feature is unaffected (unlike NativeAOT, which would break it). Then it compiles the three Inno installers (`MenYou-Setup`, `MenYou-arm64-Setup`, `MenYou-fd-Setup`), creates the GitHub Release (with each installer's SHA-256 in the body), and fans out to winget / Chocolatey (each `continue-on-error`, so one channel's flake doesn't block the rest). The **framework-dependent** installer is ~half the size / cold page-in but needs the .NET 10 Desktop Runtime (its `[Code]` precheck aborts with a download link if absent), and is **direct-download only** — the package-manager fan-out installs the self-contained x64 build only. Builds ship **unsigned** — see Code signing below. (The FD/SC split, ReadyToRun, the pdb exclusion, and the rest of the startup/packaging tuning are written up in [`OPTIMIZATION.md`](OPTIMIZATION.md).)
 
 ### `crowdin-badge.yml`
 Daily cron + `workflow_dispatch`. Publishes the README's **dynamic localization-percentage badge** straight from the live Crowdin project. Crowdin's own badge (`badges.crowdin.net/menyou/localized.svg`) only renders for a **public** project with *Settings → General → Badges → "Display badges"* enabled — otherwise it 403s. This workflow is the visibility-agnostic alternative: it calls the Crowdin API (`GET /projects/{id}/languages/progress`) with the existing `CROWDIN_*` secrets, computes the **words-weighted overall translated %** (the same metric Crowdin's "localized" badge uses), and force-pushes a [shields.io endpoint](https://shields.io/badges/endpoint-badge) JSON to an **orphan `badges` branch** (force-pushed each run, so it never accumulates history). The README badge then points at `img.shields.io/endpoint?url=…/badges/crowdin-localization.json`. Self-skips when the `CROWDIN_*` secrets are absent. To use it instead of the native badge, swap the one commented line at the top of `README.md`.
@@ -97,7 +99,6 @@ MenYou ships **unsigned**. No free Authenticode path clears the Windows SmartScr
 
 - **GitHub Releases** — the anchor; the Inno installer is uploaded per tag and the in-app updater reads the same `releases/latest` feed.
 - **winget** — `winget install Alpaq.MenYou` (publisher identity `Alpaq`).
-- **Scoop** — `scoop bucket add menyou https://github.com/Alpaq92/scoop-menyou; scoop install menyou`.
 - **Chocolatey** — `choco install menyou`.
 
 ## Required secrets
@@ -106,7 +107,6 @@ MenYou ships **unsigned**. No free Authenticode path clears the Windows SmartScr
 |---|---|---|
 | `RELEASE_PLEASE_PAT` | PAT (`repo` + `workflow`). Lets merged PRs / pushed tags trigger downstream workflows that `GITHUB_TOKEN` can't. Powers release-please, auto-merge, and the monthly cron. | **Strongly** |
 | `WINGET_PAT` | `public_repo` PAT for `winget-releaser`. | for winget |
-| `SCOOP_PAT` | PAT for the `Alpaq92/scoop-menyou` bucket repo. | for Scoop |
 | `CHOCO_API_KEY` | chocolatey.org API key. | for Chocolatey |
 | `CROWDIN_PROJECT_ID` / `CROWDIN_PERSONAL_TOKEN` | Crowdin numeric project ID + personal token (Projects scope). Enable the monthly translation sync. | for translations |
 
@@ -133,6 +133,5 @@ git push origin v0.2.0
 ## One-time setup
 
 1. Set the secrets above (at minimum `RELEASE_PLEASE_PAT`).
-2. Create the `Alpaq92/scoop-menyou` bucket repo (a `bucket/` folder; the workflow seeds it).
 3. Register at chocolatey.org and copy the API key into `CHOCO_API_KEY` (first publish is manually moderated, 1–7 days).
 4. Keep build identity stable across releases (for winget + reproducible builds): `AssemblyName` / product / company / copyright in `MenYou.csproj`, the `app.manifest` compatibility + DPI declarations, deterministic-build flags, and the `Alpaq` publisher identity.
