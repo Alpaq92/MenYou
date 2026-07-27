@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.6](https://github.com/Alpaq92/MenYou/compare/v0.9.5...v0.9.6) (2026-07-27)
+
+
+### Features
+
+* slim scrollbar, window-border option, icon cache, trimmed payload + FD installer ([#89](https://github.com/Alpaq92/MenYou/issues/89)) ([ea2b8c9](https://github.com/Alpaq92/MenYou/commit/ea2b8c9182a94ec277cd16390e176a58e4b7821d))
+
 ## [0.9.5](https://github.com/Alpaq92/MenYou/compare/v0.9.4...v0.9.5) (2026-07-21)
 
 
