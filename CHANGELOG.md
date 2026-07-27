@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.9](https://github.com/Alpaq92/MenYou/compare/v0.9.8...v0.9.9) (2026-07-27)
+
+
+### Features
+
+* **ui:** selectable menu drop shadow (Windows 11 / Subtle / Hairline) ([#95](https://github.com/Alpaq92/MenYou/issues/95)) ([b1d8531](https://github.com/Alpaq92/MenYou/commit/b1d8531a3dcb1eeb20428911451d2a3c5004a6a6))
+
 ## [0.9.8](https://github.com/Alpaq92/MenYou/compare/v0.9.7...v0.9.8) (2026-07-27)
 
 
