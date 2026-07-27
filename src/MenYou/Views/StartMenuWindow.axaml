@@ -8,8 +8,8 @@
         Title="MenYou"
         Icon="avares://MenYou/Assets/icon_v2.ico"
         SizeToContent="WidthAndHeight"
-        MinWidth="320" MinHeight="420"
-        MaxWidth="900" MaxHeight="760"
+        MinWidth="392" MinHeight="492"
+        MaxWidth="972" MaxHeight="832"
         WindowStartupLocation="Manual"
         WindowDecorations="None"
         ShowInTaskbar="False"
@@ -36,18 +36,23 @@
         <c:EnumEqualsConverter x:Key="EnumEquals" />
     </Window.Resources>
 
-    <!-- Edge treatment is applied per the WindowBorder setting in
-         ApplyDwmWindowChrome (code-behind): Windows11 mode leaves this
-         thickness 0 and lets DWM draw the system border + shadow;
-         Hairline mode sets thickness to 1 so this theme-aware
-         MenuBorderBrush line shows instead. BorderBrush is always bound
-         (harmless at thickness 0). -->
+    <!-- Edge treatment per the WindowBorder setting. The visible 1 px hairline
+         (theme MenuBorderBrush) is set on RootBorder.BorderThickness in
+         ApplyDwmWindowChrome (1 for built-in, 0 for custom). The drop shadow is
+         an Avalonia BoxShadow bound to MenuShadow (Windows11 = soft, Subtle =
+         lighter, Hairline / custom = none), drawn by Skia into the transparent
+         ShadowMargin band around the card — the transparent popup window can't
+         receive a native DWM shadow. ClipToBounds MUST stay False here, or the
+         outset shadow is clipped to nothing; the nested Border below is the
+         real content clip mask. -->
     <Border x:Name="RootBorder"
             CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
             BorderThickness="0"
             BorderBrush="{DynamicResource MenuBorderBrush}"
             Background="{DynamicResource MenuBackgroundBrush}"
-            ClipToBounds="True">
+            Margin="{Binding ShadowMargin}"
+            BoxShadow="{Binding MenuShadow}"
+            ClipToBounds="False">
         <!-- Nested rounded Border acts as the real clip mask. Without
              it the rectangular backgrounds painted by the bottom
              action bar (search panel, power-button strip) overwrite

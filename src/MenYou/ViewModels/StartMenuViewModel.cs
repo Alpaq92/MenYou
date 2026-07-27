@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using Avalonia;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -42,6 +44,53 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// Mirrors <see cref="UserSettings.CustomThemeXaml"/>. Fed through
     /// XamlStringToControlConverter on the view side.
     [ObservableProperty] private string _customThemeXaml = "";
+
+    /// Mirrors <see cref="UserSettings.WindowBorder"/>. Drives the menu card's
+    /// drop shadow (<see cref="MenuShadow"/> / <see cref="ShadowMargin"/>),
+    /// which the transparent popup renders itself since it can't get a native
+    /// DWM shadow. Re-published on SettingsService.Changed so switching the
+    /// option in Settings takes effect on the next open.
+    [ObservableProperty] private WindowBorder _windowBorder;
+
+    // Soft (Win 11-like) and lighter drop shadows, drawn as a BoxShadow on the
+    // menu card. Kept next to their margins (ShadowMarginDip) so the two never
+    // drift: the margin must exceed the shadow's reach or the window (which is
+    // SizeToContent) clips the tail.
+    private static readonly BoxShadows ShadowSoft   = BoxShadows.Parse("0 2 6 0 #30000000, 0 8 24 0 #4D000000");
+    private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 2 0 #1E000000, 0 4 10 0 #28000000");
+
+    /// The drop shadow for the current <see cref="WindowBorder"/> — empty for
+    /// custom themes (they own their edge) and for Hairline. Bound to
+    /// RootBorder.BoxShadow; drawn by Skia into the transparent margin, so it
+    /// works on the transparent popup where a DWM shadow can't.
+    public BoxShadows MenuShadow => UseCustomTheme ? default : WindowBorder switch
+    {
+        WindowBorder.Windows11 => ShadowSoft,
+        WindowBorder.Subtle    => ShadowSubtle,
+        _                      => default,
+    };
+
+    /// Transparent margin (DIP) around the card that the shadow renders into;
+    /// must exceed the shadow's reach. PositionAtTaskbar reads this to keep the
+    /// card anchored once the window grows by the band.
+    public double ShadowMarginDip => UseCustomTheme ? 0 : WindowBorder switch
+    {
+        WindowBorder.Windows11 => 36,
+        WindowBorder.Subtle    => 16,
+        _                      => 0,
+    };
+
+    /// <see cref="ShadowMarginDip"/> as a uniform Thickness for RootBorder.Margin.
+    public Thickness ShadowMargin => new(ShadowMarginDip);
+
+    partial void OnWindowBorderChanged(WindowBorder value) => RaiseShadow();
+    partial void OnUseCustomThemeChanged(bool value) => RaiseShadow();
+    private void RaiseShadow()
+    {
+        OnPropertyChanged(nameof(MenuShadow));
+        OnPropertyChanged(nameof(ShadowMarginDip));
+        OnPropertyChanged(nameof(ShadowMargin));
+    }
 
     /// True while a subtle "Updating apps…" caption should show beside the All
     /// Programs header — the gated display of a background discovery catch-up
@@ -114,12 +163,14 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         MenuStyle = settings.Current.MenuStyle;
         UseCustomTheme = settings.Current.UseCustomTheme;
         CustomThemeXaml = settings.Current.CustomThemeXaml;
+        WindowBorder = settings.Current.WindowBorder;
         ImmediateReveal = settings.Current.ImmediateMenuReveal;
         settings.Changed += () =>
         {
             MenuStyle = settings.Current.MenuStyle;
             UseCustomTheme = settings.Current.UseCustomTheme;
             CustomThemeXaml = settings.Current.CustomThemeXaml;
+            WindowBorder = settings.Current.WindowBorder;
             ImmediateReveal = settings.Current.ImmediateMenuReveal;
             // Re-cap the live Pinned / Recent lists so a changed "Max recent
             // items" (or pin set) takes effect immediately, not only after the
