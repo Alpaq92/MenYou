@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.10](https://github.com/Alpaq92/MenYou/compare/v0.9.9...v0.9.10) (2026-07-27)
+
+
+### Bug Fixes
+
+* robust updater version check + stronger menu drop shadow ([#97](https://github.com/Alpaq92/MenYou/issues/97)) ([027f272](https://github.com/Alpaq92/MenYou/commit/027f272cea2013e50b07bace1d5f66f866a10fbe))
+
 ## [0.9.9](https://github.com/Alpaq92/MenYou/compare/v0.9.8...v0.9.9) (2026-07-27)
 
 
