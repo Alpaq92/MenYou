@@ -221,10 +221,24 @@ public sealed class GitHubUpdateService : IUpdateService
         }
     }
 
-    /// The version Inno recorded at install time — the authoritative
-    /// "what's installed right now". Null in dev / portable mode.
-    private static Version? ReadInstalledVersion() => ParseVersion(ReadInstalledVersionString());
+    /// The version this build actually IS — the running assembly version, which
+    /// release.yml stamps via <c>-p:Version=&lt;tag&gt;</c>. This is authoritative
+    /// and always correct, unlike the Inno registry DisplayVersion, which
+    /// in-place upgrades have left stale (observed "0.8.5" on a 0.9.9 install) —
+    /// reading that made the updater think it was perpetually out of date and
+    /// re-offer the same update. Null in dev / portable mode (no Inno install
+    /// registered, see <see cref="IsPackaged"/>), so those never self-update.
+    private Version? ReadInstalledVersion()
+    {
+        if (!IsPackaged) return null;
+        var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        return v is null ? null : new Version(v.Major, Math.Max(v.Minor, 0), Math.Max(v.Build, 0));
+    }
 
+    /// Registry presence only — used to tell an installed build (Inno recorded
+    /// an uninstall entry) from a dev / <c>dotnet run</c> / portable extract.
+    /// The DisplayVersion value itself is NOT used for the version check (it
+    /// goes stale on upgrade); see <see cref="ReadInstalledVersion"/>.
     private static string? ReadInstalledVersionString() =>
         ReadInnoDisplayVersion(Registry.CurrentUser)        // per-user install
         ?? ReadInnoDisplayVersion(Registry.LocalMachine);   // per-machine install

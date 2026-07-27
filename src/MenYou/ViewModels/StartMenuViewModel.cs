@@ -56,8 +56,8 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     // menu card. Kept next to their margins (ShadowMarginDip) so the two never
     // drift: the margin must exceed the shadow's reach or the window (which is
     // SizeToContent) clips the tail.
-    private static readonly BoxShadows ShadowSoft   = BoxShadows.Parse("0 2 6 0 #30000000, 0 8 24 0 #4D000000");
-    private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 2 0 #1E000000, 0 4 10 0 #28000000");
+    private static readonly BoxShadows ShadowSoft   = BoxShadows.Parse("0 2 8 0 #40000000, 0 10 28 0 #73000000");
+    private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 4 0 #33000000, 0 6 16 0 #52000000");
 
     /// The drop shadow for the current <see cref="WindowBorder"/> — empty for
     /// custom themes (they own their edge) and for Hairline. Bound to
@@ -75,8 +75,8 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// card anchored once the window grows by the band.
     public double ShadowMarginDip => UseCustomTheme ? 0 : WindowBorder switch
     {
-        WindowBorder.Windows11 => 36,
-        WindowBorder.Subtle    => 16,
+        WindowBorder.Windows11 => 40,
+        WindowBorder.Subtle    => 22,
         _                      => 0,
     };
 
