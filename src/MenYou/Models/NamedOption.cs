@@ -38,12 +38,14 @@ public static class NamedOptions
         new NamedOption<AppTheme>(AppTheme.System, Strings.System, Strings.FollowWindowsTheme),
     };
 
-    // Windows11 leads because it's the default (see UserSettings.WindowBorder).
+    // FullShade leads because it's the default (see UserSettings.WindowBorder).
     public static IReadOnlyList<NamedOption<WindowBorder>> WindowBorders => new[]
     {
+        new NamedOption<WindowBorder>(WindowBorder.FullShade, Strings.WindowBorderFullShade,     null),
         new NamedOption<WindowBorder>(WindowBorder.Windows11, Strings.WindowBorderWin11,          null),
         new NamedOption<WindowBorder>(WindowBorder.Subtle,    Strings.WindowBorderSubtleShadow,  null),
         new NamedOption<WindowBorder>(WindowBorder.Hairline,  Strings.WindowBorderHairline,      null),
+        new NamedOption<WindowBorder>(WindowBorder.None,      Strings.WindowBorderNone,          null),
     };
 
     // PureAlphabetical leads because it's the default (see UserSettings.ProgramsOrder).

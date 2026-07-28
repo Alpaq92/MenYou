@@ -62,6 +62,8 @@
   "OrderAlphabetical": "名前順",
   "WindowBorderLabel": "ウィンドウの境界線",
   "WindowBorderWin11": "Windows 11（境界線 + 影）",
+  "WindowBorderFullShade": "全体の影",
   "WindowBorderSubtleShadow": "控えめな影",
-  "WindowBorderHairline": "細線"
+  "WindowBorderHairline": "細線",
+  "WindowBorderNone": "なし"
 }

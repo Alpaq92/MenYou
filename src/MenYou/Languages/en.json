@@ -62,6 +62,8 @@
   "OrderAlphabetical": "Alphabetical",
   "WindowBorderLabel": "Window border",
   "WindowBorderWin11": "Windows 11 (border + shadow)",
+  "WindowBorderFullShade": "Full shade",
   "WindowBorderSubtleShadow": "Subtle shadow",
-  "WindowBorderHairline": "Hairline"
+  "WindowBorderHairline": "Hairline",
+  "WindowBorderNone": "None"
 }

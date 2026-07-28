@@ -88,17 +88,17 @@ App discovery (enumerating `.lnk` shortcuts, UWP packages, Control Panel and Set
 MenYou ships **unsigned, self-contained** (.NET runtime bundled). On a fresh install Windows Defender scans the payload as it loads, which dominates the *first-ever* launch. Choices that minimize that surface:
 
 - **Multi-file, not single-file.** `PublishSingleFile=true` was tried and **reverted**: bundling everything into one ~127 MB unsigned blob made Defender pre-scan the whole monolith before `CreateProcess` could return — a measured **~54 s** cold autostart after a reboot. Multi-file keeps a tiny apphost that launches immediately while its DLLs are scanned as they load.
-- **No PDBs in the installer.** The native SkiaSharp + HarfBuzz symbol files (`libSkiaSharp.pdb` ~80 MB, `libHarfBuzzSharp.pdb` ~20 MB) are ~100 MB / ~44 % of the publish output yet never loaded at runtime. Excluding them (`Excludes: "*.pdb"` in the Inno script) drops the installed footprint to ~52 MB and removes 100 MB from Defender's first-run scan. MenYou's own symbols are embedded (`DebugType=embedded`), so no managed debugging is lost.
+- **No PDBs in the installer.** The native SkiaSharp + HarfBuzz symbol files (`libSkiaSharp.pdb` ~80 MB, `libHarfBuzzSharp.pdb` ~20 MB) are ~100 MB / ~45 % of the publish output yet never loaded at runtime. Excluding them (`Excludes: "*.pdb"` in the Inno script) drops the installed footprint to ~122 MB (as of 0.9.11) and removes 100 MB from Defender's first-run scan. MenYou's own symbols are embedded (`DebugType=embedded`), so no managed debugging is lost.
 - The cold first-run cost that remains (~10 s, one-time, as Defender scans the fresh DLLs the first time) is a perception problem, handled in §5.
 
 ### Two publish variants: self-contained vs framework-dependent
 
-The self-contained payload's cold **runtime page-in** — the OS faulting the bundled CoreCLR + framework DLLs into memory the first time they're touched — is a large share of what a cold start pays before MenYou's own code runs. The lever is simply *shipping fewer bytes of runtime*, which `PublishTrimmed` can't safely do here (it breaks the JSON-reflection and runtime-XAML paths — see Rejected). So MenYou now ships **two** x64 installers off the same code, and the user picks the trade-off:
+The self-contained payload's cold **runtime page-in** — the OS faulting the bundled CoreCLR + framework DLLs into memory the first time they're touched — is a large share of what a cold start pays before MenYou's own code runs. The lever is simply *shipping fewer bytes of runtime*, which `PublishTrimmed` can't safely do here — a trim attempt shipped in 0.9.6 and was reverted in 0.9.11 after it broke the shell-COM interop and crashed the app (see §9). So MenYou ships **two** x64 installers off the same code, and the user picks the trade-off (sizes as of 0.9.11):
 
-| Variant | Publish | Installed | DLLs | Prerequisite |
-|---|---|---|---|---|
-| **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~134 MB | ~230 | none (runtime bundled) |
-| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~50 MB | ~41 | .NET 10 Desktop Runtime |
+| Variant | Publish | Download | Installed | DLLs | Prerequisite |
+|---|---|---|---|---|---|
+| **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~41 MB | ~122 MB | ~230 | none (runtime bundled) |
+| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~17 MB | ~50 MB | ~41 | .NET 10 Desktop Runtime |
 
 Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload and, with it, the cold page-in. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
 

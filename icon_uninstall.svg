@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512"
+     width="512" height="512">
+    <!-- Uninstaller icon: icon_v2.svg with the palette INVERTED — the liquid
+         glass disc is the brand blue and the glyph is the silver the app
+         disc uses — and the four window tiles replaced by the MDI
+         "close-thick" cross (https://pictogrammers.com/library/mdi/icon/close-thick/,
+         Apache-2.0). Every gloss layer matches icon_v2.svg 1:1 so the two
+         icons read as siblings. Regenerate icon_uninstall.ico/.png from this
+         file when editing (tools/render-uninstall-icon.py replicates these
+         layers with PIL, since the repo toolchain has no SVG rasterizer). -->
+    <defs>
+        <!-- 1. Body: radial light blue → brand blue, focal point pulled toward
+             the top so the upper half reads brighter, like a glass bead. -->
+        <radialGradient id="body" cx="50%" cy="35%" r="65%">
+            <stop offset="0" stop-color="#4f86ff" />
+            <stop offset="1" stop-color="#1652e2" />
+        </radialGradient>
+
+        <!-- 2. Upper glassy sheen: bright translucent white at top, fading mid-way. -->
+        <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.55" />
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- 3. Lower darken band: implies weight, hints at the glass thickness. -->
+        <linearGradient id="darken" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#001e3c" stop-opacity="0" />
+            <stop offset="1" stop-color="#001e3c" stop-opacity="0.31" />
+        </linearGradient>
+
+        <!-- 4. Specular catchlight: sharp wet dot in the upper-left. -->
+        <radialGradient id="spec" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="1" />
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+        </radialGradient>
+
+        <!-- 5. Inner rim refraction: a dark band hugging the edge. -->
+        <radialGradient id="rim" cx="50%" cy="50%" r="50%">
+            <stop offset="0.86" stop-color="#0c1f4a" stop-opacity="0" />
+            <stop offset="1" stop-color="#0c1f4a" stop-opacity="0.5" />
+        </radialGradient>
+
+        <!-- 6. Bottom bounce light: refracted ground-light glow at the lower rim. -->
+        <radialGradient id="bounce" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.4" />
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+        </radialGradient>
+
+        <!-- Clip every gloss layer to the circle so nothing spills outside. -->
+        <clipPath id="clip">
+            <circle cx="256" cy="256" r="248" />
+        </clipPath>
+    </defs>
+
+    <!-- Body fill. -->
+    <circle cx="256" cy="256" r="248" fill="url(#body)" />
+
+    <!-- Glyph: MDI close-thick, sized like the app icon's tiles (~75% of the
+         canvas): iconScale = 512 * 0.75 / 24 = 16, translate centers the
+         24×24 origin. Silver from the app disc's body family. -->
+    <g transform="translate(64 64) scale(16)" fill="#e9edf5">
+        <path d="M20 6.91L17.09 4L12 9.09L6.91 4L4 6.91L9.09 12L4 17.09L6.91 20L12 14.91L17.09 20L20 17.09L14.91 12L20 6.91Z" />
+    </g>
+
+    <!-- Gloss / glass effects clipped to the disc. -->
+    <g clip-path="url(#clip)">
+        <!-- Lower darken band. -->
+        <rect x="8" y="281" width="496" height="223" fill="url(#darken)" />
+
+        <!-- Upper sheen ellipse. -->
+        <ellipse cx="256" cy="161" rx="213" ry="136" fill="url(#sheen)" />
+
+        <!-- Specular catchlight, upper-left. -->
+        <ellipse cx="194" cy="84"  rx="42"  ry="22" fill="url(#spec)" />
+
+        <!-- Bottom bounce light. -->
+        <ellipse cx="256" cy="430" rx="124" ry="37" fill="url(#bounce)" />
+
+        <!-- Inner rim refraction. -->
+        <circle cx="256" cy="256" r="248" fill="url(#rim)" />
+    </g>
+
+    <!-- Outer crisp silhouette. -->
+    <circle cx="256" cy="256" r="248" fill="none"
+            stroke="#000000" stroke-opacity="0.22" stroke-width="2" />
+</svg>

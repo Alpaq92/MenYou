@@ -190,8 +190,11 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Window edge: native Win 11 border + shadow, or a flat
-                     in-app hairline. Applied in StartMenuWindow via DWM. -->
+                <!-- Window edge: five levels — Windows 11 (outline + soft
+                     shadow), Full shade (strong all-around shadow, no
+                     outline), Subtle (light shadow only), Hairline (outline
+                     only), None (flat). Outline applied in StartMenuWindow's
+                     ApplyDwmWindowChrome; shadow is a BoxShadow binding. -->
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.WindowBorderLabel}" VerticalAlignment="Center" TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"

@@ -62,6 +62,8 @@
   "OrderAlphabetical": "Alfabetycznie",
   "WindowBorderLabel": "Obramowanie okna",
   "WindowBorderWin11": "Windows 11 (obramowanie + cień)",
+  "WindowBorderFullShade": "Pełny cień",
   "WindowBorderSubtleShadow": "Subtelny cień",
-  "WindowBorderHairline": "Cienka linia"
+  "WindowBorderHairline": "Cienka linia",
+  "WindowBorderNone": "Brak"
 }

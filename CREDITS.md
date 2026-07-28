@@ -20,3 +20,5 @@ MenYou stands on the shoulders of projects I learned a great deal from:
 ## App icon
 
 The icon is adapted from [`view-dashboard`](https://pictogrammers.com/library/mdi/icon/view-dashboard/), part of [Material Design Icons](https://pictogrammers.com/library/mdi/) by Pictogrammers (**Apache-2.0**). `icon.svg` is the flat four-tile source glyph; `icon_v2.*` wraps it in a hand-authored Liquid-Glass disc.
+
+The **uninstaller icon** (`icon_uninstall.*`) is the same disc with the palette inverted (blue glass, silver glyph) around MDI's [`close-thick`](https://pictogrammers.com/library/mdi/icon/close-thick/) cross — same Pictogrammers **Apache-2.0** license. Regenerate the raster assets from the SVG with `tools/render-uninstall-icon.py`.

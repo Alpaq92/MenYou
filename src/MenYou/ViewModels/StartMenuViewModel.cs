@@ -57,15 +57,20 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     // drift: the margin must exceed the shadow's reach or the window (which is
     // SizeToContent) clips the tail.
     private static readonly BoxShadows ShadowSoft   = BoxShadows.Parse("0 2 8 0 #40000000, 0 10 28 0 #73000000");
+    // Zero offsets on purpose: FullShade halos the card evenly on all four
+    // sides (the Windows11/Subtle pairs are offset downward). The tight first
+    // layer doubles as the edge definition, since FullShade draws no hairline.
+    private static readonly BoxShadows ShadowFull   = BoxShadows.Parse("0 0 10 0 #4D000000, 0 0 28 3 #66000000");
     private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 4 0 #33000000, 0 6 16 0 #52000000");
 
     /// The drop shadow for the current <see cref="WindowBorder"/> — empty for
-    /// custom themes (they own their edge) and for Hairline. Bound to
+    /// custom themes (they own their edge) and for Hairline / None. Bound to
     /// RootBorder.BoxShadow; drawn by Skia into the transparent margin, so it
     /// works on the transparent popup where a DWM shadow can't.
     public BoxShadows MenuShadow => UseCustomTheme ? default : WindowBorder switch
     {
         WindowBorder.Windows11 => ShadowSoft,
+        WindowBorder.FullShade => ShadowFull,
         WindowBorder.Subtle    => ShadowSubtle,
         _                      => default,
     };
@@ -75,7 +80,10 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// card anchored once the window grows by the band.
     public double ShadowMarginDip => UseCustomTheme ? 0 : WindowBorder switch
     {
+        // FullShade's extent is blur 28 + spread 3 ≈ 31, well inside the 40
+        // band the window Min/Max clamps are already sized for.
         WindowBorder.Windows11 => 40,
+        WindowBorder.FullShade => 40,
         WindowBorder.Subtle    => 22,
         _                      => 0,
     };

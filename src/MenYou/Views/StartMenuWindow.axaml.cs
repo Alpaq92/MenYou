@@ -130,8 +130,16 @@ public partial class StartMenuWindow : Window
                     // A HideMenu (e.g. toggle-close) during the cold wait above
                     // hides the window; don't resurrect it.
                     if (!IsVisible) { _revealing = false; return; }
-                    PositionAtTaskbar();
+                    // Chrome BEFORE positioning: ApplyDwmWindowChrome toggles
+                    // the 1 px RootBorder hairline (0↔1 per WindowBorder /
+                    // custom theme), which changes the SizeToContent-measured
+                    // Bounds by 2 px. UpdateLayout flushes that re-measure so
+                    // PositionAtTaskbar anchors against the FINAL height —
+                    // otherwise the first open after switching an outlined ↔
+                    // outline-less style sits 2 px off the taskbar gap.
                     ApplyDwmWindowChrome();
+                    UpdateLayout();
+                    PositionAtTaskbar();
                     ForceForeground();
                     FindFirstSearchBox()?.Focus();
                     Opacity = 1;
@@ -176,9 +184,9 @@ public partial class StartMenuWindow : Window
         _ = DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
 
         // Leave the DWM system border OFF: DWMWA_BORDER_COLOR=DEFAULT proved too
-        // faint to read on the dark menu ("I don't see the border"). We draw our
-        // own visible MenuBorderBrush hairline (RootBorder, below) in both
-        // built-in modes instead.
+        // faint to read on the dark menu ("I don't see the border"). The outlined
+        // styles draw their own visible MenuBorderBrush hairline (RootBorder,
+        // below) instead.
         int border = unchecked((int)DWMWA_COLOR_NONE);
         _ = DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
 
@@ -189,9 +197,15 @@ public partial class StartMenuWindow : Window
         // an Avalonia BoxShadow on RootBorder (bound to MenuShadow), drawn into
         // the transparent ShadowMargin band. See StartMenuWindow.axaml.
 
-        // Visible 1 px theme hairline for both built-in edge modes (the actual
-        // border you see); custom themes own their edge, so 0 there.
-        RootBorder.BorderThickness = new Thickness(custom ? 0 : 1);
+        // Visible 1 px theme hairline only for the OUTLINED styles — Windows11
+        // (outline + shadow) and Hairline (outline only). Subtle and None have
+        // no outline (outline and shadow are decoupled as of 0.9.12), and
+        // custom themes own their edge. Read from the VM's WindowBorder mirror,
+        // which SettingsService.Changed refreshes, so a Settings change takes
+        // effect on the next open (chrome is re-applied every ShowMenu).
+        var style = vm?.WindowBorder ?? WindowBorder.FullShade;
+        var hairline = !custom && style is WindowBorder.Windows11 or WindowBorder.Hairline;
+        RootBorder.BorderThickness = new Thickness(hairline ? 1 : 0);
     }
 
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
@@ -367,8 +381,8 @@ public partial class StartMenuWindow : Window
         // renders into, so the window is larger than the visible card by
         // shadowPx per edge. Shift the window out by the band so the CARD keeps
         // its corner gap and the band just spills past the corner (transparent —
-        // only the blur shows). Hairline / custom have shadowPx = 0 and reduce
-        // to the plain corner-gap placement, unchanged from before.
+        // only the blur shows). Hairline / None / custom have shadowPx = 0 and
+        // reduce to the plain corner-gap placement, unchanged from before.
         int shadowPx = (int)((vm?.ShadowMarginDip ?? 0) * scale);
         Position = new PixelPoint(
             work.X + gap - shadowPx,
