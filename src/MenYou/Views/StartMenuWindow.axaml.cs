@@ -130,8 +130,16 @@ public partial class StartMenuWindow : Window
                     // A HideMenu (e.g. toggle-close) during the cold wait above
                     // hides the window; don't resurrect it.
                     if (!IsVisible) { _revealing = false; return; }
-                    PositionAtTaskbar();
+                    // Chrome BEFORE positioning: ApplyDwmWindowChrome toggles
+                    // the 1 px RootBorder hairline (0↔1 per WindowBorder /
+                    // custom theme), which changes the SizeToContent-measured
+                    // Bounds by 2 px. UpdateLayout flushes that re-measure so
+                    // PositionAtTaskbar anchors against the FINAL height —
+                    // otherwise the first open after switching an outlined ↔
+                    // outline-less style sits 2 px off the taskbar gap.
                     ApplyDwmWindowChrome();
+                    UpdateLayout();
+                    PositionAtTaskbar();
                     ForceForeground();
                     FindFirstSearchBox()?.Focus();
                     Opacity = 1;
