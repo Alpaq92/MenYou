@@ -62,6 +62,8 @@
   "OrderAlphabetical": "За алфавітом",
   "WindowBorderLabel": "Межа вікна",
   "WindowBorderWin11": "Windows 11 (межа + тінь)",
+  "WindowBorderFullShade": "Повна тінь",
   "WindowBorderSubtleShadow": "Легка тінь",
-  "WindowBorderHairline": "Тонка лінія"
+  "WindowBorderHairline": "Тонка лінія",
+  "WindowBorderNone": "Немає"
 }

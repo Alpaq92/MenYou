@@ -108,7 +108,12 @@ OutputDir=..\..\dist
 #endif
 OutputBaseFilename={#MySetupBaseName}
 SetupIconFile=..\..\icon_v2.ico
-UninstallDisplayIcon={app}\{#MyAppExeName}
+; Distinct uninstaller icon — the app disc with the palette inverted (blue
+; disc, silver MDI close-thick cross; see icon_uninstall.svg at the repo
+; root). Shown in Apps & features / Add-Remove Programs and on the
+; Start-menu uninstall shortcut, so removal is never one mis-click away
+; from launch.
+UninstallDisplayIcon={app}\icon_uninstall.ico
 ; Shows the MIT license as an accept/decline page (wpLicense) right after
 ; Welcome. The plain-text LICENSE renders fine in Inno's license box.
 LicenseFile=..\..\LICENSE
@@ -189,10 +194,13 @@ Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: recurse
 ; example of the theming format, lifted straight from the repo's samples
 ; folder (path resolves against this script's dir, installer\inno).
 Source: "..\..\samples\custom-themes\Windows7Square.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
+; Uninstaller icon (blue disc + silver close cross) referenced by
+; UninstallDisplayIcon and the Start-menu uninstall shortcut.
+Source: "..\..\icon_uninstall.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"; IconFilename: "{app}\icon_uninstall.ico"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 ; Autostart is registered by the app at runtime (logon scheduled task via
 ; Win32AutostartService), not by an installer shortcut — see the [Tasks] note.

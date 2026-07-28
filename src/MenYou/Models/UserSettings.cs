@@ -25,12 +25,20 @@ public enum WindowBorder
     /// (a BoxShadow on the card, drawn into a transparent margin) because the
     /// transparent popup window can't receive a native DWM shadow.
     Windows11,
-    /// The same hairline plus a lighter, tighter drop shadow — a gentler lift
-    /// than the full Windows 11 shadow.
+    /// A strong zero-offset shadow that wraps the WHOLE card evenly — a halo
+    /// on all four sides rather than the downward-biased Windows 11 look.
+    /// No hairline outline; the tight inner layer defines the edge.
+    FullShade,
+    /// A lighter, tighter drop shadow ONLY — no hairline outline — a gentler
+    /// lift than the full Windows 11 treatment. (Until 0.9.11 this mode also
+    /// drew the hairline; outline and shadow are decoupled now.)
     Subtle,
-    /// The same visible 1 px theme hairline, but no shadow — a flatter look
+    /// The visible 1 px theme hairline only, no shadow — a flatter look
     /// for those who don't want the floating drop shadow.
     Hairline,
+    /// No edge treatment at all — no outline, no shadow. The window keeps its
+    /// DWM-rounded corners; only the drawn edge decorations are off.
+    None,
 }
 
 /// How each level of the "All" (All Programs) section orders its entries.
@@ -57,10 +65,11 @@ public sealed class UserSettings
     public MenuStyle MenuStyle { get; set; } = MenuStyle.Windows11;
     public AppTheme Theme { get; set; } = AppTheme.System;
     /// Menu-window edge treatment (see <see cref="Models.WindowBorder"/>).
-    /// Defaults to the native Win 11 border + shadow — releases through 0.9.5
-    /// had no border at all, so untouched installs gain the floating look on
-    /// update; switch to Hairline in Settings for the flat in-app line.
-    public WindowBorder WindowBorder { get; set; } = WindowBorder.Windows11;
+    /// FullShade is the default as of 0.9.12 — the strong all-around halo
+    /// reads best on any wallpaper without needing the hairline. Installs that
+    /// already saved a WindowBorder keep their value; only fresh installs (or
+    /// files missing the key) pick this up.
+    public WindowBorder WindowBorder { get; set; } = WindowBorder.FullShade;
     /// Ordering of the "All" section (see <see cref="Models.ProgramsOrder"/>).
     /// PureAlphabetical is the default as of 0.9.5 — one mixed list, the way
     /// Win 11's own "All apps" reads. NOTE: settings.json files saved before

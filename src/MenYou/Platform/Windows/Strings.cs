@@ -88,8 +88,10 @@ public static class Strings
     // JSON-only.
     public static string WindowBorderLabel       => Resolve("WindowBorderLabel");
     public static string WindowBorderWin11         => Resolve("WindowBorderWin11");
+    public static string WindowBorderFullShade     => Resolve("WindowBorderFullShade");
     public static string WindowBorderSubtleShadow  => Resolve("WindowBorderSubtleShadow");
     public static string WindowBorderHairline      => Resolve("WindowBorderHairline");
+    public static string WindowBorderNone          => Resolve("WindowBorderNone");
     public static string OrderFoldersFirst       => Resolve("OrderFoldersFirst");
     public static string OrderAppsFirst          => Resolve("OrderAppsFirst");
     public static string OrderAlphabetical       => Resolve("OrderAlphabetical");

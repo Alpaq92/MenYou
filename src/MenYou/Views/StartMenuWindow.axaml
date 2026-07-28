@@ -36,15 +36,17 @@
         <c:EnumEqualsConverter x:Key="EnumEquals" />
     </Window.Resources>
 
-    <!-- Edge treatment per the WindowBorder setting. The visible 1 px hairline
-         (theme MenuBorderBrush) is set on RootBorder.BorderThickness in
-         ApplyDwmWindowChrome (1 for built-in, 0 for custom). The drop shadow is
-         an Avalonia BoxShadow bound to MenuShadow (Windows11 = soft, Subtle =
-         lighter, Hairline / custom = none), drawn by Skia into the transparent
-         ShadowMargin band around the card — the transparent popup window can't
-         receive a native DWM shadow. ClipToBounds MUST stay False here, or the
-         outset shadow is clipped to nothing; the nested Border below is the
-         real content clip mask. -->
+    <!-- Edge treatment per the WindowBorder setting; outline and shadow are
+         decoupled. The visible 1 px hairline (theme MenuBorderBrush) is set on
+         RootBorder.BorderThickness in ApplyDwmWindowChrome — 1 only for the
+         outlined styles (Windows11, Hairline); 0 for Subtle, None and custom.
+         The drop shadow is an Avalonia BoxShadow bound to MenuShadow
+         (Windows11 = soft, FullShade = strong all-around halo, Subtle =
+         lighter, Hairline / None / custom = none),
+         drawn by Skia into the transparent ShadowMargin band around the card —
+         the transparent popup window can't receive a native DWM shadow.
+         ClipToBounds MUST stay False here, or the outset shadow is clipped to
+         nothing; the nested Border below is the real content clip mask. -->
     <Border x:Name="RootBorder"
             CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
             BorderThickness="0"

@@ -62,6 +62,8 @@
   "OrderAlphabetical": "Alfabética",
   "WindowBorderLabel": "Borda da janela",
   "WindowBorderWin11": "Windows 11 (borda + sombra)",
+  "WindowBorderFullShade": "Sombra completa",
   "WindowBorderSubtleShadow": "Sombra sutil",
-  "WindowBorderHairline": "Linha fina"
+  "WindowBorderHairline": "Linha fina",
+  "WindowBorderNone": "Nenhuma"
 }

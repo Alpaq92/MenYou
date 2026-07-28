@@ -62,6 +62,8 @@
   "OrderAlphabetical": "Alfabetisch",
   "WindowBorderLabel": "Vensterrand",
   "WindowBorderWin11": "Windows 11 (rand + schaduw)",
+  "WindowBorderFullShade": "Volledige schaduw",
   "WindowBorderSubtleShadow": "Subtiele schaduw",
-  "WindowBorderHairline": "Haarlijn"
+  "WindowBorderHairline": "Haarlijn",
+  "WindowBorderNone": "Geen"
 }
