@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.12](https://github.com/Alpaq92/MenYou/compare/v0.9.11...v0.9.12) (2026-07-28)
+
+
+### Features
+
+* **ui:** menu edge options — Full shade default, shadow-only Subtle, None — and a distinct uninstaller icon ([#101](https://github.com/Alpaq92/MenYou/issues/101)) ([0df6caa](https://github.com/Alpaq92/MenYou/commit/0df6caa7c3ef00544f9f1fd28978e6727f678d8c))
+
 ## [0.9.11](https://github.com/Alpaq92/MenYou/compare/v0.9.10...v0.9.11) (2026-07-28)
 
 
