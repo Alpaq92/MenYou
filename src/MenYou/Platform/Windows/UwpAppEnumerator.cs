@@ -68,7 +68,11 @@ internal static class UwpAppEnumerator
 
     [UnconditionalSuppressMessage("Trimming", "IL2050",
         Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
-            "built-in COM marshalling is intrinsic and preserved under trimming.")]
+            "the marshalling stubs are preserved under trimming. NOTE: the interfaces "
+            + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
+            + "which shifts COM vtable slots and access-violates (this shipped a crash in "
+            + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
+            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
     private static List<UwpApp> Enumerate(CancellationToken ct)
     {
         var result = new List<UwpApp>(128);
@@ -104,17 +108,15 @@ internal static class UwpAppEnumerator
                     try
                     {
                         // Marshal the returned strings ourselves via raw IntPtr
-                        // out-params instead of [MarshalAs(LPWStr)] out string.
-                        // The built-in out-string marshaller frees the returned
+                        // out-params instead of [MarshalAs(LPWStr)] out string:
+                        // the built-in out-string marshaller frees the returned
                         // pointer with CoTaskMemFree AFTER the call regardless of
-                        // the HRESULT — but a broken/updating package can return a
-                        // FAILURE from GetDisplayName while leaving ppszName
-                        // uninitialized, so freeing that garbage pointer
-                        // access-violates (0xC0000005). An AV is a corrupted-state
-                        // exception that BYPASSES the catch below and terminates
-                        // the whole process. Only touching the pointer on S_OK —
-                        // and freeing it ourselves — makes a bad item a skip, not
-                        // a crash.
+                        // the HRESULT, so a callee that fails while leaving ppsz
+                        // uninitialized would have us free a garbage pointer.
+                        // Touching and freeing it only on S_OK makes a bad item a
+                        // skip. (Defensive: this was NOT the cause of the
+                        // 0.9.6-0.9.10 crash — that was trimming shifting the COM
+                        // vtable slots, see the note on Enumerate above.)
                         if (item.GetDisplayName(SIGDN_NORMALDISPLAY, out var pName) != 0
                             || pName == IntPtr.Zero)
                             continue;

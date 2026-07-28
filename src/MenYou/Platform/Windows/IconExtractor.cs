@@ -53,7 +53,11 @@ internal static class IconExtractor
 
     [UnconditionalSuppressMessage("Trimming", "IL2050",
         Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
-            "built-in COM marshalling is intrinsic and preserved under trimming.")]
+            "the marshalling stubs are preserved under trimming. NOTE: the interfaces "
+            + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
+            + "which shifts COM vtable slots and access-violates (this shipped a crash in "
+            + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
+            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
     private static AvBitmap? ExtractViaShellItemImageFactory(string path, int size)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
@@ -174,7 +178,11 @@ internal static class IconExtractor
 
     [UnconditionalSuppressMessage("Trimming", "IL2050",
         Justification = "Shell COM interop over statically-declared [ComImport] interfaces; " +
-            "built-in COM marshalling is intrinsic and preserved under trimming.")]
+            "the marshalling stubs are preserved under trimming. NOTE: the interfaces "
+            + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
+            + "which shifts COM vtable slots and access-violates (this shipped a crash in "
+            + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
+            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
     private static AvBitmap? GetIconFromSystemImageList(int index, bool jumbo)
     {
         var listKind = jumbo ? SHIL_JUMBO : SHIL_EXTRALARGE;
