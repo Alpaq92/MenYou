@@ -57,7 +57,12 @@
            the Avalonia XAML-loadable assemblies are rooted (below), so the
            control/style types a theme resolves survive trimming.
          • Built-in COM interop (ComActivator) — shell integration; the COM
-           marshalling is intrinsic and preserved under trimming.
+           MARSHALLING STUBS are preserved under trimming. Note this does NOT
+           extend to the interfaces themselves: ILLink still deletes uncalled
+           [ComImport] interface MEMBERS, which shifts vtable slots (that is what
+           IL2050 actually warns about, and what broke 0.9.6). The
+           <TrimmerRootAssembly Include="MenYou" /> below is what makes the
+           interfaces safe.
          IMPORTANT: this blanket covers ONLY framework-origin plumbing. Every
          HAND-WRITTEN reflection / COM site is suppressed individually at its
          member with a justification ([UnconditionalSuppressMessage] in
@@ -69,6 +74,34 @@
   </PropertyGroup>
 
   <ItemGroup Condition="'$(PublishTrimmed)' == 'true'">
+    <!-- MenYou itself MUST be rooted, not just Avalonia. ILLink removes UNCALLED
+         members from [ComImport] interfaces — but a COM method's native vtable
+         slot IS its declaration order, so dropping an uncalled method silently
+         re-points every later method at the wrong slot. That shipped a
+         process-killing 0xC0000005 in 0.9.6-0.9.10: IShellItem::GetDisplayName
+         was dispatched into IShellItem::GetParent's slot, which writes through
+         its first argument (passed 0) — an access violation inside the callee,
+         past any try/catch. Confirmed by dumping the post-ILLink assembly, where
+         IShellItem had been reduced to 2 methods. 14 [ComImport] interfaces
+         across Platform\Windows\*.cs are exposed to this, so rooting the whole
+         assembly (measured cost: ~0 MB) is the durable guard rather than
+         per-interface descriptors that must be maintained forever.
+         NOTE: trimming is currently DISABLED in release.yml because of the above.
+         This root is the precondition for ever re-enabling it — and a re-attempt
+         must be verified by RUNNING a trimmed build (jump lists, icons, Control
+         Panel, app enumeration), since the build is warning-clean either way.
+         Metadata dumps of the shipped binaries showed 14 of 23 [ComImport]
+         interfaces truncated, so this was never one bad call site: e.g.
+         IPersistFile::Load would land on GetClassID and write a 16-byte CLSID
+         over a string pointer — silent heap corruption rather than a clean AV.
+         Also note <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+         above: the SDK turns built-in COM OFF under trimming precisely because
+         it is trim-unsafe, and forcing it back on is what let the runtime emit
+         stubs against the corrupted metadata with no warning at all.
+         The properly trim-safe long-term fix is migrating these interfaces to
+         source-generated [GeneratedComInterface] (ComWrappers), whose vtable
+         slots are baked in at compile time. -->
+    <TrimmerRootAssembly Include="MenYou" />
     <TrimmerRootAssembly Include="Avalonia.Base" />
     <TrimmerRootAssembly Include="Avalonia.Controls" />
     <TrimmerRootAssembly Include="Avalonia.Markup.Xaml" />

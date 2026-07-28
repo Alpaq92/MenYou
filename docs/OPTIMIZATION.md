@@ -182,6 +182,25 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 
 ## 9. Trimming the self-contained payload (0.9.x)
 
+> [!CAUTION]
+> **Trimming shipped in 0.9.6 and was REVERTED in 0.9.11 — it crashed the app.**
+> A trimmed build access-violates (`0xC0000005`, inside coreclr) in the shell-COM
+> call `IShellItem::GetDisplayName` while enumerating `shell:AppsFolder`, which
+> **kills the process**: an access violation is a corrupted-state exception, so
+> the enumerator's per-item `try/catch` cannot contain it. It fires on any
+> cache-cold launch (a fresh full enumeration), so it also took out "open
+> Settings". Proven by A/B — same source, self-contained **and** ReadyToRun in
+> both, with *only* `PublishTrimmed` differing: **trimmed crashed 2/2 runs,
+> untrimmed survived 2/2** and enumerated all ~147 apps. The build is *warning*-
+> clean, which is exactly the trap: zero trim warnings does **not** prove the
+> hand-written COM interop survives trimming, and only a runtime pass on a
+> trimmed artifact would have caught it. The size win is not worth an app that
+> dies on a cold launch; users who want a smaller payload have the
+> framework-dependent installer. The `TrimmerRootAssembly` / `NoWarn` items in
+> `MenYou.csproj` are inert (conditioned on `PublishTrimmed=true`) and kept for a
+> future attempt, which must root the COM interop and be verified **at runtime on
+> a trimmed build**. The rest of this section records the original work.
+
 **What.** `PublishTrimmed=true` (kept alongside ReadyToRun) shrinks the self-contained install from **125.8 MB → 77.1 MB** (PDBs excluded; **−39 %**) and **231 → 112 files**, cutting the cold-start runtime page-in — without adding the framework-dependent variant's separate .NET-runtime prerequisite. Orthogonal to §3's multi-file decision: the tiny apphost still launches immediately; there are simply fewer/smaller DLLs behind it to page in and scan.
 
 **Why it was deferred, and what making it safe took.** A raw trim built cleanly but emitted **412** trim-analysis warnings (IL2026/IL2050/IL2072) — reflection paths that would break at runtime if their types were trimmed away. Driven to **zero**, in order:
@@ -202,7 +221,7 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 ## Rejected / not pursued
 
 - **`PublishSingleFile`** — see §3 (~54 s cold autostart, unsigned). Kept multi-file.
-- **`PublishTrimmed`** — was deferred (a raw trim's 412 warnings would break settings load/save + custom themes). **Now shipped and made safe** — see §9 (−39 % payload, warnings driven to zero).
+- **`PublishTrimmed`** — deferred, then shipped in 0.9.6, then **reverted in 0.9.11**: it access-violates in the shell-COM `IShellItem::GetDisplayName` path and kills the process on a cache-cold launch. Warning-clean but runtime-broken — see the caution in §9.
 - **NativeAOT** — incompatible with the runtime-XAML custom-theme feature (which needs the JIT). ReadyToRun gives most of the startup benefit without that cost.
 - **Optimizing the in-process path *as the cold-start fix*** — an earlier round (warm-up priority tuning, pdb exclusion, single-file revert) targeted MenYou's own init, which was already fast. Necessary polish, but it was the wrong segment for the perceived ~15 s slowness; the measurement in the methodology section is what redirected the effort to the Run-key throttle.
 - **Skeleton placeholder tiles for the empty first frame** — rejected in review: post-SWR (§6) a valid cache exists on essentially every boot after the very first, so the empty frame is a first-ever-run-only event; and the 0.7.0 splash (§5) already demonstrated that a UI-thread veneer gets starved by the very cold load it's meant to cover. The "ready" balloon carries first-run perception instead.
