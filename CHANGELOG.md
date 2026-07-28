@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.11](https://github.com/Alpaq92/MenYou/compare/v0.9.10...v0.9.11) (2026-07-28)
+
+
+### Bug Fixes
+
+* **build:** disable trimming — it shifted COM vtable slots and crashed the app ([#99](https://github.com/Alpaq92/MenYou/issues/99)) ([99f0e86](https://github.com/Alpaq92/MenYou/commit/99f0e86f9873f3788e92471d65d7277bf7a873c8))
+
 ## [0.9.10](https://github.com/Alpaq92/MenYou/compare/v0.9.9...v0.9.10) (2026-07-27)
 
 
