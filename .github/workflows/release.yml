@@ -270,7 +270,7 @@ jobs:
             echo
             echo "Direct download below: \`MenYou-Setup-${version}.exe\` (x64) or \`MenYou-arm64-Setup-${version}.exe\` (Windows on ARM). Both are **self-contained** — no prerequisites."
             echo
-            echo "Smaller download/install: \`MenYou-fd-Setup-${version}.exe\` (x64, **framework-dependent**) — about half the size, but requires the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (the installer checks and links it if missing). Direct download only; not on winget/Chocolatey."
+            echo "Smaller download/install: \`MenYou-fd-Setup-${version}.exe\` (x64, **framework-dependent**) — about half the size, but requires the .NET 10 Runtime — base or Desktop ([download](https://dotnet.microsoft.com/download/dotnet/10.0); the installer checks and links it if missing). Direct download only; not on winget/Chocolatey."
             echo
             echo "**SHA-256** — verify your download is intact (an integrity check, *not* a code signature):"
             echo

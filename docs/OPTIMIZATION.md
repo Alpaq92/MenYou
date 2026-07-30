@@ -98,7 +98,7 @@ The self-contained payload's cold **runtime page-in** — the OS faulting the bu
 | Variant | Publish | Download | Installed | DLLs | Prerequisite |
 |---|---|---|---|---|---|
 | **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~41 MB | ~122 MB | ~230 | none (runtime bundled) |
-| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~17 MB | ~50 MB | ~41 | .NET 10 Desktop Runtime |
+| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~17 MB | ~50 MB | ~41 | .NET 10 Runtime (base or Desktop) |
 
 Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload — download and disk. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
 

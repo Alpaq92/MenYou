@@ -49,7 +49,7 @@ The GitHub release carries two x64 builds (plus a native Windows-on-ARM one). Pi
 | Installer | Size | Cold start | Needs |
 |---|---|---|---|
 | `MenYou-Setup-<version>.exe` — **self-contained** (default) | ~122 MB installed (~41 MB download) | baseline | nothing — the .NET runtime is bundled |
-| `MenYou-fd-Setup-<version>.exe` — **framework-dependent** | ~50 MB installed (~17 MB download) | similar (faster only if other .NET 10 apps run at logon) | the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) |
+| `MenYou-fd-Setup-<version>.exe` — **framework-dependent** | ~50 MB installed (~17 MB download) | similar (faster only if other .NET 10 apps run at logon) | the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) — base or Desktop |
 
 The self-contained build is the zero-prerequisite default and what the package-manager channels (winget/Chocolatey) install. The framework-dependent build is a much smaller download/install for people who already have (or don't mind installing) the .NET 10 runtime — it's **direct-download only**. (Measured: its cold start is about the same unless another .NET 10 app already keeps the shared runtime warm at logon — the size win is unconditional, the cold-start win isn't.) If the runtime is missing, its installer stops with a download link instead of laying down an app that can't launch. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging) for the measurements behind the split.
 
