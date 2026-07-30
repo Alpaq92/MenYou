@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.13](https://github.com/Alpaq92/MenYou/compare/v0.9.12...v0.9.13) (2026-07-30)
+
+
+### Bug Fixes
+
+* **ui:** show the scrollbar only while hovering or actively scrolling ([#103](https://github.com/Alpaq92/MenYou/issues/103)) ([fbe00e6](https://github.com/Alpaq92/MenYou/commit/fbe00e68eb2af94136d4b9f0ecc65c6983ab3930))
+
 ## [0.9.12](https://github.com/Alpaq92/MenYou/compare/v0.9.11...v0.9.12) (2026-07-28)
 
 
