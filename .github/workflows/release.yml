@@ -7,7 +7,7 @@
 # Stages:
 #   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64,
 #                     plus a framework-dependent win-x64 build (needs the .NET
-#                     10 Desktop Runtime; ~half the payload + cold page-in).
+#                     10 Runtime, base or Desktop; ~half the payload).
 #   2. pack         — Inno Setup (iscc), three installers: MenYou-Setup-<ver>.exe
 #                     (x64, self-contained), MenYou-arm64-Setup-<ver>.exe, and
 #                     MenYou-fd-Setup-<ver>.exe (x64, framework-dependent).
@@ -154,7 +154,7 @@ jobs:
       # cold start is about the same unless another .NET 10 app keeps the
       # shared runtime warm at logon (see docs/OPTIMIZATION.md §3). The
       # trade-off is a prerequisite: the target must
-      # have the .NET 10 Desktop Runtime — the FD installer checks for it in
+      # have the .NET 10 Runtime (base or Desktop) — the FD installer checks for it in
       # [Code] and aborts with a download link rather than installing a broken
       # app (see installer/inno/menyou.iss). Same ReadyToRun + embedded symbols
       # + native bridge as the SC x64 build above; only the runtime bundling
