@@ -100,7 +100,9 @@ The self-contained payload's cold **runtime page-in** — the OS faulting the bu
 | **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~41 MB | ~122 MB | ~230 | none (runtime bundled) |
 | **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~17 MB | ~50 MB | ~41 | .NET 10 Desktop Runtime |
 
-Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload and, with it, the cold page-in. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
+Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload — download and disk. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
+
+**Measured: the cold-start win is conditional, the size win is not.** The intuition "half the bytes ⇒ half the cold page-in" only holds if the shared runtime in `C:\Program Files\dotnet` is already warm — i.e. some *other* .NET 10 app loads at logon. On a machine where MenYou is the only .NET 10 process at logon, the shared framework's pages are exactly as cold as a bundled copy would be: the page-in **moves** to `Program Files\dotnet`, it doesn't shrink. Traced on such a machine (FD 0.9.12, first cold boot after an update, so also paying Defender's first-scan of the fresh binaries and an untrained Prefetch): **tray ready at +10.3 s** from process start — roughly the same as the ~9 s the trained self-contained build measured in the investigation that motivated this split, not half. Warm starts on the same build: **0.5–2.1 s** to tray, with the icon cache filling all 144 tiles in ~200 ms even on the cold boot (§8's disk cache paying off exactly as designed). Cold boots after Prefetch retrains on the new binaries are expected to come down the way the SC build's did across boots; treat FD's advertised advantages as **~17 MB download / ~50 MB disk always, cold start only when the runtime is otherwise in use**.
 
 Choices that keep this from becoming a footgun:
 
@@ -176,7 +178,7 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 - **Per-item isolation** — `ForEachAsync` stops scheduling after an unhandled throw and every call site discards the batch task, so one corrupt `.ico` would have silently left the rest of the menu on cogs. Each item now catches; a failed extraction is cached as null (cog stays, no per-open retry).
 - **Correctness riders** — tile-list snapshots moved onto the UI thread behind a loud `VerifyAccess` (the old loop enumerated live `ObservableCollection`s inside `Task.Run`, racing rebuilds); a generation guard drops a superseded tree batch's posts; the extraction cache's one lock-free read was closed (parallel writers made the read-during-write real).
 
-**Next lever (planned):** a small on-disk icon cache keyed by entry id, so warm boots skip extraction entirely — gated on per-entry mtime invalidation and negative-result handling (the in-memory cache stores nulls; a disk layer that doesn't would re-extract every icon-less app each boot), plus a measurement pass on the added post-login decode cost.
+**The on-disk icon cache (shipped 0.9.6).** The planned next lever landed: `IconDiskCache` persists each extracted icon as a PNG under `%AppData%\MenYou\icons\`, keyed by entry id with per-entry source-mtime invalidation and negative-result caching (an icon-less app's null is cached too, so it never re-runs the COM chain), atomic temp+move writes, and a batched index flush. Measured: the ~150-icon cold fill dropped **~7.2 s → ~0.1–0.2 s** (75× on the bench machine), and on a real cold boot the trace shows **all 144 tiles filled in ~200 ms** — cold starts now decode small PNGs instead of storming shell COM.
 
 ---
 
