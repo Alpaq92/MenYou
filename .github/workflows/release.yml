@@ -7,7 +7,7 @@
 # Stages:
 #   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64,
 #                     plus a framework-dependent win-x64 build (needs the .NET
-#                     10 Desktop Runtime; ~half the payload + cold page-in).
+#                     10 Runtime, base or Desktop; ~half the payload).
 #   2. pack         — Inno Setup (iscc), three installers: MenYou-Setup-<ver>.exe
 #                     (x64, self-contained), MenYou-arm64-Setup-<ver>.exe, and
 #                     MenYou-fd-Setup-<ver>.exe (x64, framework-dependent).
@@ -149,10 +149,12 @@ jobs:
 
       # Framework-dependent x64 build — the SECOND, optional asset
       # (MenYou-fd-Setup, direct-download only). --self-contained false drops
-      # the bundled .NET runtime: ~230 DLLs -> ~41, ~134 MB -> ~50 MB installed,
-      # which roughly halves the ~15 s cold runtime page-in (see
-      # docs/OPTIMIZATION.md). The trade-off is a prerequisite: the target must
-      # have the .NET 10 Desktop Runtime — the FD installer checks for it in
+      # the bundled .NET runtime: ~230 DLLs -> ~41, ~122 MB -> ~50 MB installed.
+      # NOTE: that is a size win, not necessarily a cold-start win — measured,
+      # cold start is about the same unless another .NET 10 app keeps the
+      # shared runtime warm at logon (see docs/OPTIMIZATION.md §3). The
+      # trade-off is a prerequisite: the target must
+      # have the .NET 10 Runtime (base or Desktop) — the FD installer checks for it in
       # [Code] and aborts with a download link rather than installing a broken
       # app (see installer/inno/menyou.iss). Same ReadyToRun + embedded symbols
       # + native bridge as the SC x64 build above; only the runtime bundling
@@ -268,7 +270,7 @@ jobs:
             echo
             echo "Direct download below: \`MenYou-Setup-${version}.exe\` (x64) or \`MenYou-arm64-Setup-${version}.exe\` (Windows on ARM). Both are **self-contained** — no prerequisites."
             echo
-            echo "Smaller / faster cold start: \`MenYou-fd-Setup-${version}.exe\` (x64, **framework-dependent**) — about half the size and cold page-in, but requires the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (the installer checks and links it if missing). Direct download only; not on winget/Chocolatey."
+            echo "Smaller download/install: \`MenYou-fd-Setup-${version}.exe\` (x64, **framework-dependent**) — about half the size, but requires the .NET 10 Runtime — base or Desktop ([download](https://dotnet.microsoft.com/download/dotnet/10.0); the installer checks and links it if missing). Direct download only; not on winget/Chocolatey."
             echo
             echo "**SHA-256** — verify your download is intact (an integrity check, *not* a code signature):"
             echo

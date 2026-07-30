@@ -1,5 +1,6 @@
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:behaviors="using:MenYou.Views.Behaviors">
     <!--
         Slim, modern ScrollBar + ScrollViewer ported from SukiUI
         (kikipoulet/SukiUI). The Avalonia Fluent default paints a chunky
@@ -11,25 +12,19 @@
         Fluent chrome (corner separators, etc.) doesn't fight the slim
         bar.
 
-        Interaction model (slim, focus-driven — the thumb stays a constant
-        5 px and never grows):
-        - Focused: the thumb is visible (Opacity 1) at its slim 5 px width
-          whenever the scroll area can scroll — always there while you're
-          using the menu, so you can see and grab it without hunting.
-        - Pointer over the scroll area: the thumb only BRIGHTENS to the
-          hover brush. AllowAutoHide is used purely as that pointer-over
-          state flag (set precisely via /template/ so a hovered OUTER
-          ScrollViewer doesn't brighten a nested inner one); it stays False
-          otherwise, so the framework's own auto-hide fade never runs. Width
-          is unchanged.
-        - Host window not focused: StartMenuWindow toggles the
-          "window-unfocused" class (code-behind OnActivated / OnDeactivated),
-          and the Window.window-unfocused rules below fade the thumb out
-          (Opacity 0). Those rules are intentionally LAST — Avalonia style
-          precedence is order-based, so a later Opacity=0 wins over the
-          default Opacity=1 while the window is inactive. Other windows
-          (Settings) never set the class, so their slim bar is simply always
-          visible.
+        Interaction model (overlay — hidden unless the user is interacting
+        with the scroll area; the thumb stays a constant 5 px and never
+        grows):
+        - At rest: the thumb is fully transparent (Opacity 0), so nothing
+          shows over uniform content.
+        - Pointer over the scroll area, OR the area actively scrolling
+          (wheel / keyboard / programmatic — ScrollActivityBehavior pulses
+          the "scrolling" class while the offset moves, lingering ~1 s):
+          the thumb fades in at its slim width with the hover brush.
+          AllowAutoHide is used purely as that show-state flag (set
+          precisely via /template/ so a hovered or scrolling OUTER
+          ScrollViewer doesn't light up a nested inner one); it stays False
+          otherwise, so the framework's own auto-hide fade never runs.
 
         Side-menu (.Stack) variants from the upstream file were dropped
         — they depend on SukiUI's internal converters which we don't
@@ -69,7 +64,7 @@
                                             <Border Name="ThumbBarVertical"
                                                     Width="5"
                                                     Margin="0,3"
-                                                    Opacity="1"
+                                                    Opacity="0"
                                                     Background="{DynamicResource ScrollBarThumbRestBrush}"
                                                     CornerRadius="{DynamicResource ScrollBarThumbCornerRadius}">
                                                 <Border.Transitions>
@@ -122,7 +117,7 @@
                                             <Border Name="ThumbBarHorizontal"
                                                     Height="5"
                                                     Margin="3,0"
-                                                    Opacity="1"
+                                                    Opacity="0"
                                                     Background="{DynamicResource ScrollBarThumbRestBrush}"
                                                     CornerRadius="10">
                                                 <Border.Transitions>
@@ -144,40 +139,33 @@
         </Setter>
     </Style>
 
-    <!-- Pointer-over BRIGHTEN only (slim 5 px width unchanged). /template/ sets
-         the flag on the ScrollViewer's OWN bar precisely (one hop), so a hovered
-         outer ScrollViewer doesn't also brighten a nested inner one. -->
+    <!-- Show the bar while the user is INTERACTING with the scroll area:
+         pointer over it, or its offset actively moving (the "scrolling" class,
+         pulsed by ScrollActivityBehavior with a ~1 s linger). /template/ sets
+         the flag on the ScrollViewer's OWN bar precisely (one hop), so a
+         hovered or scrolling outer ScrollViewer doesn't light up a nested
+         inner one. -->
     <Style Selector="ScrollViewer:pointerover /template/ ScrollBar">
+        <Setter Property="AllowAutoHide" Value="True" />
+    </Style>
+    <Style Selector="ScrollViewer.scrolling /template/ ScrollBar">
         <Setter Property="AllowAutoHide" Value="True" />
     </Style>
 
     <Style Selector="ScrollBar[AllowAutoHide=True] Border#ThumbBarVertical">
+        <Setter Property="Opacity" Value="1" />
         <Setter Property="Background" Value="{DynamicResource ScrollBarThumbHoverBrush}" />
     </Style>
 
     <Style Selector="ScrollBar[AllowAutoHide=True] Border#ThumbBarHorizontal">
+        <Setter Property="Opacity" Value="1" />
         <Setter Property="Background" Value="{DynamicResource ScrollBarThumbHoverBrush}" />
     </Style>
 
-    <!-- Hidden while the host window isn't focused (StartMenuWindow toggles the
-         "window-unfocused" class in OnActivated / OnDeactivated). MUST stay after
-         the rules above: Avalonia style precedence is order-based, so this later
-         Opacity=0 overrides the default Opacity=1 while the window is inactive.
-         Reuses the thumb's Opacity DoubleTransition for a smooth fade. Only
-         StartMenuWindow sets the class; other windows keep the slim bar visible. -->
-    <!-- :is(Window) — NOT bare "Window": a bare type name is an exact-type
-         (OfType) selector, and the live control is the subclass StartMenuWindow,
-         so "Window" would never match and the hide would silently never fire.
-         :is(Window) matches Window and its subclasses. -->
-    <Style Selector=":is(Window).window-unfocused Border#ThumbBarVertical">
-        <Setter Property="Opacity" Value="0" />
-    </Style>
-
-    <Style Selector=":is(Window).window-unfocused Border#ThumbBarHorizontal">
-        <Setter Property="Opacity" Value="0" />
-    </Style>
-
     <Style Selector="ScrollViewer">
+        <!-- Every ScrollViewer reports scroll activity, so the show-on-
+             scrolling rule above works app-wide (lists, trees, flyouts). -->
+        <Setter Property="(behaviors:ScrollActivityBehavior.Enable)" Value="True" />
         <Setter Property="Template">
             <ControlTemplate>
                 <!-- Single-cell Grid so the scrollbars overlay the content

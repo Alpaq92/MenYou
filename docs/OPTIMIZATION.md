@@ -2,7 +2,7 @@
 
 How MenYou is kept fast, and the reasoning behind each change — focused on **startup**, which is what users feel most for a Start-menu replacement that lives in the tray and must be ready the moment they sign in.
 
-This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across two distinct eras: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task) and the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up).
+This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across three threads: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task), the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up), and the **payload/packaging** work (§3, §9 — what ships, what pages in on a cold boot, and the trimming attempt that had to be reverted).
 
 ---
 
@@ -19,7 +19,7 @@ Cold boot — time from the desktop appearing to MenYou's **process launching** 
 
 Same machine, same binary path — the **launch** dropped **~15 s → ~1 s** purely by changing *how Windows is told to start the app*. Desktop→tray-*usable* followed: ~16 s before, **~2–4 s** on 0.7.0.
 
-A second, independent cold-start regression — in the **data paint**, not the launch — surfaced after 0.7.0 shipped: intermittently the menu opened *empty* for ~15–20 s even though the process launched in ~1 s. That one was fixed in **0.8.7** (stale-while-revalidate, §6), hardened through **0.8.14–0.9.0** (§7), with the remaining visible cost (the icon fill) parallelized in **0.9.2** (§8).
+A second, independent cold-start regression — in the **data paint**, not the launch — surfaced after 0.7.0 shipped: intermittently the menu opened *empty* for ~15–20 s even though the process launched in ~1 s. That one was fixed in **0.8.7** (stale-while-revalidate, §6), hardened through **0.8.14–0.9.0** (§7), with the remaining visible cost (the icon fill) parallelized in **0.9.2** and moved onto a disk cache in **0.9.6** (§8).
 
 ### Results — data-paint era
 
@@ -98,9 +98,11 @@ The self-contained payload's cold **runtime page-in** — the OS faulting the bu
 | Variant | Publish | Download | Installed | DLLs | Prerequisite |
 |---|---|---|---|---|---|
 | **Self-contained** (`MenYou-Setup`) | `--self-contained` | ~41 MB | ~122 MB | ~230 | none (runtime bundled) |
-| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~17 MB | ~50 MB | ~41 | .NET 10 Desktop Runtime |
+| **Framework-dependent** (`MenYou-fd-Setup`) | `--self-contained false` | ~17 MB | ~50 MB | ~41 | .NET 10 Runtime (base or Desktop) |
 
-Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload and, with it, the cold page-in. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
+Dropping the bundled runtime (~230 DLLs → ~41, `coreclr.dll` and the shared framework gone; Avalonia + Skia stay) roughly **halves** the payload — download and disk. Both keep ReadyToRun and embedded symbols; only `--self-contained` differs, so the **managed payload is byte-identical** between them.
+
+**Measured: the cold-start win is conditional, the size win is not.** The intuition "half the bytes ⇒ half the cold page-in" only holds if the shared runtime in `C:\Program Files\dotnet` is already warm — i.e. some *other* .NET 10 app loads at logon. On a machine where MenYou is the only .NET 10 process at logon, the shared framework's pages are exactly as cold as a bundled copy would be: the page-in **moves** to `Program Files\dotnet`, it doesn't shrink. Traced on such a machine (FD 0.9.12, first cold boot after an update, so also paying Defender's first-scan of the fresh binaries and an untrained Prefetch): **tray ready at +10.3 s** from process start — roughly the same as the ~9 s the trained self-contained build measured in the investigation that motivated this split, not half. Warm starts on the same build: **0.5–2.1 s** to tray, with the icon cache filling all 144 tiles in ~200 ms even on the cold boot (§8's disk cache paying off exactly as designed). Cold boots after Prefetch retrains on the new binaries are expected to come down the way the SC build's did across boots; treat FD's advertised advantages as **~17 MB download / ~50 MB disk always, cold start only when the runtime is otherwise in use**.
 
 Choices that keep this from becoming a footgun:
 
@@ -176,7 +178,7 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 - **Per-item isolation** — `ForEachAsync` stops scheduling after an unhandled throw and every call site discards the batch task, so one corrupt `.ico` would have silently left the rest of the menu on cogs. Each item now catches; a failed extraction is cached as null (cog stays, no per-open retry).
 - **Correctness riders** — tile-list snapshots moved onto the UI thread behind a loud `VerifyAccess` (the old loop enumerated live `ObservableCollection`s inside `Task.Run`, racing rebuilds); a generation guard drops a superseded tree batch's posts; the extraction cache's one lock-free read was closed (parallel writers made the read-during-write real).
 
-**Next lever (planned):** a small on-disk icon cache keyed by entry id, so warm boots skip extraction entirely — gated on per-entry mtime invalidation and negative-result handling (the in-memory cache stores nulls; a disk layer that doesn't would re-extract every icon-less app each boot), plus a measurement pass on the added post-login decode cost.
+**The on-disk icon cache (shipped 0.9.6).** The planned next lever landed: `IconDiskCache` persists each extracted icon as a PNG under `%AppData%\MenYou\icons\`, keyed by entry id with per-entry source-mtime invalidation and negative-result caching (an icon-less app's null is cached too, so it never re-runs the COM chain), atomic temp+move writes, and a batched index flush. Measured: the ~150-icon cold fill dropped **~7.2 s → ~0.1–0.2 s** (75× on the bench machine), and on a real cold boot the trace shows **all 144 tiles filled in ~200 ms** — cold starts now decode small PNGs instead of storming shell COM.
 
 ---
 
@@ -244,3 +246,6 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 | **0.8.14** | Truthful-paint guards: degraded-UWP-scan quarantine (empty ≠ success; never persisted), atomic id-map publish for the lock-free pin/recent join, Recent join-then-cap, and the mirror's empty-export wipe guard. |
 | **0.9.0** | Ghost filtering — uninstall-style entries and dead-path AUMIDs dropped from the AppsFolder merge, so uninstalled apps can't persist in the snapshot (and the resolver-cache lag window can't reintroduce them). |
 | **0.9.2** | **Parallel icon fill** — the serial per-icon `Task.Run` + awaited-UI-invoke loop became one capped-DOP `Parallel.ForEachAsync` batch with exactly-once per-id extraction, per-item fault isolation, and per-icon posted updates (visible batch measured 2086 → 446 ms); tile-list snapshots moved on-thread; the icon cache's last lock-free read closed. |
+| **0.9.6** | **On-disk icon cache** (§8: PNG-per-id, mtime invalidation, negative-result caching — cold fill ~7.2 s → ~0.1–0.2 s); **framework-dependent installer variant** (§3, ~50 MB installed); `PublishTrimmed` shipped (−39 % payload, warning-clean) — **runtime-broken, reverted in 0.9.11** (§9). |
+| **0.9.11** | **Trimming reverted** — ILLink deletes uncalled `[ComImport]` interface members, shifting COM vtable slots: `IShellItem::GetDisplayName` dispatched into `GetParent`'s slot → `0xC0000005` on every cache-cold launch, past any `try/catch`. Proven by strict A/B; `TrimmerRootAssembly Include="MenYou"` landed (inert) as the precondition for any future attempt (§9). |
+| **0.9.13** | **FD cold start measured honestly** (§3): tray at +10.3 s on a true cold boot ≈ the trained SC build, because the shared runtime is just as cold when nothing else loads .NET 10 at logon — FD's unconditional win is size, not cold start. Warm starts 0.5–2.1 s; icon disk cache filled 144 tiles in ~200 ms on the same cold boot. |
