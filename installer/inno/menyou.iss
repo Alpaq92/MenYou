@@ -422,7 +422,7 @@ procedure CloseStrayMenYou();
 var
   Loc, Svc, Procs, P: Variant;
   AppDir, ExePath: String;
-  I, Pid: Integer;
+  I, Pid, Rc: Integer;
 begin
   AppDir := AddBackslash(ExpandConstant('{app}'));
   try
@@ -444,8 +444,18 @@ begin
       begin
         Pid := P.ProcessId;
         Log('Closing stray MenYou.exe (pid ' + IntToStr(Pid) + ') at ' + ExePath);
-        { Terminate through the instance already in hand — no taskkill spawn. }
-        P.Terminate();
+        { Kill via taskkill.exe rather than the WMI instance's own Terminate(),
+          even though we hold the instance and Terminate() is one call with no
+          process spawn. 0.9.15 shipped Terminate() and Defender's cloud ML
+          immediately flagged the FD installer as Trojan:Win32/Wacatac.B!ml —
+          a false positive (the asset is CI-built by github-actions from the
+          tagged public source), but a costly one, and WMI-enumerate-then-
+          Terminate is textbook malware behaviour to a heuristic. taskkill has
+          been in this script since before 0.9.0 across 15+ releases with no
+          such detection, so the spawn is the price of not tripping the
+          classifier. Do not "optimise" this back to Terminate(). }
+        Exec(ExpandConstant('{sys}\taskkill.exe'), '/f /pid ' + IntToStr(Pid), '',
+             SW_HIDE, ewWaitUntilTerminated, Rc);
       end;
     end;
   except
