@@ -398,6 +398,61 @@ begin
 end;
 #endif
 
+{ Close any MenYou.exe running from OUTSIDE the install directory.
+
+  Why: the single-instance guard (Platform\Windows\SingleInstance.cs) keys off
+  ONE fixed mutex name, so it is path-blind — every MenYou binary claims the
+  same guard. Restart Manager (CloseApplications=yes) only closes processes
+  holding files in the install directory, so a MenYou started from anywhere
+  else (a portable extract, a dev build, an old folder left behind by a moved
+  install) survives the upgrade, keeps the mutex, and the new exe then rings that
+  stale process's doorbell and EXITS. The user sees the old build still
+  serving the menu — reporting its own older version — with no sign the update
+  did not take effect. (Observed while shipping 0.9.14.)
+
+  So: leave the installed-directory process to Restart Manager, which closes it
+  gracefully and relaunches it afterwards (RestartApplications=yes), and only
+  force-close the strays RM cannot see. Terminating them is the intended
+  outcome — they are the same app being upgraded, and MenYou persists settings
+  on Apply rather than at exit, so there is nothing buffered to lose.
+
+  Best-effort by design: a failed stray-check must never block an otherwise
+  valid install. }
+procedure CloseStrayMenYou();
+var
+  Loc, Svc, Procs, P: Variant;
+  AppDir, ExePath: String;
+  I, Pid: Integer;
+begin
+  AppDir := AddBackslash(ExpandConstant('{app}'));
+  try
+    { Inno's Pascal Script cannot chain a method onto CreateOleObject's
+      result, so the locator needs its own variable. }
+    Loc := CreateOleObject('WbemScripting.SWbemLocator');
+    Svc := Loc.ConnectServer('', 'root\CIMV2', '', '');
+    Procs := Svc.ExecQuery('SELECT ProcessId, ExecutablePath FROM Win32_Process'
+                           + ' WHERE Name = "MenYou.exe"');
+    for I := 0 to Procs.Count - 1 do
+    begin
+      P := Procs.ItemIndex(I);
+      ExePath := '';
+      { Null when the query cannot read the path (another user's process). }
+      if not VarIsNull(P.ExecutablePath) then
+        ExePath := P.ExecutablePath;
+      if (ExePath <> '')
+         and (CompareText(Copy(ExePath, 1, Length(AppDir)), AppDir) <> 0) then
+      begin
+        Pid := P.ProcessId;
+        Log('Closing stray MenYou.exe (pid ' + IntToStr(Pid) + ') at ' + ExePath);
+        { Terminate through the instance already in hand — no taskkill spawn. }
+        P.Terminate();
+      end;
+    end;
+  except
+    Log('Stray-instance check skipped: ' + GetExceptionMessage);
+  end;
+end;
+
 { Runs right before files are installed. Older MenYou builds (< 0.8.0) injected
   MenYou.Bridge.dll into explorer.exe with a hook OWNED BY EXPLORER, so the DLL
   stayed mapped — and its file locked — even after MenYou closed. Replacing it
@@ -430,6 +485,8 @@ begin
     Exit;
   end;
 #endif
+  { Before touching any files — see the procedure header for why. }
+  CloseStrayMenYou();
   Dll := ExpandConstant('{app}\MenYou.Bridge.dll');
   if FileExists(Dll) and (not DeleteFile(Dll)) then
   begin

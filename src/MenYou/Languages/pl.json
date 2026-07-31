@@ -22,6 +22,7 @@
   "PushToWinStartDescription": "Zapisuje listę przypiętych z MenYou do zasady ConfigureStartPins i restartuje Eksplorator. Operacja jednorazowa — Windows zastosuje przypięcia przy następnym logowaniu. Po edycji w MenYou uruchom ponownie, aby zaktualizować.",
   "CheckForUpdates": "Sprawdź aktualizacje",
   "About": "O programie",
+  "ViewReleaseNotes": "Zobacz informacje o wydaniu",
   "UpdateUpToDate": "Aktualna wersja",
   "UpdateDownloaded": "Aktualizacja gotowa — uruchom ponownie MenYou",
   "UpdateCheckFailed": "Sprawdzanie aktualizacji nie powiodło się",

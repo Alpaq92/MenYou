@@ -22,6 +22,7 @@
   "PushToWinStartDescription": "Writes MenYou's pin list to the ConfigureStartPins policy and restarts Explorer. One-shot — Windows applies pins on next sign-in. The user can edit Start pins after; re-run this to push again.",
   "CheckForUpdates": "Check for updates",
   "About": "About",
+  "ViewReleaseNotes": "View release notes",
   "UpdateUpToDate": "Up to date",
   "UpdateDownloaded": "Update ready — restart MenYou to apply",
   "UpdateCheckFailed": "Update check failed",

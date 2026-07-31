@@ -20,6 +20,7 @@
   "PushToWinStartDescription": "Escribe la lista de anclados de MenYou en la directiva ConfigureStartPins y reinicia el Explorador. Acción única — Windows aplica los anclajes en el siguiente inicio de sesión. Vuelva a ejecutarlo para enviar de nuevo.",
   "CheckForUpdates": "Buscar actualizaciones",
   "About": "Acerca de",
+  "ViewReleaseNotes": "Ver notas de la versión",
   "UpdateUpToDate": "Actualizado",
   "UpdateDownloaded": "Actualización lista — reinicie MenYou",
   "UpdateCheckFailed": "Error al comprobar las actualizaciones",

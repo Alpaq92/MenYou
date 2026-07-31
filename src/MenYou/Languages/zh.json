@@ -20,6 +20,7 @@
   "PushToWinStartDescription": "将 MenYou 的固定列表写入 ConfigureStartPins 策略并重启资源管理器。一次性操作 — Windows 在下次登录时应用。再次推送请重新运行。",
   "CheckForUpdates": "检查更新",
   "About": "关于",
+  "ViewReleaseNotes": "查看发行说明",
   "UpdateUpToDate": "已是最新版本",
   "UpdateDownloaded": "更新就绪 — 请重启 MenYou",
   "UpdateCheckFailed": "检查更新失败",

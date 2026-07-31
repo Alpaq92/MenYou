@@ -38,6 +38,15 @@ public sealed class GitHubUpdateService : IUpdateService
     /// and the Settings window (both open it in the default browser).
     public const string RepositoryUrl = "https://github.com/" + Owner + "/" + Repo;
 
+    /// CHANGELOG.md as it stood at <paramref name="tag"/> ("vX.Y.Z"), where that
+    /// version's entry is the newest — i.e. at the top of the file. An anchor
+    /// deep-link on main is not derivable: release-please renders headings as
+    /// "0.9.13 (2026-07-30)", so the anchor embeds a release date the app can't
+    /// know. Unversioned builds fall back to main. Lives here because this class
+    /// owns the repo's identity and URL shapes (see the naming contract below).
+    public static string ChangelogUrl(string? tag) =>
+        $"{RepositoryUrl}/blob/{(string.IsNullOrEmpty(tag) ? "main" : tag)}/CHANGELOG.md";
+
     // Must match the [Setup] AppId in installer/inno/menyou.iss. Inno
     // records its uninstall entry under "<AppId>_is1" in the Uninstall
     // hive; the PRESENCE of that key is how we tell an installed build from a
