@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.15](https://github.com/Alpaq92/MenYou/compare/v0.9.14...v0.9.15) (2026-07-31)
+
+
+### Bug Fixes
+
+* sweep stray MenYou instances on install; link the version label to the changelog ([#107](https://github.com/Alpaq92/MenYou/issues/107)) ([740d70e](https://github.com/Alpaq92/MenYou/commit/740d70ec42b4a322c76abff0ad961b18afc6239a))
+
 ## [0.9.14](https://github.com/Alpaq92/MenYou/compare/v0.9.13...v0.9.14) (2026-07-31)
 
 
