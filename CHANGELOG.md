@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.14](https://github.com/Alpaq92/MenYou/compare/v0.9.13...v0.9.14) (2026-07-31)
+
+
+### Bug Fixes
+
+* **ui:** Places button icon — MDI folder-outline instead of the chevron ([#105](https://github.com/Alpaq92/MenYou/issues/105)) ([803379b](https://github.com/Alpaq92/MenYou/commit/803379b639c27b18757e0dc5b6fe8e4fed490acb))
+
 ## [0.9.13](https://github.com/Alpaq92/MenYou/compare/v0.9.12...v0.9.13) (2026-07-30)
 
 
