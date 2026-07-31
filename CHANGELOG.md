@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.16](https://github.com/Alpaq92/MenYou/compare/v0.9.15...v0.9.16) (2026-07-31)
+
+
+### Bug Fixes
+
+* **installer:** kill strays via taskkill again — WMI Terminate tripped Defender ([#109](https://github.com/Alpaq92/MenYou/issues/109)) ([b3b4f9c](https://github.com/Alpaq92/MenYou/commit/b3b4f9c4ab452b424d64daada95e28e97f9ff4a0))
+
 ## [0.9.15](https://github.com/Alpaq92/MenYou/compare/v0.9.14...v0.9.15) (2026-07-31)
 
 
