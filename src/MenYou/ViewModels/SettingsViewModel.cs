@@ -462,17 +462,26 @@ public sealed partial class SettingsViewModel : ViewModelBase
     }
 
     /// Opens MenYou's GitHub project page in the user's default browser.
-    /// UseShellExecute=true hands the https URL to the shell so it resolves
-    /// through the registered browser; best-effort, so a missing handler
-    /// just no-ops rather than throwing into the UI.
     [RelayCommand]
-    public void OpenAbout()
+    public void OpenAbout() => OpenUrl(GitHubUpdateService.RepositoryUrl);
+
+    /// Opens the CHANGELOG at the running build's tag — the clickable version
+    /// label lands here. <see cref="Version"/> is already formatted "vX.Y.Z",
+    /// which IS the tag name (see <see cref="GitHubUpdateService.ChangelogUrl"/>
+    /// for why the tag, not an anchor on main).
+    [RelayCommand]
+    public void OpenChangelog() => OpenUrl(GitHubUpdateService.ChangelogUrl(Version));
+
+    /// Hands an https URL to the shell. UseShellExecute=true resolves it
+    /// through the registered browser; best-effort, so a missing handler just
+    /// no-ops rather than throwing into the UI.
+    private static void OpenUrl(string url)
     {
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
             {
-                FileName = GitHubUpdateService.RepositoryUrl,
+                FileName = url,
                 UseShellExecute = true,
             });
         }

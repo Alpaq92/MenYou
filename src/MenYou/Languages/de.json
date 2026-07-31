@@ -22,6 +22,7 @@
   "PushToWinStartDescription": "Schreibt die MenYou-Pinliste in die Richtlinie ConfigureStartPins und startet den Explorer neu. Einmalige Aktion — Windows wendet die Anheftungen bei der nächsten Anmeldung an. Erneut ausführen, um Aktualisierungen zu übertragen.",
   "CheckForUpdates": "Nach Aktualisierungen suchen",
   "About": "Über",
+  "ViewReleaseNotes": "Versionshinweise anzeigen",
   "UpdateUpToDate": "Auf dem neuesten Stand",
   "UpdateDownloaded": "Aktualisierung bereit — MenYou neu starten",
   "UpdateCheckFailed": "Aktualisierungsprüfung fehlgeschlagen",

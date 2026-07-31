@@ -121,6 +121,25 @@
             <Setter Property="MinHeight" Value="34" />
             <Setter Property="Padding" Value="10,4" />
         </Style>
+
+        <!-- Version label rendered as a link (opens this build's release
+             notes). A Button, not a TextBlock+handler, so it keeps keyboard
+             focus and Enter/Space activation for free; the chrome is stripped
+             so it reads as text until hovered. -->
+        <Style Selector="Button.version-link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="4,2" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.version-link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.version-link:pointerover > TextBlock">
+            <Setter Property="TextDecorations" Value="Underline" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemAccentColorLight2}" />
+        </Style>
     </Window.Styles>
 
     <Grid RowDefinitions="*,Auto">
@@ -476,10 +495,12 @@
                             IsEnabled="{Binding CanCheckForUpdates}" />
                     <Button Content="{x:Static loc:Strings.About}"
                             Command="{Binding OpenAboutCommand}" />
-                    <TextBlock Text="{Binding Version}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               VerticalAlignment="Center"
-                               Margin="8,0,0,0" />
+                    <Button Classes="version-link"
+                            Command="{Binding OpenChangelogCommand}"
+                            VerticalAlignment="Center"
+                            ToolTip.Tip="{x:Static loc:Strings.ViewReleaseNotes}">
+                        <TextBlock Text="{Binding Version}" />
+                    </Button>
                     <TextBlock Text="{Binding UpdateStatus}"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center"

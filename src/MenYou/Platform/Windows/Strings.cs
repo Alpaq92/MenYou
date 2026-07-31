@@ -257,6 +257,9 @@ public static class Strings
     // browser. No reliable shell-DLL source for a bare "About" verb across
     // SKUs, so it comes from the JSON bundle.
     public static string About                   => Resolve("About");
+    // ViewReleaseNotes: tooltip on the clickable version label beside the
+    // About button; opens this build's GitHub release notes. JSON-only.
+    public static string ViewReleaseNotes        => Resolve("ViewReleaseNotes");
     // UpdateChecking: themecpl.dll,-1107 = "Ładowanie" / "Loading" —
     // the Personalization spinner label. Not literally "Checking" but
     // works as a generic in-progress status.

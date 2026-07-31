@@ -20,6 +20,7 @@
   "PushToWinStartDescription": "MenYou のピンリストを ConfigureStartPins ポリシーに書き込み Explorer を再起動します。1 回限り — 次回サインイン時に Windows が適用します。再送するには再実行してください。",
   "CheckForUpdates": "更新を確認",
   "About": "バージョン情報",
+  "ViewReleaseNotes": "リリースノートを表示",
   "UpdateUpToDate": "最新です",
   "UpdateDownloaded": "更新の準備ができました — MenYou を再起動してください",
   "UpdateCheckFailed": "更新の確認に失敗しました",

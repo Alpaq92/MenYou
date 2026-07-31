@@ -20,6 +20,7 @@
   "PushToWinStartDescription": "Écrit la liste d'épingles de MenYou dans la stratégie ConfigureStartPins et redémarre l'Explorateur. Action ponctuelle — Windows applique les épingles à la prochaine connexion. Relancez pour pousser à nouveau.",
   "CheckForUpdates": "Vérifier les mises à jour",
   "About": "À propos",
+  "ViewReleaseNotes": "Voir les notes de version",
   "UpdateUpToDate": "À jour",
   "UpdateDownloaded": "Mise à jour prête — redémarrez MenYou",
   "UpdateCheckFailed": "Échec de la vérification des mises à jour",
