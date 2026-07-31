@@ -395,7 +395,7 @@
            then the same five power verbs as the Win7 layout: Lock,
            SignOut, Sleep, Restart, Shutdown. Places + Settings sit
            left of the vertical 1-px separator because they aren't
-           destructive verbs; the chevron-up glyph (E70E) opens a
+           destructive verbs; the folder (MDI folder-outline) icon opens a
            Flyout listing the full RightPanel.Shortcuts set (Start
            Menu / Documents / Settings / Control Panel / Pictures /
            Music / Downloads / This PC / Network / Run...). Shutdown
@@ -404,15 +404,20 @@
            MenuHoverBrush. -->
       <StackPanel Grid.Column="1" Orientation="Horizontal"
                   Spacing="2" VerticalAlignment="Center">
-        <!-- Places flyout button. ChevronUp glyph (E70E) hints at the
-             "pops upward from the bottom bar" affordance. The Flyout's
-             ItemsControl binds to RightPanel.Shortcuts so every Place
-             the user has on disk shows up — no curated filter. Each
-             row is a Button.menu so it picks up the same rounded
-             hover treatment as the rest of the menu. -->
+        <!-- Places flyout button: MDI "folder-outline" (Apache-2.0 — see
+             CREDITS.md) — the flyout is a list of shell FOLDERS (Documents,
+             Downloads, This PC, ...), so the icon names the content.
+             PathIcon (not TextBlock) so the icon matches MDI exactly and its
+             Fill tracks Foreground, recoloring on hover like the glyph
+             TextBlocks beside it. 14 px box ≈ the optical ink size of the
+             16 px Segoe glyphs. The Flyout's ItemsControl binds to
+             RightPanel.Shortcuts so every Place the user has on disk shows
+             up — no curated filter. Each row is a Button.menu so it picks up
+             the same rounded hover treatment as the rest of the menu. -->
         <Button Classes="power"
                 ToolTip.Tip="{x:Static loc:Strings.Places}">
-          <TextBlock Classes="power-glyph" Text="&#xE70E;" />
+          <PathIcon Width="14" Height="14"
+                    Data="M20,18H4V8H20M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6Z" />
           <Button.Flyout>
             <Flyout Placement="Top">
               <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}"
