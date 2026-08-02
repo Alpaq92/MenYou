@@ -102,6 +102,8 @@ Windows Defender has repeatedly flagged MenYou installers as `Trojan:Win32/Wacat
 - Every release mints a fresh hash for every asset, so each release is an independent roll of the dice.
 - Package-manager prevalence is not sufficient on its own — the self-contained installer ships via winget and Chocolatey and was flagged anyway on a direct download.
 
+And "unsigned + low prevalence" is only half of it — plenty of unsigned apps are never flagged. MenYou's own feature set supplies the rest: three `WH_KEYBOARD_LL` hooks (reads as a keylogger), four `WH_MOUSE_LL` hooks, a `WH_GETMESSAGE` hook that maps `MenYou.Bridge.dll` into `explorer.exe` (injection into a system process), `AdjustTokenPrivileges` for `SE_SHUTDOWN_NAME`, and persistence via both `...CurrentVersion\Run` and `schtasks`. That is the canonical profile of a keylogger with persistence and injection, and every item is required by a shipped feature. The injection is already done the clean, OS-mediated way (`SetWindowsHookEx`, as Open-Shell does it — not `CreateRemoteThread`), so there is no less-suspicious technique left to adopt. **Expect a flag on any release until the binaries are signed; a clean release is luck, not a fix.**
+
 **A valid Authenticode signature is a strong negative signal for the ML classifier even though it no longer buys a SmartScreen bypass.** The two are worth deciding separately. Options that did not exist (or were not considered) when the section above was written:
 
 | Route | Notes |
