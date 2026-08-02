@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.21](https://github.com/Alpaq92/MenYou/compare/v0.9.20...v0.9.21) (2026-08-02)
+
+
+### Bug Fixes
+
+* **installer:** retire the framework-dependent variant ([#119](https://github.com/Alpaq92/MenYou/issues/119)) ([ce7a1cf](https://github.com/Alpaq92/MenYou/commit/ce7a1cfdd25490db51f0c8db2c3d1839d8be891c))
+
 ## [0.9.20](https://github.com/Alpaq92/MenYou/compare/v0.9.19...v0.9.20) (2026-08-02)
 
 
