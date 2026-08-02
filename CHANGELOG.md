@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.18](https://github.com/Alpaq92/MenYou/compare/v0.9.17...v0.9.18) (2026-08-02)
+
+
+### Bug Fixes
+
+* **ui:** arm the post-settle focus check on the fallback reveal too ([#113](https://github.com/Alpaq92/MenYou/issues/113)) ([ba99c80](https://github.com/Alpaq92/MenYou/commit/ba99c8045014ba8cf3c96029bef119f26b6168b0))
+
 ## [0.9.17](https://github.com/Alpaq92/MenYou/compare/v0.9.16...v0.9.17) (2026-08-02)
 
 
