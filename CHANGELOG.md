@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.23](https://github.com/Alpaq92/MenYou/compare/v0.9.22...v0.9.23) (2026-08-02)
+
+
+### Documentation
+
+* full write-up of the Defender false positive, and why it recurs ([#124](https://github.com/Alpaq92/MenYou/issues/124)) ([f858f76](https://github.com/Alpaq92/MenYou/commit/f858f767a4c9115b0fc3f6ed15a1f6a7ccd8ceee))
+
 ## [0.9.22](https://github.com/Alpaq92/MenYou/compare/v0.9.21...v0.9.22) (2026-08-02)
 
 
