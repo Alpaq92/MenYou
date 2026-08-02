@@ -78,6 +78,41 @@ already-shipped version makes release-please try to **re-cut** that version (it
 caused a 0.8.1 re-release loop). Pin only to the version you actually intend to
 cut next, and confirm the manifest matches.
 
+## Windows Defender false positives — settled, don't re-litigate
+
+Defender periodically flags a MenYou installer as `Trojan:Win32/Wacatac.B!ml`
+(0.9.15 and 0.9.19 on `MenYou-fd-Setup`, 0.9.20 on `MenYou-Setup`). **Nothing in
+the repo causes it and no code change fixes it.** Two attempts already burned a
+release each, so before theorising again, the established facts:
+
+- **Not reproducible offline.** The payload files, a locally built installer,
+  and that installer carrying a GitHub Mark-of-the-Web all scan clean under
+  `MpCmdRun -Scan`. The verdict is a **cloud call made at download time**; its
+  dominant inputs are *unsigned* and *zero prevalence*, not the bytes.
+- **Nondeterministic per hash.** Every release mints a fresh hash for every
+  asset, so each release is an independent roll. A clean release is not
+  evidence that anything was fixed — that mistake has now been made twice.
+- **Wrong theory #1 (0.9.16):** the installer's WMI `Terminate()` call. Reverted
+  to `taskkill`; 0.9.19 was flagged anyway.
+- **Wrong theory #2 (0.9.20):** the framework-dependent variant was somehow
+  special because all detections so far had landed on it. Retired it; the
+  self-contained installer was flagged on the very next release. (FD stays
+  retired — the *other* reason, that "half the size" ignored the ~55 MB runtime
+  it required, is sound.)
+- **Prevalence alone is insufficient.** `MenYou-Setup` ships via winget *and*
+  Chocolatey and was still flagged on a direct download.
+
+Only two things actually work, and both need the repo owner (identity
+verification, payment, or a Microsoft account sign-in): a **WDSI submission**,
+which clears one hash and nothing after it, and **code signing**, which is the
+durable fix. `menyou.iss` is already wired for signing (`/DMySignTool`,
+`SignedUninstaller=yes`) — what's missing is a `release.yml` step and a
+certificate. Note that `docs/AUTOMATION.md` used to argue against signing purely
+on SmartScreen grounds; that reasoning does not transfer to Defender's ML
+classifier, for which a valid Authenticode signature is a strong negative signal
+regardless of SmartScreen. See `docs/AUTOMATION.md` § Code signing and
+`docs/OPTIMIZATION.md` §3.
+
 ## Changelog
 
 `CHANGELOG.md` is release-please-generated — don't hand-edit released sections.
