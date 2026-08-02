@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.19](https://github.com/Alpaq92/MenYou/compare/v0.9.18...v0.9.19) (2026-08-02)
+
+
+### Bug Fixes
+
+* **startup:** hook Start and the Win key before Avalonia loads ([#115](https://github.com/Alpaq92/MenYou/issues/115)) ([568f1ab](https://github.com/Alpaq92/MenYou/commit/568f1ab0a149c56c452ed68f8f09c837a1c07805))
+
 ## [0.9.18](https://github.com/Alpaq92/MenYou/compare/v0.9.17...v0.9.18) (2026-08-02)
 
 
