@@ -1,5 +1,6 @@
 using Avalonia;
 using MenYou.Platform.Windows;
+using MenYou.Services;
 
 namespace MenYou;
 
@@ -15,10 +16,18 @@ internal static class Program
         if (!SingleInstance.TryAcquire())
             return 0;
 
+        // Get the Start button and the Win key hooked BEFORE Avalonia loads.
+        // The UI stack takes seconds to come up on a cold boot, and until it
+        // did the hooks weren't in — so an early press opened Windows' Start
+        // menu, the exact thing MenYou exists to replace. Presses captured
+        // before there's a UI are queued and serviced once it appears; see
+        // EarlyStartup.
+        EarlyStartup.Run();
+
         // MenYou installs/updates via an Inno Setup installer + an in-app
         // GitHub-Releases update check (GitHubUpdateService). Inno handles
-        // install / upgrade / uninstall out of process, so there's no boot hook
-        // to run here before Avalonia starts.
+        // install / upgrade / uninstall out of process, so there's no other
+        // boot hook to run here.
         return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
