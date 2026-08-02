@@ -92,7 +92,25 @@ Append `!` for breaking changes. Pre-1.0, breaking changes bump the **minor** ve
 
 ## Code signing
 
-MenYou ships **unsigned**. No free Authenticode path clears the Windows SmartScreen "unrecognized app" warning for an app like this — EV certificates stopped bypassing SmartScreen in 2024, and the only $0 routes (a sponsored OSS signer, or the Microsoft Store) don't fit a low-level shell-integration app. So the release notes publish the installer's **SHA-256** for integrity instead, and the SmartScreen prompt is documented for users.
+MenYou ships **unsigned**, and the release notes publish each installer's **SHA-256** for integrity instead.
+
+The original reasoning was about SmartScreen: no free Authenticode path clears the "unrecognized app" warning, EV certificates stopped bypassing SmartScreen in 2024, and the $0 routes (a sponsored OSS signer, the Microsoft Store) don't fit a low-level shell-integration app. That is still true — **but it is the wrong frame for the problem that actually bites.**
+
+Windows Defender has repeatedly flagged MenYou installers as `Trojan:Win32/Wacatac.B!ml`: 0.9.15 and 0.9.19 (`MenYou-fd-Setup`), then 0.9.20 (`MenYou-Setup`, self-contained — the first release with no FD variant, which is what disproved the theory that the FD build was somehow special). This is a **different mechanism from SmartScreen**. It is a cloud ML verdict issued at download time, and its two dominant inputs are *unsigned* and *zero prevalence*:
+
+- It is not reproducible offline. The payload files, a locally built installer, and that installer carrying a GitHub Mark-of-the-Web all scan clean under `MpCmdRun`. Nothing in the bytes is objectionable; no change to `menyou.iss` can cause or cure it. (A 0.9.16 revert made on the theory that the installer's WMI `Terminate()` call triggered it was simply wrong.)
+- Every release mints a fresh hash for every asset, so each release is an independent roll of the dice.
+- Package-manager prevalence is not sufficient on its own — the self-contained installer ships via winget and Chocolatey and was flagged anyway on a direct download.
+
+**A valid Authenticode signature is a strong negative signal for the ML classifier even though it no longer buys a SmartScreen bypass.** The two are worth deciding separately. Options that did not exist (or were not considered) when the section above was written:
+
+| Route | Notes |
+|---|---|
+| **Azure Trusted Signing** | Microsoft-operated CA, subscription-priced rather than per-certificate, and open to individual developers subject to an identity-history requirement. Has a first-party GitHub Action. Verify current pricing and eligibility before committing. |
+| **SignPath Foundation** | Free for qualifying open-source projects; application and approval required. |
+| **Certum Open Source** | Long-standing low-cost option for OSS developers; hardware token or cloud signing. |
+
+The installer script is **already wired for this**: pass `/DMySignTool="<signtool cmd $f>"` and Inno signs both the installer and the uninstaller (`SignedUninstaller=yes`). What is missing is a signing step in `release.yml` and a certificate. Until one exists, the only per-file remedy is submitting the flagged hash to [Microsoft WDSI](https://www.microsoft.com/en-us/wdsi/filesubmission), which clears that one build and nothing after it.
 
 ## Distribution (all free)
 
