@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.24](https://github.com/Alpaq92/MenYou/compare/v0.9.23...v0.9.24) (2026-08-02)
+
+
+### Bug Fixes
+
+* **updater:** verify the download, and say so when antivirus eats it ([#126](https://github.com/Alpaq92/MenYou/issues/126)) ([6e75e1d](https://github.com/Alpaq92/MenYou/commit/6e75e1d24645ed8c51fe90bc6132fb9f9602d023))
+
 ## [0.9.23](https://github.com/Alpaq92/MenYou/compare/v0.9.22...v0.9.23) (2026-08-02)
 
 
