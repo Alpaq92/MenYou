@@ -167,6 +167,12 @@ public partial class StartMenuWindow : Window
                 Opacity = 1;
                 _revealing = false;
                 _settlingUntilUtc = DateTime.UtcNow + SettleWindow;
+                // Same reasoning as the success path: this reveal is just as
+                // visible, and it is MORE likely to have missed foreground (we
+                // got here because something in the reveal threw, possibly the
+                // ForceForeground call itself). Leaving one reveal path
+                // event-driven is exactly the hole this fix closes.
+                DeferAutoHideRecheck();
             }
         }, DispatcherPriority.Loaded);
     }
