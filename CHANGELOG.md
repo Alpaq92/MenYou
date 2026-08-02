@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.17](https://github.com/Alpaq92/MenYou/compare/v0.9.16...v0.9.17) (2026-08-02)
+
+
+### Bug Fixes
+
+* **ui:** menu stayed open when focus was lost during the post-show settle ([#111](https://github.com/Alpaq92/MenYou/issues/111)) ([5b71762](https://github.com/Alpaq92/MenYou/commit/5b717621a31357776de4d164049abcf3a9beacd9))
+
 ## [0.9.16](https://github.com/Alpaq92/MenYou/compare/v0.9.15...v0.9.16) (2026-07-31)
 
 
