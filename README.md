@@ -46,7 +46,16 @@ This started with a debloated Windows 11 ([Tiny11](https://github.com/ntdevlabs/
 
 The GitHub release carries an x64 build and a native Windows-on-ARM one, both **self-contained** — ~122 MB installed (~41 MB download), no prerequisite, the .NET runtime is bundled. winget and Chocolatey install the x64 build.
 
-A third, **framework-dependent** installer (`MenYou-fd-Setup`) shipped through 0.9.19 at ~50 MB installed. It was retired because the smaller download only looked smaller — it required a ~55 MB .NET runtime, and its cold start measured about the same unless another .NET 10 app already kept the shared runtime warm at logon. (It was also, at the time, the only artifact Windows Defender's cloud ML had flagged as `Trojan:Win32/Wacatac.B!ml`; that turned out to be coincidence — the self-contained installer drew the same verdict on the very next release. The false positive tracks **unsigned, low-prevalence** binaries and affects every unsigned asset equally.) Existing installs migrate themselves to the self-contained build on the next update check. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging).
+A third, **framework-dependent** installer (`MenYou-fd-Setup`) shipped through 0.9.19 at ~50 MB installed. It was retired because the smaller download only looked smaller — it required a ~55 MB .NET runtime, and its cold start measured about the same unless another .NET 10 app already kept the shared runtime warm at logon. Existing installs migrate themselves to the self-contained build on the next update check.
+
+> **Windows Defender may flag the installer as `Trojan:Win32/Wacatac.B!ml`. It is a false positive.**
+> MenYou replaces the Start menu, so it installs global keyboard and mouse hooks, maps a small helper DLL into
+> Explorer to intercept the Win key, and registers itself to start with Windows. That combination — in an
+> **unsigned** binary that every release gives a brand-new hash — is what generic ML classifiers are trained to
+> catch, and `Wacatac` is the bucket they use for it. Nothing in the download is malicious: the installer and its
+> entire payload scan clean locally; the verdict is a cloud reputation call made at download time. Verify the
+> published SHA-256, then choose *More info → Run anyway*, or build from source. It will keep recurring until the
+> binaries are code-signed — see [`CLAUDE.md`](CLAUDE.md) for the full investigation. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging).
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) — a standard setup wizard where you can override the install location, Start-Menu folder, and shortcuts (per-user by default, with a per-machine option). Updates are checked in-app against GitHub Releases: **Settings → Sprawdź aktualizacje** downloads the latest installer and runs it to upgrade in place — and a leftover framework-dependent install is migrated to the self-contained build. Code-signing status (SignPath Foundation when available, otherwise unsigned) is noted in the release body — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the deployment pipeline.
 
