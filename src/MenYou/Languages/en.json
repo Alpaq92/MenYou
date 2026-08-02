@@ -26,6 +26,7 @@
   "UpdateUpToDate": "Up to date",
   "UpdateDownloaded": "Update ready — restart MenYou to apply",
   "UpdateCheckFailed": "Update check failed",
+  "UpdateBlockedByAntivirus": "Update blocked by antivirus — a known false positive. Download it manually from the MenYou releases page.",
   "StyleWin7": "Modern (Windows 7)",
   "StyleWin7Desc": "Two columns, pinned tiles, inline programs tree",
   "StyleClassic2": "Classic two-column (XP)",

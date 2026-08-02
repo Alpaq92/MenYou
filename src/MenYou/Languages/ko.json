@@ -20,6 +20,7 @@
   "UpdateUpToDate": "최신 상태",
   "UpdateDownloaded": "업데이트 준비 완료 — MenYou를 다시 시작하세요",
   "UpdateCheckFailed": "업데이트 확인 실패",
+  "UpdateBlockedByAntivirus": "바이러스 백신이 업데이트를 차단했습니다 — 알려진 오탐입니다. MenYou 릴리스 페이지에서 수동으로 내려받으세요.",
   "StyleWin7": "모던 (Windows 7)",
   "StyleClassic2": "고전 2열 (XP)",
   "StyleClassic1": "고전 1열 (9x)",

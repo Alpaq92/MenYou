@@ -20,6 +20,7 @@
   "UpdateUpToDate": "Bijgewerkt",
   "UpdateDownloaded": "Update gereed — start MenYou opnieuw",
   "UpdateCheckFailed": "Controle op updates mislukt",
+  "UpdateBlockedByAntivirus": "Update geblokkeerd door antivirus — een bekend vals alarm. Download hem handmatig van de MenYou-releasespagina.",
   "StyleWin7": "Modern (Windows 7)",
   "StartMenuReplacementTail": "Vervanger voor Start-menu",
   "Forget": "Vergeten",

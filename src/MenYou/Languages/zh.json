@@ -24,6 +24,7 @@
   "UpdateUpToDate": "已是最新版本",
   "UpdateDownloaded": "更新就绪 — 请重启 MenYou",
   "UpdateCheckFailed": "检查更新失败",
+  "UpdateBlockedByAntivirus": "更新被杀毒软件拦截 — 这是已知的误报。请从 MenYou 发布页面手动下载。",
   "StyleWin7": "现代 (Windows 7)",
   "StyleWin7Desc": "双列、固定磁贴、内嵌程序树",
   "StyleClassic2": "经典双列 (XP)",

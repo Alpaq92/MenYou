@@ -439,6 +439,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
             UpdateStatus = outcome switch
             {
                 UpdateResult.Downloaded => Strings.UpdateDownloaded,
+                // Blocked carries the temp path rather than an exception
+                // string: the installer downloaded fine and was then removed
+                // by antivirus, so there is no error to quote — just a known
+                // false positive to explain and a manual route to offer.
+                UpdateResult.Blocked    => Strings.UpdateBlockedByAntivirus,
                 UpdateResult.Failed     => $"{Strings.UpdateCheckFailed} ({message})",
                 _                       => Strings.UpdateUpToDate,
             };
