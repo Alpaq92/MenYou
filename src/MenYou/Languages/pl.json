@@ -26,6 +26,7 @@
   "UpdateUpToDate": "Aktualna wersja",
   "UpdateDownloaded": "Aktualizacja gotowa — uruchom ponownie MenYou",
   "UpdateCheckFailed": "Sprawdzanie aktualizacji nie powiodło się",
+  "UpdateBlockedByAntivirus": "Aktualizacja zablokowana przez program antywirusowy — to znany falszywy alarm. Pobierz ja recznie ze strony wydan MenYou.",
   "StyleWin7": "Nowoczesny (Windows 7)",
   "StyleWin7Desc": "Dwie kolumny, kafelki przypiętych, drzewo programów",
   "StyleClassic2": "Klasyczny dwukolumnowy (XP)",

@@ -24,6 +24,7 @@
   "UpdateUpToDate": "最新です",
   "UpdateDownloaded": "更新の準備ができました — MenYou を再起動してください",
   "UpdateCheckFailed": "更新の確認に失敗しました",
+  "UpdateBlockedByAntivirus": "ウイルス対策ソフトが更新をブロックしました（既知の誤検知です）。MenYou のリリースページから手動でダウンロードしてください。",
   "StyleWin7": "モダン (Windows 7)",
   "StyleWin7Desc": "2 列、ピン留めタイル、プログラム ツリー",
   "StyleClassic2": "クラシック 2 列 (XP)",

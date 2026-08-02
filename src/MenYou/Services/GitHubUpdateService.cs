@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Win32;
 
@@ -185,9 +186,43 @@ public sealed class GitHubUpdateService : IUpdateService
             // the AppId, not the filename).
             const string destPrefix = SetupAssetPrefix;
             var dest = Path.Combine(Path.GetTempPath(), $"{destPrefix}-{latest}.exe");
-            await using (var src = await http.GetStreamAsync(url, ct).ConfigureAwait(false))
-            await using (var fs = File.Create(dest))
+            try
+            {
+                await using var src = await http.GetStreamAsync(url, ct).ConfigureAwait(false);
+                await using var fs = File.Create(dest);
                 await src.CopyToAsync(fs, ct).ConfigureAwait(false);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Real-time protection can yank the handle mid-write.
+                return (UpdateResult.Blocked, dest);
+            }
+
+            // Verify what actually landed before running it. Two distinct
+            // failures used to arrive here indistinguishable, both surfacing as
+            // Process.Start's "the system cannot find the file specified":
+            //   * antivirus quarantined the download (MenYou's installers draw
+            //     a recurring Wacatac.B!ml false positive — see CLAUDE.md), or
+            //   * the transfer truncated and the installer is corrupt.
+            // Running an unverified installer is the worse half of that: Inno
+            // would start against a partial payload.
+            var info = new FileInfo(dest);
+            if (!info.Exists || info.Length == 0)
+                return (UpdateResult.Blocked, dest);
+
+            // The release body publishes each asset's SHA-256; when it parses,
+            // hold the download to it. A mismatch is corruption, not AV — the
+            // file is still there.
+            var expected = ExpectedSha256(root, Path.GetFileName(new Uri(url).LocalPath));
+            if (expected is not null)
+            {
+                var actual = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(dest, ct).ConfigureAwait(false)));
+                if (!string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    TryDelete(dest);
+                    return (UpdateResult.Failed, $"downloaded installer failed its SHA-256 check (expected {expected[..16]}…, got {actual[..16]}…)");
+                }
+            }
 
             // Launch it silently: Inno reuses the prior install location
             // and options (keyed off the AppId), shows only a progress
@@ -197,12 +232,21 @@ public sealed class GitHubUpdateService : IUpdateService
             // reserved for the first install (website download, run with
             // no flags). UseShellExecute lets a per-machine install raise
             // the UAC prompt it needs.
-            Process.Start(new ProcessStartInfo
+            try
             {
-                FileName = dest,
-                Arguments = "/SILENT",
-                UseShellExecute = true,
-            });
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = dest,
+                    Arguments = "/SILENT",
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException)
+            {
+                // Verified a moment ago, so it was almost certainly quarantined
+                // in the gap — the same AV path, just losing a slower race.
+                return (UpdateResult.Blocked, dest);
+            }
             return (UpdateResult.Downloaded, null);
         }
         catch (OperationCanceledException)
@@ -229,6 +273,38 @@ public sealed class GitHubUpdateService : IUpdateService
     /// error) we assume SC, which is now the harmless answer in both
     /// directions: every release carries the SC asset, and the only cost of a
     /// wrong guess is that a stale FD install migrates one release later.
+    /// The SHA-256 the release body publishes for <paramref name="assetName"/>,
+    /// or null when the body is absent or doesn't list it. release.yml writes
+    /// one "&lt;64 hex&gt;  &lt;filename&gt;" line per asset inside a fenced block; parsing
+    /// is deliberately forgiving, because a body-format change must degrade to
+    /// "skip the check", never to "refuse to update".
+    private static string? ExpectedSha256(JsonElement root, string assetName)
+    {
+        if (!root.TryGetProperty("body", out var bodyEl)) return null;
+        var body = bodyEl.GetString();
+        if (string.IsNullOrEmpty(body)) return null;
+
+        using var reader = new StringReader(body);
+        for (string? raw; (raw = reader.ReadLine()) is not null;)
+        {
+            var line = raw.Trim();
+            if (line.Length < 66) continue;
+            var sep = line.IndexOf(' ');
+            if (sep != 64) continue;
+            if (!line.AsSpan(sep).Trim().Equals(assetName, StringComparison.OrdinalIgnoreCase)) continue;
+            var hash = line[..64];
+            foreach (var c in hash)
+                if (!Uri.IsHexDigit(c)) return null;
+            return hash;
+        }
+        return null;
+    }
+
+    private static void TryDelete(string path)
+    {
+        try { File.Delete(path); } catch { /* best-effort */ }
+    }
+
     private static bool IsFrameworkDependent()
     {
         try

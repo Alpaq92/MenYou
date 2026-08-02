@@ -24,6 +24,7 @@
   "UpdateUpToDate": "Actualizado",
   "UpdateDownloaded": "Actualización lista — reinicie MenYou",
   "UpdateCheckFailed": "Error al comprobar las actualizaciones",
+  "UpdateBlockedByAntivirus": "Actualizacion bloqueada por el antivirus: un falso positivo conocido. Descargala manualmente desde la pagina de versiones de MenYou.",
   "StyleWin7": "Moderno (Windows 7)",
   "StyleWin7Desc": "Dos columnas, mosaicos anclados, árbol de programas en línea",
   "StyleClassic2": "Clásico de dos columnas (XP)",

@@ -267,6 +267,7 @@ public static class Strings
     public static string UpdateUpToDate          => Resolve("UpdateUpToDate");
     public static string UpdateDownloaded        => Resolve("UpdateDownloaded");
     public static string UpdateCheckFailed       => Resolve("UpdateCheckFailed");
+    public static string UpdateBlockedByAntivirus => Resolve("UpdateBlockedByAntivirus");
     // Apply: Personalization control panel's "Apply" button —
     // themecpl.dll,-1190. Verified via SHLoadIndirectString probe.
     public static string Apply                   => Resolve("Apply", $@"@{Sys}\themecpl.dll,-1190");

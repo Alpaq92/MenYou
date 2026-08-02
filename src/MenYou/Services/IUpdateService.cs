@@ -20,6 +20,16 @@ public enum UpdateResult
     /// The GitHub Releases feed couldn't be reached, or the release had
     /// no installer asset. Settings shows the error message.
     Failed,
+
+    /// The installer downloaded but was gone (or truncated) before it could
+    /// be launched — in practice, quarantined by antivirus. MenYou's
+    /// installers draw a recurring `Trojan:Win32/Wacatac.B!ml` false positive
+    /// from Defender's cloud (see CLAUDE.md), and because the updater writes
+    /// the .exe to %TEMP% and runs it, that verdict silently breaks in-app
+    /// updates too. Reported separately from <see cref="Failed"/> so Settings
+    /// can say what actually happened and point at the manual download,
+    /// instead of surfacing "the system cannot find the file specified".
+    Blocked,
 }
 
 /// Abstraction over the update mechanism so the SettingsViewModel stays

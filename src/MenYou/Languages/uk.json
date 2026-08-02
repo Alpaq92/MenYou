@@ -18,6 +18,7 @@
   "UpdateUpToDate": "Актуальна версія",
   "UpdateDownloaded": "Оновлення готове — перезапустіть MenYou",
   "UpdateCheckFailed": "Не вдалося перевірити оновлення",
+  "UpdateBlockedByAntivirus": "Оновлення заблоковано антивірусом — відоме хибне спрацювання. Завантажте його вручну зі сторінки випусків MenYou.",
   "StyleWin7": "Сучасний (Windows 7)",
   "StartMenuReplacementTail": "Заміна меню Пуск",
   "Forget": "Забути",
