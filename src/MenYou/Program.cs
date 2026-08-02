@@ -38,12 +38,14 @@ internal static class Program
     public static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            // WithInterFont() is deliberately NOT called: it loads
-            // Avalonia.Fonts.Inter.dll (~1.8 MB) and registers a font no style
-            // in this app asks for — every FontFamily here is Segoe-based
-            // ("Segoe UI Variable, Segoe UI", "Segoe Fluent Icons", "Cascadia
-            // Code, Consolas, monospace"), all present on Win10+. Pure load-path
-            // weight for a fallback that never resolves.
+            // No WithInterFont() — the Avalonia.Fonts.Inter package is
+            // deliberately not referenced, so the method isn't available here.
+            // It registers a font no style in this app asks for: every
+            // FontFamily is Segoe-based ("Segoe UI Variable, Segoe UI", "Segoe
+            // Fluent Icons", "Cascadia Code, Consolas, monospace"), all present
+            // on Win10+. Dropping the CALL alone (0.9.17) kept it off the load
+            // path but left the package reference behind, still shipping the
+            // 1.8 MB DLL inside every installer — so the reference went too.
             .With(new Win32PlatformOptions
             {
                 // Default is [AngleEgl, Wgl, Software], so the ANGLE path pulls

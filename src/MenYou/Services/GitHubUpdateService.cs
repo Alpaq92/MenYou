@@ -13,11 +13,16 @@ namespace MenYou.Services;
 /// queries the GitHub REST API for the repo's latest release, compares its
 /// tag to the installed version, and when a newer one exists downloads the
 /// matching <c>MenYou-*-Setup-*.exe</c> asset and launches it. The asset is
-/// picked to match BOTH this machine's architecture (x64 / arm64) and this
-/// install's build VARIANT — self-contained (<c>MenYou-Setup</c>) or
-/// framework-dependent (<c>MenYou-fd-Setup</c>) — so an FD install updates
-/// to FD and an SC install to SC, never silently swapping the runtime model
-/// out from under the user (see <see cref="IsFrameworkDependent"/>). Inno
+/// picked to match this machine's architecture (x64 / arm64).
+///
+/// Releases used to also carry a framework-dependent installer
+/// (<c>MenYou-fd-Setup</c>) and this picked the asset matching the installed
+/// variant. That variant is RETIRED, so the only job left for the FD probe is
+/// MIGRATION: an existing FD install is offered the self-contained installer
+/// instead (see <see cref="IsFrameworkDependent"/>), which upgrades it in
+/// place onto the bundled runtime. Without that, every FD install in the field
+/// would fail its update check forever looking for an asset that no longer
+/// exists. Inno
 /// keys the install off a fixed AppId, so running the new Setup upgrades the
 /// existing install in place; its Restart-Manager integration
 /// (<c>CloseApplications</c> / <c>RestartApplications</c>) closes and
@@ -69,13 +74,12 @@ public sealed class GitHubUpdateService : IUpdateService
     // the pipeline loudly instead of silently orphaning field updaters.
     private const string SetupAssetPrefix = "MenYou-Setup";
     private const string Arm64SetupAssetPrefix = "MenYou-arm64-Setup";
-    // Framework-dependent installer (needs the .NET 10 Desktop Runtime; ~half
-    // the payload). Its prefix is DISJOINT from "MenYou-Setup" for the same
-    // reason the arm64 one is: a pre-variant-aware "first MenYou-Setup*"
-    // matcher must never grab it. Direct-download only (not in
-    // winget/choco). Only an FD install (detected via coreclr.dll's
-    // absence) ever selects this asset — see IsFrameworkDependent().
-    private const string FdSetupAssetPrefix = "MenYou-fd-Setup";
+    // "MenYou-fd-Setup" is RETIRED and intentionally has no constant here.
+    // Releases no longer build it, so nothing may select it — but the name
+    // stays burned into this contract as reserved: it must never be reused for
+    // a different payload, because FD installs still in the field would happily
+    // download it. They are migrated to the self-contained installer instead;
+    // see IsFrameworkDependent().
 
     public bool IsPackaged =>
         ReadInstalledVersionString() is not null;
@@ -113,18 +117,18 @@ public sealed class GitHubUpdateService : IUpdateService
             if (latest is null || latest < current)
                 return (UpdateResult.UpToDate, null);
 
-            // Pick the installer matching THIS install's VARIANT and this
-            // machine's architecture (see the naming-contract note on the
-            // prefix constants). Variant first: a framework-dependent install
-            // must stay FD and a self-contained one SC — the two ship
-            // different payloads against the same AppId, so crossing them on
-            // an update would leave a mismatched install. FD is x64-only
-            // (single MenYou-fd-Setup asset) and takes no part in the arm64
-            // migration below. For SC, an ARM machine falls back to the x64
-            // installer (runs under emulation) when a release lacks the native
-            // asset; x64 never takes the arm64 asset (disjoint prefixes).
-            // OSArchitecture reports the TRUE OS arch even from an emulated x64
-            // process, which powers the migration below.
+            // Pick the installer matching this machine's architecture (see the
+            // naming-contract note on the prefix constants). An ARM machine
+            // falls back to the x64 installer (runs under emulation) when a
+            // release lacks the native asset; x64 never takes the arm64 asset
+            // (disjoint prefixes). OSArchitecture reports the TRUE OS arch even
+            // from an emulated x64 process, which powers the migrations below.
+            //
+            // A framework-dependent install gets the SAME self-contained asset
+            // as everyone else — that IS the migration. Both variants share the
+            // Inno AppId, so the SC installer upgrades the FD install in place
+            // and the bundled runtime lands beside the apphost; from then on
+            // coreclr.dll exists and the probe reports SC.
             var isFrameworkDependent = IsFrameworkDependent();
             var wantArm64 = RuntimeInformation.OSArchitecture == Architecture.Arm64;
             string? FindInstaller(string prefix)
@@ -136,32 +140,38 @@ public sealed class GitHubUpdateService : IUpdateService
                     // Prefixes are pairwise disjoint ("MenYou-fd-Setup" and
                     // "MenYou-arm64-Setup" don't start with "MenYou-Setup"), so
                     // a StartsWith match is unambiguous across variants/arches.
+                    // This still matters after the FD retirement: releases up
+                    // to 0.9.19 carry an fd asset, and an FD install checking
+                    // against one of those must land on the SC installer that
+                    // migrates it — not walk back onto MenYou-fd-Setup.
                     if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
                         && name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                         return asset.GetProperty("browser_download_url").GetString();
                 }
                 return null;
             }
-            // Same-version pass: normally up-to-date — with one exception (SC
-            // only). An ARM machine RUNNING THE X64 BUILD under emulation (a
-            // Chocolatey install, or an earlier fallback download)
-            // migrates to the native arm64 asset of the SAME version when one
-            // exists. Loop-safe: once native, ProcessArchitecture is Arm64 and
-            // this never fires again; and when the release has no native
-            // asset, it stays UpToDate rather than pointlessly reinstalling
-            // x64. FD has no cross-arch asset, so it's simply UpToDate here.
-            var emulatedOnArm = !isFrameworkDependent && wantArm64
+            // Same-version pass: normally up-to-date, with two migrations that
+            // fire even when the tag matches, because both leave the user on a
+            // build that is no longer the right one for their machine.
+            //   * An ARM machine RUNNING THE X64 BUILD under emulation (a
+            //     Chocolatey install, or an earlier fallback download) takes
+            //     the native arm64 asset of the same version when one exists.
+            //   * A framework-dependent install takes the self-contained asset,
+            //     retiring a variant that is no longer built.
+            // Both are loop-safe: once native, ProcessArchitecture is Arm64;
+            // once self-contained, coreclr.dll exists — so neither fires twice.
+            // With no matching asset each stays UpToDate rather than
+            // pointlessly reinstalling what is already there.
+            var emulatedOnArm = wantArm64
                 && RuntimeInformation.ProcessArchitecture == Architecture.X64;
             string? url;
             if (latest == current)
             {
                 url = emulatedOnArm ? FindInstaller(Arm64SetupAssetPrefix) : null;
+                if (string.IsNullOrEmpty(url) && isFrameworkDependent)
+                    url = FindInstaller(SetupAssetPrefix);
                 if (string.IsNullOrEmpty(url))
                     return (UpdateResult.UpToDate, null);
-            }
-            else if (isFrameworkDependent)
-            {
-                url = FindInstaller(FdSetupAssetPrefix);
             }
             else
             {
@@ -169,14 +179,11 @@ public sealed class GitHubUpdateService : IUpdateService
                       ?? FindInstaller(SetupAssetPrefix);
             }
             if (string.IsNullOrEmpty(url))
-                return (UpdateResult.Failed, isFrameworkDependent
-                    ? "no MenYou-fd-Setup .exe asset on the latest release"
-                    : "no MenYou-Setup .exe asset on the latest release");
+                return (UpdateResult.Failed, "no MenYou-Setup .exe asset on the latest release");
 
-            // Download the installer to a temp file (name reflects the variant
-            // for tidiness in %TEMP%; Inno keys the upgrade off the AppId, not
-            // the filename).
-            var destPrefix = isFrameworkDependent ? FdSetupAssetPrefix : SetupAssetPrefix;
+            // Download the installer to a temp file (Inno keys the upgrade off
+            // the AppId, not the filename).
+            const string destPrefix = SetupAssetPrefix;
             var dest = Path.Combine(Path.GetTempPath(), $"{destPrefix}-{latest}.exe");
             await using (var src = await http.GetStreamAsync(url, ct).ConfigureAwait(false))
             await using (var fs = File.Create(dest))
@@ -208,18 +215,20 @@ public sealed class GitHubUpdateService : IUpdateService
         }
     }
 
-    /// Whether THIS install is the framework-dependent build, which decides
-    /// the release-asset variant to update to (FD → FD, SC → SC — see
-    /// <see cref="CheckAndApplyAsync"/>). Self-contained builds ship the
-    /// CoreCLR runtime beside the apphost; framework-dependent builds bind to
-    /// the machine-wide .NET runtime and don't, so <c>coreclr.dll</c>'s
-    /// presence next to <c>MenYou.exe</c> is the cleanest single
-    /// discriminator: the SC publish always includes it, and the FD
-    /// installer's runtime precheck keeps a broken FD install from ever
-    /// existing without a runtime. If the probe throws (odd layout, access
-    /// error) we assume SC — its asset always exists on every release, so a
-    /// wrong guess degrades to "offered the SC installer", never "stranded on
-    /// a missing FD asset".
+    /// Whether THIS install is a leftover framework-dependent build. The FD
+    /// variant is retired, so this no longer selects an asset — it triggers a
+    /// one-time MIGRATION onto the self-contained installer, including on the
+    /// same-version pass (see <see cref="CheckAndApplyAsync"/>), so FD installs
+    /// don't sit there failing every check against an asset that stopped being
+    /// published.
+    ///
+    /// Self-contained builds ship the CoreCLR runtime beside the apphost;
+    /// framework-dependent builds bind to the machine-wide .NET runtime and
+    /// don't, so <c>coreclr.dll</c>'s presence next to <c>MenYou.exe</c> is the
+    /// cleanest single discriminator. If the probe throws (odd layout, access
+    /// error) we assume SC, which is now the harmless answer in both
+    /// directions: every release carries the SC asset, and the only cost of a
+    /// wrong guess is that a stale FD install migrates one release later.
     private static bool IsFrameworkDependent()
     {
         try
