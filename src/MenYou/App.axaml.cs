@@ -325,6 +325,12 @@ public partial class App : Application
                 else if (_startMenu is { IsVisible: true } menu)
                 {
                     HookTrace.Log($"App.ForegroundWatcher: foreground left but skipped (settling={menu.IsSettling})");
+                    // Deferred, NOT dropped: this event only fires on a
+                    // foreground CHANGE, so a click-away during the settle
+                    // window would otherwise never be re-signalled and the
+                    // menu would sit there open. The window re-checks the live
+                    // foreground once settling ends.
+                    menu.DeferAutoHideRecheck();
                 }
             });
     }
