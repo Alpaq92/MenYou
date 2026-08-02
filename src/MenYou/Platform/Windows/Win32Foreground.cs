@@ -43,6 +43,20 @@ internal static class Win32Foreground
         }
     }
 
+    /// True when the foreground window belongs to THIS process. Used to
+    /// re-check a focus-loss signal that arrived while the menu was still
+    /// settling: the event says "focus left at some instant", this says
+    /// "focus is away right now", which is what auto-hide should act on.
+    /// Treats an unreadable foreground window as "not ours" — a window we
+    /// cannot query is certainly not our menu.
+    public static bool IsOursForeground()
+    {
+        var fg = GetForegroundWindow();
+        if (fg == IntPtr.Zero) return false;
+        _ = GetWindowThreadProcessId(fg, out var pid);
+        return pid == (uint)Environment.ProcessId;
+    }
+
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
 

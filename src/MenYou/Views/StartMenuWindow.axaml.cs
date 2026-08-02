@@ -147,6 +147,17 @@ public partial class StartMenuWindow : Window
                     // just-shown menu.
                     _settlingUntilUtc = DateTime.UtcNow + SettleWindow;
                     HookTrace.Log("StartMenuWindow: shown + re-measured + force-foregrounded");
+                    // Always arm the post-settle focus check, not just when a
+                    // focus-loss signal was suppressed. Auto-hide used to be
+                    // purely EVENT-driven, so it needed a foreground TRANSITION
+                    // to notice — and if the reveal never won foreground in the
+                    // first place (Win 11 focus-stealing prevention can beat
+                    // ForceForeground), no transition ever happened and the menu
+                    // sat there unfocused and permanent. Arming unconditionally
+                    // makes it STATE-driven: once settling ends, "is the
+                    // foreground ours?" decides, whatever events did or didn't
+                    // fire.
+                    DeferAutoHideRecheck();
                 }, DispatcherPriority.Loaded);
             }
             catch
@@ -282,6 +293,56 @@ public partial class StartMenuWindow : Window
         }, DispatcherPriority.Loaded);
     }
 
+    /// One-shot re-check armed when a focus-loss signal arrives DURING the
+    /// settle window. Field so a burst of signals re-arms one timer instead
+    /// of stacking several.
+    private DispatcherTimer? _settleRecheck;
+
+    /// Re-evaluate auto-hide once the settle window has expired.
+    ///
+    /// The settle guard exists because foreground bounces around for a moment
+    /// after the menu appears (the dying tray/Start click, the previous
+    /// foreground app, our own ForceForeground) — acting on those signals made
+    /// the menu blink open and vanish. But SKIPPING a signal used to DISCARD
+    /// it: <see cref="ForegroundWatcher"/> only raises on a foreground CHANGE,
+    /// so if the user clicked away inside those 750 ms — easy, since the menu
+    /// opens right under the cursor at the Start button — no further event ever
+    /// came and the menu stayed open until it was closed by hand. (Observed in
+    /// the trace: "foreground left but skipped (settling=True)" twice, then
+    /// nothing.)
+    ///
+    /// So the signal is now deferred rather than dropped: when settling ends,
+    /// ask Windows who actually owns foreground *now* and hide if it isn't us.
+    /// Checking live state (not replaying the stale event) is what makes this
+    /// safe — if the user genuinely focused the menu in the meantime, or it
+    /// already hid, nothing happens.
+    public void DeferAutoHideRecheck()
+    {
+        if (!IsVisible) return;
+        // Run just after the settle window closes; while _revealing is still
+        // true the deadline may move, so the tick re-arms rather than assuming.
+        var due = _settlingUntilUtc - DateTime.UtcNow + TimeSpan.FromMilliseconds(120);
+        if (due < TimeSpan.FromMilliseconds(120)) due = TimeSpan.FromMilliseconds(120);
+
+        _settleRecheck ??= new DispatcherTimer();
+        _settleRecheck.Stop();
+        _settleRecheck.Interval = due;
+        _settleRecheck.Tick -= OnSettleRecheck;
+        _settleRecheck.Tick += OnSettleRecheck;
+        _settleRecheck.Start();
+    }
+
+    private void OnSettleRecheck(object? sender, EventArgs e)
+    {
+        if (IsSettling) { DeferAutoHideRecheck(); return; }   // still bouncing — wait it out
+        _settleRecheck?.Stop();
+        if (!IsVisible) return;
+        if (!App.Services.GetRequiredService<ISettingsService>().Current.HideOnFocusLost) return;
+        if (Win32Foreground.IsOursForeground()) return;       // we kept/regained focus — nothing to do
+        HookTrace.Log("StartMenuWindow: deferred auto-hide (focus left during settle)");
+        HideMenu();
+    }
+
     private void OnDeactivated(object? sender, EventArgs e)
     {
         var settings = App.Services.GetRequiredService<ISettingsService>();
@@ -294,6 +355,7 @@ public partial class StartMenuWindow : Window
         if (IsSettling)
         {
             HookTrace.Log("StartMenuWindow: Deactivated suppressed (settling)");
+            DeferAutoHideRecheck();   // suppressed now, re-evaluated once settled
             return;
         }
         HookTrace.Log($"StartMenuWindow: Deactivated (HideOnFocusLost={settings.Current.HideOnFocusLost})");
