@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.22](https://github.com/Alpaq92/MenYou/compare/v0.9.21...v0.9.22) (2026-08-02)
+
+
+### Maintenance
+
+* record the Defender false-positive findings; release 0.9.22 ([#122](https://github.com/Alpaq92/MenYou/issues/122)) ([a221e7f](https://github.com/Alpaq92/MenYou/commit/a221e7f511bdc5e3526ff213deaac7c2572900b7))
+
 ## [0.9.21](https://github.com/Alpaq92/MenYou/compare/v0.9.20...v0.9.21) (2026-08-02)
 
 
