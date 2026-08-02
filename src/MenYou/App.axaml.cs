@@ -241,6 +241,19 @@ public partial class App : Application
         // WinKey notifications, used when the LL hook strategy isn't
         // available). Lives independently of the hotkey service so it stays
         // up even when the user has disabled the Win key replacement.
+        //
+        // EarlyStartup normally stands this up before Avalonia loads — and
+        // crucially before the bridge is injected, so a notification can never
+        // arrive with no window to land on. That one routes through the hotkey
+        // service's callback, which posts the same ToggleStartMenu hop as
+        // HandleIpcMessage below and additionally queues presses that beat the
+        // UI. Adopt it; only build one here if early startup didn't get that
+        // far (the class name is well-known, so two would be one too many).
+        if (EarlyStartup.Ipc is { } earlyIpc)
+        {
+            _ipcListener = earlyIpc;
+            return;
+        }
         _ipcListener = new CopyDataListener();
         _ipcListener.Received += msg => Dispatcher.UIThread.Post(() => HandleIpcMessage(msg));
     }
@@ -338,14 +351,26 @@ public partial class App : Application
     private static IServiceProvider BuildServices()
     {
         var s = new ServiceCollection();
-        s.AddSingleton<ISettingsService, SettingsService>();
+        // Adopt whatever EarlyStartup built before Avalonia loaded rather than
+        // constructing rivals: a second SettingsService would fork the settings
+        // state (two Current objects, two Changed lists), and a second
+        // Win32HotkeyService would install a duplicate set of low-level hooks
+        // and fire the menu twice per press. Each falls back to a normal
+        // registration if early startup didn't get that far.
+        if (EarlyStartup.Settings is { } earlySettings)
+            s.AddSingleton<ISettingsService>(earlySettings);
+        else
+            s.AddSingleton<ISettingsService, SettingsService>();
         s.AddSingleton<IAppDiscoveryService, AppDiscoveryService>();
         s.AddSingleton<IIconService, IconService>();
         s.AddSingleton<IRecentItemsService, RecentItemsService>();
         s.AddSingleton<IShellLauncher, ShellLauncher>();
         s.AddSingleton<ISearchService, SearchService>();
         s.AddSingleton<IPowerService, Win32PowerService>();
-        s.AddSingleton<IHotkeyService, Win32HotkeyService>();
+        if (EarlyStartup.Hotkeys is { } earlyHotkeys)
+            s.AddSingleton<IHotkeyService>(earlyHotkeys);
+        else
+            s.AddSingleton<IHotkeyService, Win32HotkeyService>();
         s.AddSingleton<IAutostartService, Win32AutostartService>();
         s.AddSingleton<IPinService, PinService>();
         s.AddSingleton<IWin11StartMirror, Win11StartMirrorService>();

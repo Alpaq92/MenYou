@@ -10,22 +10,82 @@ public sealed class Win32HotkeyService : IHotkeyService
     private const int FallbackHotkeyId = 0xBEE1;
     private const uint VK_F12 = 0x7B;
 
+    /// How long a press captured before the UI existed stays worth honouring.
+    /// Comfortably covers a slow cold boot (measured ~7 s from process start to
+    /// the first line of our code) while still being short enough that a press
+    /// the user has long since given up on can't pop a menu out of nowhere.
+    private static readonly TimeSpan QueuedPressTtl = TimeSpan.FromSeconds(12);
+
     private readonly HotkeyWindow _hotkey = new();
     private StartClickHook? _startClick;
     private WinKeyHook? _winKey;
     private BridgeInjector? _bridge;
-    private Action? _callback;
+    private volatile Action? _callback;
     private bool _fallbackRegistered;
+
+    /// UTC ticks of a press that arrived with no callback wired yet, or 0 for
+    /// none. Written from the hook threads and read from the UI thread, hence
+    /// Interlocked rather than a plain DateTime.
+    private long _queuedPressTicks;
 
     public Win32HotkeyService()
     {
         _hotkey.Pressed += id =>
         {
-            if (id == FallbackHotkeyId) _callback?.Invoke();
+            if (id == FallbackHotkeyId) OnPressed();
         };
     }
 
-    public void Initialize(Action onPressed) => _callback = onPressed;
+    /// Every hook funnels through here.
+    ///
+    /// EarlyStartup installs the hooks before Avalonia loads, so presses can
+    /// arrive seconds before there is any UI to show. Those are QUEUED, not
+    /// passed through to Windows: MenYou is a Start-menu REPLACEMENT, so
+    /// letting the system Start menu open during the boot window would surface
+    /// the wrong menu (and then possibly MenYou on top of it), while dropping
+    /// the press would surface nothing at all. Queueing keeps the gesture and
+    /// its result matched up — the menu is just late.
+    ///
+    /// Coalesced to a single pending press, keeping the LATEST one: mashing
+    /// Start while the machine boots should open the menu once, and dating the
+    /// queue from the last press is what keeps the TTL check meaningful.
+    private void OnPressed()
+    {
+        var callback = _callback;
+        if (callback is not null)
+        {
+            callback();
+            return;
+        }
+
+        if (Interlocked.Exchange(ref _queuedPressTicks, DateTime.UtcNow.Ticks) == 0)
+            HookTrace.Log("Hotkey: press arrived before the UI was ready -> queued");
+    }
+
+    /// Outside trigger — the injected bridge's WM_COPYDATA notifications
+    /// (CopyDataListener) come in this way so they share the hooks' callback
+    /// and pre-UI queue instead of needing a live UI thread of their own.
+    public void Trigger() => OnPressed();
+
+    public void Initialize(Action onPressed)
+    {
+        // Wire the callback FIRST, then drain: a press landing in between is
+        // then serviced directly instead of falling into a queue nobody reads.
+        _callback = onPressed;
+
+        var ticks = Interlocked.Exchange(ref _queuedPressTicks, 0);
+        if (ticks == 0) return;
+
+        var age = DateTime.UtcNow - new DateTime(ticks, DateTimeKind.Utc);
+        if (age > QueuedPressTtl)
+        {
+            HookTrace.Log($"Hotkey: queued press dropped ({age.TotalSeconds:F1}s stale)");
+            return;
+        }
+
+        HookTrace.Log($"Hotkey: replaying queued press ({age.TotalSeconds:F1}s old)");
+        onPressed();
+    }
 
     public void ApplyBindings(UserSettings settings)
     {
@@ -96,7 +156,7 @@ public sealed class Win32HotkeyService : IHotkeyService
         if (wanted)
         {
             _startClick = new StartClickHook();
-            _startClick.StartClicked += () => _callback?.Invoke();
+            _startClick.StartClicked += OnPressed;
         }
         else
         {
@@ -111,7 +171,7 @@ public sealed class Win32HotkeyService : IHotkeyService
         if (wanted)
         {
             _winKey = new WinKeyHook();
-            _winKey.LoneWinTap += () => _callback?.Invoke();
+            _winKey.LoneWinTap += OnPressed;
         }
         else
         {
