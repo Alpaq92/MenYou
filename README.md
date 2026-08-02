@@ -44,16 +44,11 @@ This started with a debloated Windows 11 ([Tiny11](https://github.com/ntdevlabs/
 
 ### Which installer?
 
-The GitHub release carries two x64 builds (plus a native Windows-on-ARM one). Pick by trade-off:
+The GitHub release carries an x64 build and a native Windows-on-ARM one, both **self-contained** — ~122 MB installed (~41 MB download), no prerequisite, the .NET runtime is bundled. winget and Chocolatey install the x64 build.
 
-| Installer | Size | Cold start | Needs |
-|---|---|---|---|
-| `MenYou-Setup-<version>.exe` — **self-contained** (default) | ~122 MB installed (~41 MB download) | baseline | nothing — the .NET runtime is bundled |
-| `MenYou-fd-Setup-<version>.exe` — **framework-dependent** | ~50 MB installed (~17 MB download) | similar (faster only if other .NET 10 apps run at logon) | the [.NET 10 Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) — base or Desktop |
+A third, **framework-dependent** installer (`MenYou-fd-Setup`) shipped through 0.9.19 at ~50 MB installed. It was retired: it turned out to be the only artifact Windows Defender's cloud ML repeatedly flagged as `Trojan:Win32/Wacatac.B!ml` (a false positive that tracks unsigned, low-prevalence binaries), and the smaller download only looked smaller — it required a ~55 MB .NET runtime, and its cold start measured about the same unless another .NET 10 app already kept the shared runtime warm at logon. Existing installs migrate themselves to the self-contained build on the next update check. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging).
 
-The self-contained build is the zero-prerequisite default and what the package-manager channels (winget/Chocolatey) install. The framework-dependent build is a much smaller download/install for people who already have (or don't mind installing) the .NET 10 runtime — it's **direct-download only**. (Measured: its cold start is about the same unless another .NET 10 app already keeps the shared runtime warm at logon — the size win is unconditional, the cold-start win isn't.) If the runtime is missing, its installer stops with a download link instead of laying down an app that can't launch. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging) for the measurements behind the split.
-
-The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) — a standard setup wizard where you can override the install location, Start-Menu folder, and shortcuts (per-user by default, with a per-machine option). Updates are checked in-app against GitHub Releases: **Settings → Sprawdź aktualizacje** downloads the latest installer and runs it to upgrade in place — and it stays on your variant (a framework-dependent install updates to framework-dependent, self-contained to self-contained). Code-signing status (SignPath Foundation when available, otherwise unsigned) is noted in the release body — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the deployment pipeline.
+The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) — a standard setup wizard where you can override the install location, Start-Menu folder, and shortcuts (per-user by default, with a per-machine option). Updates are checked in-app against GitHub Releases: **Settings → Sprawdź aktualizacje** downloads the latest installer and runs it to upgrade in place — and a leftover framework-dependent install is migrated to the self-contained build. Code-signing status (SignPath Foundation when available, otherwise unsigned) is noted in the release body — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the deployment pipeline.
 
 ## Build from source
 

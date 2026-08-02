@@ -5,13 +5,10 @@
 # and on manual workflow_dispatch from the Actions UI.
 #
 # Stages:
-#   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64,
-#                     plus a framework-dependent win-x64 build (needs the .NET
-#                     10 Runtime, base or Desktop; ~half the payload).
-#   2. pack         — Inno Setup (iscc), three installers: MenYou-Setup-<ver>.exe
-#                     (x64, self-contained), MenYou-arm64-Setup-<ver>.exe, and
-#                     MenYou-fd-Setup-<ver>.exe (x64, framework-dependent).
-#   3. release      — upload all three installers to a fresh GitHub Release for
+#   1. publish      — `dotnet publish` self-contained, win-x64 + win-arm64.
+#   2. pack         — Inno Setup (iscc), two installers: MenYou-Setup-<ver>.exe
+#                     (x64) and MenYou-arm64-Setup-<ver>.exe.
+#   3. release      — upload both installers to a fresh GitHub Release for
 #                     the tag, with a body carrying the unsigned-build note,
 #                     install instructions, every SHA-256, and a CHANGELOG link.
 #   4. publish-pkg  — fire-and-forget pushes to winget and Chocolatey
@@ -113,8 +110,7 @@ jobs:
       # enumerated every app. Trimming buys ~50 MB; it is not worth an app that
       # dies on a cache-cold launch, so correctness wins until the interop is
       # provably trim-safe (see docs/OPTIMIZATION.md §9). ReadyToRun stays — it
-      # is unaffected and carries the startup win. Users who want the smaller
-      # payload have the framework-dependent installer.
+      # is unaffected and carries the startup win.
       - name: Publish (Release, win-x64, self-contained)
         run: >
           dotnet publish src/MenYou/MenYou.csproj
@@ -147,28 +143,6 @@ jobs:
           -p:SkipNativeBridge=true
           -o publish/win-arm64
 
-      # Framework-dependent x64 build — the SECOND, optional asset
-      # (MenYou-fd-Setup, direct-download only). --self-contained false drops
-      # the bundled .NET runtime: ~230 DLLs -> ~41, ~122 MB -> ~50 MB installed.
-      # NOTE: that is a size win, not necessarily a cold-start win — measured,
-      # cold start is about the same unless another .NET 10 app keeps the
-      # shared runtime warm at logon (see docs/OPTIMIZATION.md §3). The
-      # trade-off is a prerequisite: the target must
-      # have the .NET 10 Runtime (base or Desktop) — the FD installer checks for it in
-      # [Code] and aborts with a download link rather than installing a broken
-      # app (see installer/inno/menyou.iss). Same ReadyToRun + embedded symbols
-      # + native bridge as the SC x64 build above; only the runtime bundling
-      # differs, so the managed payload is byte-identical.
-      - name: Publish (Release, win-x64, framework-dependent)
-        run: >
-          dotnet publish src/MenYou/MenYou.csproj
-          -c Release -r win-x64 --self-contained false
-          -p:Version=${{ steps.resolve_version.outputs.version }}
-          -p:PublishSingleFile=false
-          -p:PublishReadyToRun=true
-          -p:DebugType=embedded
-          -o publish/win-x64-fd
-
       - name: Install Inno Setup
         shell: pwsh
         run: choco install innosetup -y --no-progress
@@ -176,9 +150,9 @@ jobs:
       - name: Compile installer (Inno Setup)
         shell: pwsh
         run: |
-          # Three iscc passes emit dist\MenYou-Setup-<ver>.exe (x64, SC),
-          # dist\MenYou-arm64-Setup-<ver>.exe, and dist\MenYou-fd-Setup-<ver>.exe
-          # (x64, framework-dependent). Relative paths inside the .iss resolve
+          # Two iscc passes emit dist\MenYou-Setup-<ver>.exe (x64) and
+          # dist\MenYou-arm64-Setup-<ver>.exe, both self-contained. Relative
+          # paths inside the .iss resolve
           # against the script's own directory (installer\inno), so the publish
           # folder is passed as an absolute path.
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
@@ -196,24 +170,13 @@ jobs:
             "/DMyArch=arm64" `
             "installer\inno\menyou.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC (arm64) failed with exit code $LASTEXITCODE" }
-          # Framework-dependent pass: /DMyVariant=fd points at the FD publish
-          # dir, flips the output name to MenYou-fd-Setup-<ver> (disjoint from
-          # the frozen MenYou-Setup contract, so pre-arch/variant-aware updaters
-          # can never grab it — see GitHubUpdateService.cs), and turns on the
-          # installer's .NET 10 runtime precheck in [Code].
-          & $iscc `
-            "/DMyAppVersion=${{ steps.resolve_version.outputs.version }}" `
-            "/DMyPublishDir=${{ github.workspace }}\publish\win-x64-fd" `
-            "/DMyVariant=fd" `
-            "installer\inno\menyou.iss"
-          if ($LASTEXITCODE -ne 0) { throw "ISCC (fd) failed with exit code $LASTEXITCODE" }
           # Enforce the frozen-name contract INSIDE the build job: a drifted
           # OutputBaseFilename must fail here, loudly. (upload-artifact's
           # if-no-files-found:error only fires when NOTHING matches, so a
           # partial upload would sail through it; gh-release's
           # fail_on_unmatched_files is the final pre-ship gate.)
           $v = "${{ steps.resolve_version.outputs.version }}"
-          foreach ($required in @("dist\MenYou-Setup-$v.exe", "dist\MenYou-arm64-Setup-$v.exe", "dist\MenYou-fd-Setup-$v.exe")) {
+          foreach ($required in @("dist\MenYou-Setup-$v.exe", "dist\MenYou-arm64-Setup-$v.exe")) {
             if (-not (Test-Path $required)) { throw "Naming contract violated: $required not produced (see GitHubUpdateService.cs)" }
           }
           Get-ChildItem dist
@@ -229,7 +192,6 @@ jobs:
           path: |
             dist/MenYou-Setup-${{ steps.resolve_version.outputs.version }}.exe
             dist/MenYou-arm64-Setup-${{ steps.resolve_version.outputs.version }}.exe
-            dist/MenYou-fd-Setup-${{ steps.resolve_version.outputs.version }}.exe
           if-no-files-found: error
           overwrite: true
 
@@ -270,8 +232,6 @@ jobs:
             echo
             echo "Direct download below: \`MenYou-Setup-${version}.exe\` (x64) or \`MenYou-arm64-Setup-${version}.exe\` (Windows on ARM). Both are **self-contained** — no prerequisites."
             echo
-            echo "Smaller download/install: \`MenYou-fd-Setup-${version}.exe\` (x64, **framework-dependent**) — about half the size, but requires the .NET 10 Runtime — base or Desktop ([download](https://dotnet.microsoft.com/download/dotnet/10.0); the installer checks and links it if missing). Direct download only; not on winget/Chocolatey."
-            echo
             echo "**SHA-256** — verify your download is intact (an integrity check, *not* a code signature):"
             echo
             echo "\`\`\`"
@@ -300,7 +260,6 @@ jobs:
           files: |
             dist/MenYou-Setup-${{ needs.build.outputs.version }}.exe
             dist/MenYou-arm64-Setup-${{ needs.build.outputs.version }}.exe
-            dist/MenYou-fd-Setup-${{ needs.build.outputs.version }}.exe
           draft: false
           prerelease: false
           fail_on_unmatched_files: true
@@ -316,15 +275,11 @@ jobs:
   # native arm64 build at the next release. (Scoop was retired — its bucket
   # repo was deleted; re-add a publish_scoop job if the bucket comes back.)
   #
-  # The framework-dependent installer (MenYou-fd-Setup) is DIRECT-DOWNLOAD
-  # ONLY — deliberately absent from both channels to avoid manifest
-  # arch/variant complexity (a runtime dependency + a second x64 entry). It
-  # falls out for free: winget's installers-regex (^MenYou-(arm64-)?Setup-…)
-  # doesn't match "MenYou-fd-Setup-", and the Chocolatey job fetches the
-  # fixed MenYou-Setup URL, so neither ever sees the FD asset even though
-  # it's on the release. In-app updates keep an FD install on FD
-  # (variant-matched by the updater), so a channel serving SC never crosses
-  # a user over.
+  # A framework-dependent installer (MenYou-fd-Setup) shipped alongside these
+  # until 0.9.19, direct-download only. Retired: it was the sole artifact
+  # Defender's cloud ML kept flagging, and "half the size" ignored the ~55 MB
+  # runtime it required. Field installs migrate to the self-contained build on
+  # their next update check (GitHubUpdateService).
   # ------------------------------------------------------------------------
   publish_winget:
     name: Publish to winget
