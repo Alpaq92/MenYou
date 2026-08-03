@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.25](https://github.com/Alpaq92/MenYou/compare/v0.9.24...v0.9.25) (2026-08-03)
+
+
+### Features
+
+* **ui:** make the Win 11 power strip Segoe-only, and change the sign-out glyph ([#129](https://github.com/Alpaq92/MenYou/issues/129)) ([b4438ab](https://github.com/Alpaq92/MenYou/commit/b4438ab25b44ecb3743b921a7de640b1cea94851))
+
 ## [0.9.24](https://github.com/Alpaq92/MenYou/compare/v0.9.23...v0.9.24) (2026-08-02)
 
 

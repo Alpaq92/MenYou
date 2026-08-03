@@ -23,4 +23,4 @@ The icon is adapted from [`view-dashboard`](https://pictogrammers.com/library/md
 
 The **uninstaller icon** (`icon_uninstall.*`) is the same disc with the palette inverted (blue glass, silver glyph) around MDI's [`close-thick`](https://pictogrammers.com/library/mdi/icon/close-thick/) cross — same Pictogrammers **Apache-2.0** license. Regenerate the raster assets from the SVG with `tools/render-uninstall-icon.py`.
 
-The Windows 11 layout's **Places button** uses MDI's [`folder-outline`](https://pictogrammers.com/library/mdi/icon/folder-outline/) (same **Apache-2.0** license) as inline path data.
+The custom-theme preview's empty-state placeholder uses MDI's [`artboard`](https://pictogrammers.com/library/mdi/icon/artboard/) glyph as inline path data (same **Apache-2.0** license) — see `Views/Converters/XamlStringToControlConverter.cs`.
