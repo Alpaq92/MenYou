@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.26](https://github.com/Alpaq92/MenYou/compare/v0.9.25...v0.9.26) (2026-08-03)
+
+
+### Bug Fixes
+
+* Bump the nuget-minor-and-patch group with 4 updates ([#128](https://github.com/Alpaq92/MenYou/issues/128)) ([ec23a9d](https://github.com/Alpaq92/MenYou/commit/ec23a9d544876b90cee41809f1ff5f9c588774ff))
+
 ## [0.9.25](https://github.com/Alpaq92/MenYou/compare/v0.9.24...v0.9.25) (2026-08-03)
 
 
