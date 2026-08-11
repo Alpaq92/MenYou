@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.27](https://github.com/Alpaq92/MenYou/compare/v0.9.26...v0.9.27) (2026-08-11)
+
+
+### Bug Fixes
+
+* **autostart:** re-register when it is enabled but missing ([#132](https://github.com/Alpaq92/MenYou/issues/132)) ([ae29ed8](https://github.com/Alpaq92/MenYou/commit/ae29ed84436342976334d8a121d01fdff143f14c))
+
 ## [0.9.26](https://github.com/Alpaq92/MenYou/compare/v0.9.25...v0.9.26) (2026-08-03)
 
 
