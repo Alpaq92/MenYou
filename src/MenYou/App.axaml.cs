@@ -941,6 +941,48 @@ public partial class App : Application
                     });
             });
         }
+        else if (settings.Current.StartWithWindows)
+        {
+            // Self-heal. The migration above is one-shot, gated on a flag that
+            // survives in %APPDATA% — but the autostart it registers does NOT
+            // survive an uninstall: the uninstaller deletes the "MenYou" task
+            // and the legacy Run value (menyou.iss, CurUninstallStepChanged).
+            // winget and Chocolatey upgrade by uninstall-then-install, so that
+            // teardown runs on a routine update and leaves the profile saying
+            // StartWithWindows=true, AutostartTaskMigrated=true, with nothing
+            // registered at all — and because the flag is set, the migration
+            // never retries. MenYou then silently stops starting with Windows,
+            // with the Settings toggle still showing "on" (observed after a
+            // 0.9.24 -> 0.9.26 upgrade).
+            //
+            // So verify rather than trust the flag: if the user wants autostart
+            // and it isn't actually there, put it back.
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    // Only from a real install. SetEnabled registers
+                    // Environment.ProcessPath, so doing this from a dev build /
+                    // `dotnet run` / portable extract would point autostart at a
+                    // throwaway binary. The uninstaller sits beside the exe in an
+                    // Inno install and nowhere else.
+                    if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe")))
+                        return;
+
+                    var autostart = Services.GetRequiredService<IAutostartService>();
+                    if (autostart.IsEnabled) return;
+
+                    HookTrace.Log("Autostart: wanted but not registered — re-registering");
+                    autostart.SetEnabled(true);
+                    HookTrace.Log($"Autostart: re-registered (enabled={autostart.IsEnabled})");
+                }
+                catch (Exception ex)
+                {
+                    // Never block startup over this; the next launch retries.
+                    HookTrace.Log($"Autostart: self-heal failed ({ex.GetType().Name})");
+                }
+            });
+        }
     }
 
     private static void ApplyTheme(AppTheme theme)
