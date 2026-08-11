@@ -965,9 +965,20 @@ public partial class App : Application
                     // Environment.ProcessPath, so doing this from a dev build /
                     // `dotnet run` / portable extract would point autostart at a
                     // throwaway binary. The uninstaller sits beside the exe in an
-                    // Inno install and nowhere else.
-                    if (!File.Exists(Path.Combine(AppContext.BaseDirectory, "unins000.exe")))
+                    // Inno install and nowhere else. Path.Join, not Path.Combine:
+                    // Combine RESETS to the second argument when it looks
+                    // rooted, so it silently discards BaseDirectory on a bad
+                    // input; Join always concatenates.
+                    if (!File.Exists(Path.Join(AppContext.BaseDirectory, "unins000.exe")))
                         return;
+
+                    // Re-read the preference here rather than trusting the one
+                    // captured before this task was queued. Settings is
+                    // reachable the moment the window opens, so a user who
+                    // turns autostart OFF while this is still in flight would
+                    // otherwise have it silently turned back on — the repair
+                    // must never override a fresher choice than its own.
+                    if (!settings.Current.StartWithWindows) return;
 
                     var autostart = Services.GetRequiredService<IAutostartService>();
                     if (autostart.IsEnabled) return;
