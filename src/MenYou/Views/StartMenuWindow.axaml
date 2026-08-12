@@ -8,7 +8,7 @@
         Title="MenYou"
         Icon="avares://MenYou/Assets/icon_v2.ico"
         SizeToContent="WidthAndHeight"
-        MinWidth="400" MinHeight="500"
+        MinWidth="{Binding MenuMinWidth}" MinHeight="{Binding MenuMinHeight}"
         MaxWidth="980" MaxHeight="840"
         WindowStartupLocation="Manual"
         WindowDecorations="None"
@@ -30,6 +30,17 @@
              only directly-themed controls (no NumericUpDown-style
              composites that need an app-scope theme). -->
         <FluentTheme />
+
+        <!-- A custom theme owns its whole edge: CustomThemeCornerRadiusConverter
+             already squares RootBorder's corners so the window can't round off
+             a theme that squares everything inside. But RootBorder still PAINTS
+             MenuBackground, and an opaque square fill behind a theme that
+             rounds ITSELF shows up as dark square corners around the curve —
+             the theme looks square even though it isn't. Drop the fill for
+             custom themes and let the theme paint its own background. -->
+        <Style Selector="Border#RootBorder.customtheme">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
     </Window.Styles>
 
     <Window.Resources>
@@ -52,6 +63,7 @@
             BorderThickness="0"
             BorderBrush="{DynamicResource MenuBorderBrush}"
             Background="{DynamicResource MenuBackgroundBrush}"
+            Classes.customtheme="{Binding UseCustomTheme}"
             Margin="{Binding ShadowMargin}"
             BoxShadow="{Binding MenuShadow}"
             ClipToBounds="False">

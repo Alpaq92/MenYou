@@ -13,6 +13,8 @@
 
         <Border Grid.Row="0"
                 Background="{DynamicResource UserHeaderBrush}"
+                BorderBrush="{DynamicResource MenuSeparatorBrush}"
+                BorderThickness="0,0,0,1"
                 Padding="0">
             <!-- Whole header is a clickable button — opens
                  ms-settings:yourinfo, same destination as clicking the
@@ -29,10 +31,10 @@
                      it doesn't. Initial-letter fallback only fires when
                      Avatar is null (no photo + no silhouette readable). -->
                 <Panel Width="32" Height="32" VerticalAlignment="Center">
-                    <Border Background="#33FFFFFF" CornerRadius="16"
+                    <Border Background="{DynamicResource AvatarOrbBrush}" CornerRadius="16"
                             IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
                         <TextBlock Text="{Binding UserName[0]}"
-                                   Foreground="White" FontSize="16" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MenuForegroundBrush}" FontSize="16" FontWeight="SemiBold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -43,7 +45,7 @@
                     </Ellipse>
                 </Panel>
                 <TextBlock Text="{Binding UserName}"
-                           Foreground="White" FontSize="13" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MenuForegroundBrush}" FontSize="13" FontWeight="SemiBold"
                            VerticalAlignment="Center" />
                 </StackPanel>
             </Button>

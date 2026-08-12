@@ -30,6 +30,8 @@
         <Border Grid.Row="0"
                 Background="{DynamicResource UserHeaderBrush}"
                 CornerRadius="10,10,0,0"
+                BorderBrush="{DynamicResource MenuSeparatorBrush}"
+                BorderThickness="0,0,0,1"
                 Padding="0">
             <!-- Whole header is a clickable button — opens
                  ms-settings:yourinfo. Padding moved onto the Button so
@@ -45,10 +47,10 @@
                      it doesn't. Initial-letter fallback only fires when
                      Avatar is null (no photo + no silhouette readable). -->
                 <Panel Width="36" Height="36" VerticalAlignment="Center">
-                    <Border Background="#33FFFFFF" CornerRadius="18"
+                    <Border Background="{DynamicResource AvatarOrbBrush}" CornerRadius="18"
                             IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
                         <TextBlock Text="{Binding UserName[0]}"
-                                   Foreground="White" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MenuForegroundBrush}" FontSize="18" FontWeight="SemiBold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -59,7 +61,7 @@
                     </Ellipse>
                 </Panel>
                 <TextBlock Text="{Binding UserName}"
-                           Foreground="White" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MenuForegroundBrush}" FontSize="14" FontWeight="SemiBold"
                            VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
@@ -281,7 +283,7 @@
                             </Button>
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}"
                                     Command="{Binding Power.SignOutCommand}">
-                                <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+                                <TextBlock Classes="power-glyph" Text="&#xE1E0;" />
                             </Button>
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}"
                                     Command="{Binding Power.SleepCommand}">

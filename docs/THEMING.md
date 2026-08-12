@@ -11,6 +11,10 @@ What lets them parse through `AvaloniaRuntimeXamlLoader.Parse<Control>` is that 
 | File | What it mimics |
 |---|---|
 | [`Windows7Square.axaml`](../samples/custom-themes/Windows7Square.axaml) | A clone of the built-in "Modern (Windows 7)" layout with every corner squared off — pinned tile grid + user header on top, scrollable Recent / All Programs and the shell-shortcut / search-context column in the middle, search box + six power glyphs along the bottom. Re-declares MenYou's rounded control styles (`Button.menu`, the circular power buttons, the search box, list highlights, the round avatar) with `CornerRadius=0`, so the whole interior reads sharp/pointy instead of rounded. |
+| [`ClassicXpBlue.axaml`](../samples/custom-themes/ClassicXpBlue.axaml) | The built-in **Classic XP** layout with its original **blue account header** (`#0078D4 → #005A9E`). The built-in header now matches the menu background per theme, so this preserves the older look. |
+| [`Classic9xBlue.axaml`](../samples/custom-themes/Classic9xBlue.axaml) | The same, for the built-in **Classic 9x** layout. |
+
+> The two `*Blue` samples are generated from the built-in layouts as they stood *before* the header was de-coloured, so they are otherwise byte-faithful clones — including the old sign-out glyph. Each differs in only three ways, all forced by the host changing underneath: it carries its own `ClassicHeaderBrush` (because `UserHeaderBrush` no longer resolves to blue), it re-declares the account tile's white hover wash (because the app-level one is now a theme grey that vanishes on blue), and it wraps itself in a rounded `Border` — see **Chrome a custom theme owns** below.
 
 > **Heads up — the Windows 11 and Linux Mint Cinnamon samples graduated to built-in styles.** They used to ship here as `Windows11.axaml` and `MintCinnamon.axaml`; both are now first-class layouts you pick from **Settings → Appearance** (alongside Modern (Windows 7), Classic XP and Classic 9x) instead of loading by hand. `Windows7Square` stays as a sample because it's a small, self-contained illustration of the "re-skin an existing layout by overriding its styles" technique.
 
@@ -19,7 +23,7 @@ What lets them parse through `AvaloniaRuntimeXamlLoader.Parse<Control>` is that 
 1. Open MenYou Settings (tray icon → Settings, or Shift+Win → Settings).
 2. Switch to the **Custom** tab.
 3. Tick **Use custom theme** (enables the editor + buttons).
-4. Click **Load…** and pick a file. The installer ships the sample beside the app at `samples\custom-themes\Windows7Square.axaml` inside MenYou's install folder; the same files live in the repo under [`samples/custom-themes/`](../samples/custom-themes/).
+4. Click **Load…** and pick a file. The installer ships all three samples beside the app in `samples\custom-themes\` inside MenYou's install folder; the same files live in the repo under [`samples/custom-themes/`](../samples/custom-themes/).
 5. The XAML lands in the editor; the right-hand preview pane renders it live.
 6. Edit, then **Save** to write the modified version back out to disk (the loaded copy in `%AppData%\MenYou\CustomThemes\` stays untouched — Save is export, not in-place overwrite).
 
@@ -39,6 +43,36 @@ Either way:
 - **Stick to controls Avalonia ships out of the box** — `Grid`, `StackPanel`, `Border`, `Button`, `TextBlock`, `TextBox`, `ScrollViewer`, `Image`, `Path`, etc. Third-party controls (a library's custom `NavigationView`, charting widgets, …) need their xmlns declared at the root AND need their assemblies to be loaded in the host process, which limits portability.
 - **Use SVG path data for icons** — `Path Data="..."` with a Material Design Icons path (Apache-2.0) is the lightest option. No image files = no asset-path resolution problems.
 
+## Chrome a custom theme owns
+
+The window gives a custom theme the same treatment as a built-in layout in every respect **except its corners**:
+
+| | built-in layout | custom theme |
+|---|---|---|
+| Drop shadow (`WindowBorder` setting) | yes | **yes** |
+| Transparent shadow margin around the card | yes | **yes** |
+| 16 px gap from the screen corner / taskbar | yes | **yes**, whenever a shadow is set |
+| Rounded 10 px corners | yes | **no** — you draw your own edge |
+| Menu-background fill behind your content | yes | **no** — you paint your own |
+
+The corner rule exists so the window can't round off a theme that squares everything inside (`Windows7Square`). The consequence is that **a theme wanting rounded corners must round itself**, and because the window paints no background behind you, it must paint its own too — otherwise the corners show through as desktop. Both `*Blue` samples do exactly that:
+
+```xml
+<Border xmlns="https://github.com/avaloniaui" ...
+        Width="320" Height="560"
+        CornerRadius="10"
+        ClipToBounds="True"
+        Background="{DynamicResource MenuBackgroundBrush}">
+  <Grid RowDefinitions="Auto,*,Auto">
+    ...
+  </Grid>
+</Border>
+```
+
+`ClipToBounds` matters: without it a full-bleed child (the coloured account header) paints square right over the rounded corner.
+
+Sizing is yours as well — the window is `SizeToContent`, so it takes the `Width` / `Height` you declare and adds the shadow band around it. A theme that declares nothing stretches to the built-in minimum.
+
 ## Converter toolbox
 
 MenYou ships ten value converters plus the shared context-menu behavior — all usable from a custom theme by declaring their namespaces at the root:
@@ -56,7 +90,7 @@ xmlns:behaviors="using:MenYou.Views.Behaviors"
 | `BrightnessConverter` | Brightens/dims a `Bitmap` by a signed fraction (`Parameter="0.15"`, culture-invariant; useful range ±1.0), cached per (source, amount). | The third stage of the avatar pipeline; any icon dimming. |
 | `EnumEqualsConverter` | `true` when the bound enum equals the parameter (parsed against the bound value's type). | Show/hide theme parts off `MenuStyle` or any VM enum. |
 | `NewItemHighlightConverter` | Bool → `AccentSubtleBrush` (theme-aware, from app resources) or transparent. | The "just installed" accent wash on Pinned/Recent rows. |
-| `CustomThemeCornerRadiusConverter` | Maps `UseCustomTheme` to the menu window's corner radius: built-ins keep the rounded 10 px chrome, a loaded custom theme gets square (0) corners so it owns its own edge. | Already applied at the window level — the reason your square-cornered theme actually renders square. |
+| `CustomThemeCornerRadiusConverter` | Maps `UseCustomTheme` to the menu window's corner radius: built-ins keep the rounded 10 px chrome, a loaded custom theme gets square (0) corners so it owns its own edge. | Already applied at the window level — the reason your square-cornered theme actually renders square. If you want rounded corners, round yourself; see **Chrome a custom theme owns**. |
 | `ScrollbarReserveHeightConverter` | (multi-value) Returns a `MinHeight` that reserves room for the slim overlay horizontal scrollbar only when content actually overflows (`Extent.Width > Viewport.Width`); 0 otherwise. | Under any horizontal tile strip so it stays compact without a scrollbar. |
 | `XamlStringToControlConverter` | Parses live XAML text into a control via `AvaloniaRuntimeXamlLoader`, rendering a friendly inline error instead of throwing. | Powers the Settings editor's live preview itself; reusable for any text-to-control surface. |
 | `ProgramsOrderConverter` | Re-orders a menu-item collection per a `ProgramsOrder` parameter (`FoldersFirst` / `AppsFirst` / `PureAlphabetical`). Returns a **live view** that re-sorts itself when a background refresh rebuilds the source in place. | Give your theme its own "All" ordering, independent of the user's Settings choice — see below. |

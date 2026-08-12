@@ -182,7 +182,12 @@ Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: recurse
 ; Custom loads an .axaml the user points it at. This is just a worked
 ; example of the theming format, lifted straight from the repo's samples
 ; folder (path resolves against this script's dir, installer\inno).
+; Sample custom themes, loadable from Settings -> Custom -> Load...
+; A glob would be tidier, but each name is listed so a renamed or deleted
+; sample fails the build loudly instead of silently shipping fewer themes.
 Source: "..\..\samples\custom-themes\Windows7Square.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
+Source: "..\..\samples\custom-themes\ClassicXpBlue.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
+Source: "..\..\samples\custom-themes\Classic9xBlue.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
 ; Uninstaller icon (blue disc + silver close cross) referenced by
 ; UninstallDisplayIcon and the Start-menu uninstall shortcut.
 Source: "..\..\icon_uninstall.ico"; DestDir: "{app}"; Flags: ignoreversion
