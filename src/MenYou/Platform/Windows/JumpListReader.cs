@@ -332,7 +332,7 @@ internal static class JumpListReader
             + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
             + "which shifts COM vtable slots and access-violates (this shipped a crash in "
             + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
-            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
+            + "MenYou.csproj and docs/OPTIMIZATION.md#trimming.")]
     private static string? TryGetAumidFromPropertyStore(string lnkPath)
     {
         try
@@ -362,7 +362,7 @@ internal static class JumpListReader
             + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
             + "which shifts COM vtable slots and access-violates (this shipped a crash in "
             + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
-            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
+            + "MenYou.csproj and docs/OPTIMIZATION.md#trimming.")]
     [UnconditionalSuppressMessage("Trimming", "IL2072",
         Justification = "Activator.CreateInstance on a shell COM CLSID does CoCreateInstance " +
             "on a native object; no managed members are reflected, so trimming is unaffected.")]

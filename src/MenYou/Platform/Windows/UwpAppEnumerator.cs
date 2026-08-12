@@ -72,7 +72,7 @@ internal static class UwpAppEnumerator
             + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
             + "which shifts COM vtable slots and access-violates (this shipped a crash in "
             + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
-            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
+            + "MenYou.csproj and docs/OPTIMIZATION.md#trimming.")]
     private static List<UwpApp> Enumerate(CancellationToken ct)
     {
         var result = new List<UwpApp>(128);
