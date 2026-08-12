@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.29](https://github.com/Alpaq92/MenYou/compare/v0.9.28...v0.9.29) (2026-08-12)
+
+
+### Performance
+
+* **startup:** stop throttling the logon task, and drop payload nothing loads ([#136](https://github.com/Alpaq92/MenYou/issues/136)) ([48aa49d](https://github.com/Alpaq92/MenYou/commit/48aa49d3e5df672419db31108c3af6ae620ef297))
+
 ## [0.9.28](https://github.com/Alpaq92/MenYou/compare/v0.9.27...v0.9.28) (2026-08-12)
 
 
