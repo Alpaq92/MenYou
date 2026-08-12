@@ -84,6 +84,18 @@ jobs:
       - name: Restore
         run: dotnet restore src/MenYou/MenYou.csproj
 
+      # PublishReadyToRunComposite: crossgen2 emits ONE composite native image
+      # for the whole self-contained closure instead of a per-assembly image
+      # each. Cross-assembly calls resolve directly rather than through
+      # indirection stubs, and there is one image to map instead of ~230, which
+      # is what startup here is actually bound by — a running MenYou pages in
+      # ~70 MB across ~73 modules and reaches its own first line of code late.
+      # Requires self-contained (it is) and makes the build slower and the
+      # output larger; both are acceptable against startup. It does NOT replace
+      # trimming: 160 of the shipped files, 61.6 MB, are never loaded at all,
+      # and only trimming removes those (blocked on the COM-vtable issue in
+      # docs/OPTIMIZATION.md §9).
+      #
       # PublishReadyToRun: crossgen2 AOT-compiles the app + Avalonia to native
       # images (the framework is already R2R in the self-contained runtime
       # pack), so startup skips JITing those paths — measured ~165 ms faster to
@@ -118,6 +130,7 @@ jobs:
           -p:Version=${{ steps.resolve_version.outputs.version }}
           -p:PublishSingleFile=false
           -p:PublishReadyToRun=true
+          -p:PublishReadyToRunComposite=true
           -p:DebugType=embedded
           -o publish/win-x64
 
@@ -139,6 +152,7 @@ jobs:
           -p:Version=${{ steps.resolve_version.outputs.version }}
           -p:PublishSingleFile=false
           -p:PublishReadyToRun=true
+          -p:PublishReadyToRunComposite=true
           -p:DebugType=embedded
           -p:SkipNativeBridge=true
           -o publish/win-arm64
