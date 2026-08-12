@@ -2,7 +2,9 @@
 
 How MenYou is kept fast, and the reasoning behind each change — focused on **startup**, which is what users feel most for a Start-menu replacement that lives in the tray and must be ready the moment they sign in.
 
-This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across three threads: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task), the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up), and the **payload/packaging** work (§3, §9 — what ships, what pages in on a cold boot, and the trimming attempt that had to be reverted).
+This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across four threads: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task), the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up), the **payload/packaging** work (§3, §9 — what ships, what pages in on a cold boot, and the trimming attempt that had to be reverted), and the **load-path** work (§10–§11 — measuring what is actually paged in, and what is left to do about it).
+
+**Start at [§11](#11-reducing-launch-time--method-and-the-levers-that-are-left)** if you are here to make launch faster: it has the measurement method, where the time actually goes, and the remaining levers ranked.
 
 ---
 
@@ -242,6 +244,57 @@ That split is the whole story: **only trimming removes the 61.6 MB**, and trimmi
 - **`[InstallDelete]` for retired payload files** — Inno never removes a file that has dropped out of `[Files]`; it only stops installing it. `Avalonia.Fonts.Inter.dll` was still sitting in a 0.9.27 install two releases after the package reference was removed, so the "1.8 MB saved" in 0.9.25 was true for fresh installs and false for upgraders. Add an `[InstallDelete]` line whenever a shipped file is retired.
 
 Note what is *not* on the list. `System.Security.Cryptography` (2.4 MB) is loaded for `SHA1.HashData` in `AppDiscoveryService`, which generates the **AppIds persisted in `settings.json`** — swapping it for a cheaper hash would invalidate every user's Pinned and Recent list, so it stays. ICU is already absent (the payload ships none).
+
+---
+
+## 11. Reducing launch time — method, and the levers that are left
+
+### Measure first, and measure the right thing
+
+Two numbers get confused. **Time-to-tray** is when MenYou exists; **time-to-first-open** is when the menu paints. They have different bottlenecks, and almost everything below moves the first one.
+
+Cold start is dominated by work that happens *before MenYou's own code runs at all*. A traced cold boot reached the first line of `Program.Main` at **+7.3 s**, then finished every synchronous init step — cache preload, tray, hooks, bridge — in **244 ms**. Optimising app code is therefore close to pointless; the lever is the load path.
+
+To see the load path on a running instance:
+
+```pwsh
+$p = Get-Process MenYou; $dir = Split-Path $p.Path
+$mods = $p.Modules | Where-Object { $_.FileName -like "$dir*" }
+$mods.Count                                                      # modules from the install dir
+($mods | Measure-Object ModuleMemorySize -Sum).Sum / 1MB         # bytes on the load path
+$mods | Sort-Object ModuleMemorySize -Descending | Select -First 15
+```
+
+Diff that against everything shipped to find dead weight (that is how the 61.6 MB in §10 was found).
+
+**Beware Prefetch.** Windows retrains SuperFetch/Prefetch on new binaries, so the *first* cold boot after an update is slower than the steady state — an A/B across an update measures Prefetch, not your change. Compare like with like, or boot each build twice and take the second.
+
+### Where the time goes
+
+| Stage | Roughly | Movable by |
+|---|---|---|
+| Task Scheduler starts the process | — | trigger delay, task **priority** (§1) |
+| Runtime + assembly page-in (~70 MB, ~73 modules) | the bulk | trimming, composite R2R, shipping less |
+| MenYou synchronous init | ~244 ms | nothing worth having |
+| Warm-up (window build, first paint) | deferred by design | already off the critical path (§4) |
+
+### Levers, ranked
+
+1. **Trimming — the only thing that removes the 61.6 MB.** 160 shipped files are never loaded. Blocked on §9: ILLink deletes uncalled `[ComImport]` members and shifts COM vtable slots, which shipped a process-killing `0xC0000005` in 0.9.6–0.9.10. `TrimmerRootAssembly Include="MenYou"` is already in the csproj as the precondition. A retry is **not a flag flip** — the build is warning-clean either way, so it must be verified by *running* a trimmed build against jump lists, icons, Control Panel and app enumeration. Budget the verification, not the change.
+2. **Defer `System.Drawing` off the startup path.** `LoadFallbackIconAsync()` runs during synchronous init and is the only startup caller of `IconExtractor`, which is the only user of `System.Drawing` — pulling `System.Private.Windows.Core` (1.8 MB), `System.Drawing.Common` (892 KB), `System.Private.Windows.GdiPlus` (408 KB) and `System.Drawing.Primitives` (120 KB), ~3.2 MB, for a *fallback* icon needed only when an app's own extraction fails. Honest caveat: those assemblies load anyway at the first icon fill, so this **moves** the cost rather than removing it — but it moves it out of the contended logon window, which is the same reasoning as the priority fix.
+3. **Composite ReadyToRun** — done in 0.9.29. Helps stub resolution, not page-in.
+4. **Ship less** — `av_libglesv2.dll` (5.3 MB) removed in 0.9.29. Audit the publish output against the loaded-module list whenever a dependency is dropped, and add an `[InstallDelete]` line so upgraders benefit too.
+
+### Evaluated and rejected
+
+NativeAOT, `PublishSingleFile` and the trimming revert are covered in **Rejected / not pursued** below — that list is canonical, don't restate it here. New to this round:
+
+| Lever | Why not |
+|---|---|
+| **`InvariantGlobalization`** | No win: the payload ships no ICU at all, so there is nothing to drop. Would also break culture-aware sort/search across 13 locales. |
+| **Cheaper AppId hash** (drop `System.Security.Cryptography`, 2.4 MB) | `SHA1.HashData` in `AppDiscoveryService` generates the AppIds **persisted in `settings.json`**. Changing it invalidates every user's Pinned and Recent list. Would need a migration, and is not worth 2.4 MB. |
+| **`TieredPGO`** | Optimises steady-state throughput, not startup. |
+| **Lowering the task's `PT1S` delay** | The 1 s exists so the notification area is up before the tray icon registers; removing it trades a reliable tray icon for a fraction of a second. |
 
 ---
 
