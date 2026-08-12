@@ -55,7 +55,7 @@ A third, **framework-dependent** installer (`MenYou-fd-Setup`) shipped through 0
 > catch, and `Wacatac` is the bucket they use for it. Nothing in the download is malicious: the installer and its
 > entire payload scan clean locally; the verdict is a cloud reputation call made at download time. Verify the
 > published SHA-256, then choose *More info → Run anyway*, or build from source. It will keep recurring until the
-> binaries are code-signed — see [`CLAUDE.md`](CLAUDE.md) for the full investigation. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#3-payload--defender-installer--packaging).
+> binaries are code-signed — see [`CLAUDE.md`](CLAUDE.md) for the full investigation. See [`docs/OPTIMIZATION.md`](docs/OPTIMIZATION.md#payload-and-packaging).
 
 The installer is built with [Inno Setup](https://jrsoftware.org/isinfo.php) — a standard setup wizard where you can override the install location, Start-Menu folder, and shortcuts (per-user by default, with a per-machine option). Updates are checked in-app against GitHub Releases: **Settings → Sprawdź aktualizacje** downloads the latest installer and runs it to upgrade in place — and a leftover framework-dependent install is migrated to the self-contained build. Code-signing status (SignPath Foundation when available, otherwise unsigned) is noted in the release body — see [`docs/AUTOMATION.md`](docs/AUTOMATION.md) for the deployment pipeline.
 

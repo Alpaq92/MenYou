@@ -57,7 +57,7 @@ internal static class IconExtractor
             + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
             + "which shifts COM vtable slots and access-violates (this shipped a crash in "
             + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
-            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
+            + "MenYou.csproj and docs/OPTIMIZATION.md#trimming.")]
     private static AvBitmap? ExtractViaShellItemImageFactory(string path, int size)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
@@ -182,7 +182,7 @@ internal static class IconExtractor
             + "are NOT safe by themselves — ILLink deletes uncalled [ComImport] members, "
             + "which shifts COM vtable slots and access-violates (this shipped a crash in "
             + "0.9.6). They survive only because MenYou is a TrimmerRootAssembly; see "
-            + "MenYou.csproj and docs/OPTIMIZATION.md §9.")]
+            + "MenYou.csproj and docs/OPTIMIZATION.md#trimming.")]
     private static AvBitmap? GetIconFromSystemImageList(int index, bool jumbo)
     {
         var listKind = jumbo ? SHIL_JUMBO : SHIL_EXTRALARGE;

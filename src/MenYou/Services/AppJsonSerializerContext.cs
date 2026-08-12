@@ -9,7 +9,7 @@ namespace MenYou.Services;
 // (RequiresUnreferencedCode) warnings that block a trim-safe publish — the
 // generator emits the property/converter metadata at build time, so the
 // trimmer can see exactly which members are used and never strips a type the
-// serializer needs. See docs/OPTIMIZATION.md (§ trimming).
+// serializer needs. See docs/OPTIMIZATION.md#trimming.
 //
 // Two contexts because the persisted shapes want different, behaviour-
 // preserving options:

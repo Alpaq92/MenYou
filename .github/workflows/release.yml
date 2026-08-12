@@ -94,7 +94,7 @@ jobs:
       # output larger; both are acceptable against startup. It does NOT replace
       # trimming: 160 of the shipped files, 61.6 MB, are never loaded at all,
       # and only trimming removes those (blocked on the COM-vtable issue in
-      # docs/OPTIMIZATION.md §9).
+      # docs/OPTIMIZATION.md#trimming).
       #
       # PublishReadyToRun: crossgen2 AOT-compiles the app + Avalonia to native
       # images (the framework is already R2R in the self-contained runtime
@@ -121,7 +121,7 @@ jobs:
       # differing — trimmed crashed 2/2 runs, untrimmed survived 2/2 and
       # enumerated every app. Trimming buys ~50 MB; it is not worth an app that
       # dies on a cache-cold launch, so correctness wins until the interop is
-      # provably trim-safe (see docs/OPTIMIZATION.md §9). ReadyToRun stays — it
+      # provably trim-safe (see docs/OPTIMIZATION.md#trimming). ReadyToRun stays — it
       # is unaffected and carries the startup win.
       - name: Publish (Release, win-x64, self-contained)
         run: >
