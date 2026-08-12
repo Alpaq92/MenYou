@@ -230,6 +230,7 @@ Measured against a **running installed 0.9.27**, counting only modules loaded fr
 
 | | |
 |---|---|
+| Measured on | installed **0.9.27** |
 | Modules loaded at startup | **73** |
 | Bytes on that load path | **70.8 MB** |
 | Files shipped | 236 (132.4 MB) |
@@ -273,17 +274,17 @@ Diff that against everything shipped to find dead weight (that is how the 61.6 M
 
 | Stage | Roughly | Movable by |
 |---|---|---|
-| Task Scheduler starts the process | — | trigger delay, task **priority** (§1) |
-| Runtime + assembly page-in (~70 MB, ~73 modules) | the bulk | trimming, composite R2R, shipping less |
+| Task Scheduler fires the trigger | — | the task's `LogonDelay` (`PT1S`) — and nothing else; this is *when* the process is launched |
+| Runtime + assembly page-in (~70 MB, ~73 modules, measured on 0.9.27) | the bulk | trimming, shipping less, composite R2R, **and the task's `Priority`** (§1) — priority does not change *when* the task fires, it governs the CPU and I/O the process gets **once running**, which is exactly this stage |
 | MenYou synchronous init | ~244 ms | nothing worth having |
 | Warm-up (window build, first paint) | deferred by design | already off the critical path (§4) |
 
 ### Levers, ranked
 
-1. **Trimming — the only thing that removes the 61.6 MB.** 160 shipped files are never loaded. Blocked on §9: ILLink deletes uncalled `[ComImport]` members and shifts COM vtable slots, which shipped a process-killing `0xC0000005` in 0.9.6–0.9.10. `TrimmerRootAssembly Include="MenYou"` is already in the csproj as the precondition. A retry is **not a flag flip** — the build is warning-clean either way, so it must be verified by *running* a trimmed build against jump lists, icons, Control Panel and app enumeration. Budget the verification, not the change.
-2. **Defer `System.Drawing` off the startup path.** `LoadFallbackIconAsync()` runs during synchronous init and is the only startup caller of `IconExtractor`, which is the only user of `System.Drawing` — pulling `System.Private.Windows.Core` (1.8 MB), `System.Drawing.Common` (892 KB), `System.Private.Windows.GdiPlus` (408 KB) and `System.Drawing.Primitives` (120 KB), ~3.2 MB, for a *fallback* icon needed only when an app's own extraction fails. Honest caveat: those assemblies load anyway at the first icon fill, so this **moves** the cost rather than removing it — but it moves it out of the contended logon window, which is the same reasoning as the priority fix.
-3. **Composite ReadyToRun** — done in 0.9.29. Helps stub resolution, not page-in.
-4. **Ship less** — `av_libglesv2.dll` (5.3 MB) removed in 0.9.29. Audit the publish output against the loaded-module list whenever a dependency is dropped, and add an `[InstallDelete]` line so upgraders benefit too.
+1. **Trimming — the only thing that removes the 61.6 MB** (160 shipped files never loaded; measured on an installed **0.9.27**, see §10). Blocked on §9: ILLink deletes uncalled `[ComImport]` members and shifts COM vtable slots, which shipped a process-killing `0xC0000005` in 0.9.6–0.9.10. `TrimmerRootAssembly Include="MenYou"` is already in the csproj as the precondition. A retry is **not a flag flip** — the build is warning-clean either way, so it must be verified by *running* a trimmed build against jump lists, icons, Control Panel and app enumeration. Budget the verification, not the change.
+2. **Defer `System.Drawing` off the startup path.** `LoadFallbackIconAsync()` runs during synchronous init and is the only startup caller of `IconExtractor`, which is the only user of `System.Drawing` — pulling `System.Private.Windows.Core` (1.8 MB), `System.Drawing.Common` (892 KB), `System.Private.Windows.GdiPlus` (408 KB) and `System.Drawing.Primitives` (120 KB) — ~3.2 MB, measured on an installed **0.9.27** — for a *fallback* icon needed only when an app's own extraction fails. Honest caveat: those assemblies load anyway at the first icon fill, so this **moves** the cost rather than removing it — but it moves it out of the contended logon window, which is the same reasoning as the priority fix.
+3. **Composite ReadyToRun** — done in 0.9.29. Removes cross-assembly indirection stubs, and maps one native image instead of one per assembly, so it touches page-in as well — just far less of it than trimming would, since the bytes are still there.
+4. **Ship less** — `av_libglesv2.dll` (5.3 MB as shipped in 0.9.27) removed in 0.9.29. Audit the publish output against the loaded-module list whenever a dependency is dropped, and add an `[InstallDelete]` line so upgraders benefit too.
 
 ### Evaluated and rejected
 
