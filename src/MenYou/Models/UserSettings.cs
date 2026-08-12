@@ -133,6 +133,15 @@ public sealed class UserSettings
     // task and clearing the legacy Run value — then sets the flag so it never
     // re-runs. See [[Win32AutostartService]].
     public bool AutostartTaskMigrated { get; set; } = false;
+
+    // The logon task was originally created at Task Scheduler's default
+    // Priority 7 (below-normal cpu + reduced I/O), which throttles MenYou's
+    // page-in during the most contended moment on the machine. The XML now
+    // asks for 4, but an EXISTING task keeps whatever it was created with —
+    // the self-heal only re-registers autostart that is MISSING, not autostart
+    // that is merely stale. This one-shot flag forces a single re-create so
+    // installed users actually get the new priority. See [[Win32AutostartService]].
+    public bool AutostartPriorityApplied { get; set; } = false;
     public bool HideOnFocusLost { get; set; } = true;
     public int MaxRecentItems { get; set; } = 8;
 

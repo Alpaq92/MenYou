@@ -159,7 +159,17 @@ public sealed class Win32AutostartService : IAutostartService
             <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>
             <Enabled>true</Enabled>
             <Hidden>false</Hidden>
-            <Priority>7</Priority>
+            <!-- 4, not Task Scheduler's default of 7. Priority 7 runs the task
+                 at BELOW-NORMAL cpu AND reduced I/O priority. MenYou's cold
+                 start is almost entirely paging in ~70 MB across ~73 modules —
+                 pure I/O — and logon is the most I/O-contended moment on the
+                 machine, so a below-normal task queues behind Explorer,
+                 OneDrive, Defender and every other startup item. 4 is the
+                 normal band; MenYou is a Start-menu replacement the user is
+                 liable to press within seconds of signing in, so it should not
+                 be pre-empted by background work. Not raised further: 0-3 are
+                 realtime/high and would be antisocial for a tray app. -->
+            <Priority>4</Priority>
             <RunOnlyIfIdle>false</RunOnlyIfIdle>
             <IdleSettings>
               <StopOnIdleEnd>false</StopOnIdleEnd>

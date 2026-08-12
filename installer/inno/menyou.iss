@@ -176,7 +176,12 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; install and, more importantly, removes 100 MB from Defender's first-run scan
 ; surface on a fresh (unsigned) install. MenYou's own symbols are embedded
 ; (DebugType=embedded), so no managed debugging is lost either.
-Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: recursesubdirs createallsubdirs ignoreversion
+; av_libglesv2.dll is ANGLE's GLES translator, ~5.3 MB. Program.cs pins
+; Win32PlatformOptions.RenderingMode to Software ONLY, so the ANGLE path can
+; never be selected and the DLL is never loaded (verified against a running
+; process's module list). Excluded rather than shipped-and-ignored. If GPU
+; rendering is ever re-enabled in Program.cs, DROP THIS EXCLUDE with it.
+Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,av_libglesv2.dll"; Flags: recursesubdirs createallsubdirs ignoreversion
 ; Custom-theme sample, shipped as an on-disk reference users can copy and
 ; edit. It is NOT a built-in style and is never auto-loaded — Settings ->
 ; Custom loads an .axaml the user points it at. This is just a worked
@@ -198,6 +203,18 @@ Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"; 
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 ; Autostart is registered by the app at runtime (logon scheduled task via
 ; Win32AutostartService), not by an installer shortcut — see the [Tasks] note.
+
+[InstallDelete]
+; Inno never removes a file that has DROPPED OUT of [Files] — it only stops
+; installing it — so every payload removal leaves an orphan behind on upgrade
+; and the install dir only ever grows. These were both measured still sitting
+; in a 0.9.27 install long after the code stopped referencing them. Add a line
+; here whenever a shipped file is retired.
+;   Avalonia.Fonts.Inter.dll — package reference dropped in 0.9.25 (nothing
+;   asks for the Inter font; every FontFamily in the app is Segoe-based).
+;   av_libglesv2.dll — excluded above; software rendering since 0.9.17.
+Type: files; Name: "{app}\Avalonia.Fonts.Inter.dll"
+Type: files; Name: "{app}v_libglesv2.dll"
 
 [UninstallDelete]
 ; The native bridge is shadow-copied here at runtime — outside {app}, so an

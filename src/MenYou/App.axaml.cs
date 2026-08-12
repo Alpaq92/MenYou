@@ -981,11 +981,27 @@ public partial class App : Application
                     if (!settings.Current.StartWithWindows) return;
 
                     var autostart = Services.GetRequiredService<IAutostartService>();
-                    if (autostart.IsEnabled) return;
 
-                    HookTrace.Log("Autostart: wanted but not registered — re-registering");
-                    autostart.SetEnabled(true);
-                    HookTrace.Log($"Autostart: re-registered (enabled={autostart.IsEnabled})");
+                    if (!autostart.IsEnabled)
+                    {
+                        HookTrace.Log("Autostart: wanted but not registered — re-registering");
+                        autostart.SetEnabled(true);
+                        HookTrace.Log($"Autostart: re-registered (enabled={autostart.IsEnabled})");
+                        MarkPriorityApplied(settings);   // fresh task already has Priority 4
+                        return;
+                    }
+
+                    // Autostart IS registered — but a task created before the
+                    // priority fix keeps Task Scheduler's default Priority 7
+                    // (below-normal cpu + reduced I/O), which throttles page-in
+                    // at logon, the most I/O-contended moment there is. The XML
+                    // now asks for 4; an existing task does not pick that up on
+                    // its own, and the self-heal above deliberately only repairs
+                    // autostart that is MISSING. So re-create it exactly once.
+                    if (settings.Current.AutostartPriorityApplied) return;
+                    HookTrace.Log("Autostart: re-creating task to apply Priority 4");
+                    autostart.SetEnabled(true);   // /create /f — idempotent rewrite
+                    if (autostart.IsEnabled) MarkPriorityApplied(settings);
                 }
                 catch (Exception ex)
                 {
@@ -995,6 +1011,16 @@ public partial class App : Application
             });
         }
     }
+
+    /// Persist the one-shot "logon task has the new Priority" marker. Written
+    /// on the UI thread because SettingsService.Save raises Changed, which
+    /// listeners handle there.
+    private static void MarkPriorityApplied(ISettingsService settings) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            settings.Current.AutostartPriorityApplied = true;
+            settings.Save();
+        });
 
     private static void ApplyTheme(AppTheme theme)
     {

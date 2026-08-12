@@ -62,12 +62,15 @@ The decisive insight came from **(3) − (2)**: the gap between the desktop bein
 **Fix.** Autostart was moved from the `HKCU\Run` value to a **per-user logon-triggered Scheduled Task** (`Win32AutostartService`), which is *exempt* from that throttle — it fires as part of the logon sequence. Key properties of the task:
 
 - **`LogonTrigger`** for the current user, **`Delay = PT1S`** (a 1 s nudge so the shell's notification area exists before the tray icon registers; measured to still land right after Explorer while shaving ~2 s off the earlier PT3S).
+- **`<Priority>4</Priority>`** — *not* Task Scheduler's default of 7. Escaping the Run-key throttle got MenYou **started** early; priority 7 then throttled it while it **ran**. Level 7 means below-normal CPU **and reduced I/O priority**, and MenYou's cold start is almost entirely I/O — a running instance pages in ~70 MB across ~73 modules. Logon is the most I/O-contended moment on the machine, so a below-normal task queues behind Explorer, OneDrive, Defender and every other startup item. 4 is the normal band. Not raised further: 0–3 are realtime/high and would be antisocial for a tray app. Fixed in 0.9.29; the value was inherited, never chosen.
 - **`InteractiveToken` + `LeastPrivilege`** — runs in the user's session at medium integrity, *not* elevated. This is essential: MenYou installs low-level input hooks and manipulates Explorer's foreground, which only works at the same integrity level as the shell (an elevated autostart would break the hooks via UIPI).
 - **No admin needed** to create it — a user may freely register tasks that run as themselves.
 
 **Robustness:**
 - **Fallback** — if task creation is blocked (locked-down box, group policy), it falls back to the legacy `HKCU\Run` value so autostart still works, just throttled. Either way it also zeroes `StartupDelayInMSec` so that fallback path is as prompt as Windows allows.
 - **Self-healing migration** — existing installs migrate Run-key → task once on launch. The migration only marks itself done **after verifying autostart is actually in place** (`IsEnabled`), so a transient failure can't strand a user with no autostart (an earlier version flipped the "done" flag unconditionally and left a machine with neither task nor Run-key).
+- **Self-heal for a *missing* task** — the migration flag lives in `%AppData%`, but the task does not: the uninstaller deletes it, and winget/Chocolatey upgrade by uninstall-then-install, so a routine update left `StartWithWindows=true` with nothing registered and the one-shot flag already set. Autostart is now re-registered whenever it is wanted but absent (0.9.28). Guarded on `unins000.exe` beside the exe, because `SetEnabled` registers `Environment.ProcessPath` and would otherwise point a user's autostart at a dev build.
+- **Re-creating a *stale* task** — an existing task keeps whatever settings it was created with, so raising the priority in the XML does nothing for installs that already have one, and the missing-task self-heal deliberately does not touch it. A one-shot `AutostartPriorityApplied` flag forces exactly one re-create (0.9.29).
 - **Schema correctness** — the task XML is declared `version="1.2"` and contains only 1.2-valid settings. A `<UseUnifiedSchedulingEngine>` node (1.3+) silently made Task Scheduler reject the whole XML; it was removed. Element order within `<Settings>` is also load-bearing.
 - **Installer / uninstaller** — the opt-in Startup-folder shortcut was removed from the Inno script; autostart is owned entirely by the app now, so the two mechanisms can't double-launch. The uninstaller deletes the task (and any legacy `HKCU\Run` value) in `CurUninstallStepChanged`, so an orphaned task can't outlive MenYou and fire at each sign-in with a missing target.
 
@@ -219,6 +222,29 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 
 ---
 
+## 10. What the startup load path actually costs (0.9.29)
+
+Measured against a **running installed 0.9.27**, counting only modules loaded from the install directory:
+
+| | |
+|---|---|
+| Modules loaded at startup | **73** |
+| Bytes on that load path | **70.8 MB** |
+| Files shipped | 236 (132.4 MB) |
+| Shipped but **never loaded** | **160 files, 61.6 MB** |
+
+The largest things actually paged in are irreducible — `System.Private.CoreLib` (15.6 MB), `libSkiaSharp` (11.4 MB), `Avalonia.Base` (6.8 MB), `coreclr` (4.6 MB). The largest things *not* loaded are pure waste: `System.Private.Xml` (7.6 MB), `System.Linq.Expressions` (3.6 MB), `System.Data.Common` (2.7 MB), `System.Private.DataContractSerialization` (2.0 MB), `Microsoft.DiaSymReader.Native` (2.1 MB).
+
+That split is the whole story: **only trimming removes the 61.6 MB**, and trimming is blocked on §9. What was available without reopening it:
+
+- **`PublishReadyToRunComposite=true`** — one composite native image for the self-contained closure instead of a per-assembly image each, so cross-assembly calls resolve directly rather than through indirection stubs. Slower build, larger output; both acceptable against startup.
+- **`av_libglesv2.dll` excluded from the payload** — 5.3 MB of ANGLE shipped for a GPU path that `Program.cs` pinned off in 0.9.17 (`RenderingMode = Software` only). Confirmed absent from the running process's module list before removing it. *If GPU rendering is ever re-enabled, drop the exclude with it.*
+- **`[InstallDelete]` for retired payload files** — Inno never removes a file that has dropped out of `[Files]`; it only stops installing it. `Avalonia.Fonts.Inter.dll` was still sitting in a 0.9.27 install two releases after the package reference was removed, so the "1.8 MB saved" in 0.9.25 was true for fresh installs and false for upgraders. Add an `[InstallDelete]` line whenever a shipped file is retired.
+
+Note what is *not* on the list. `System.Security.Cryptography` (2.4 MB) is loaded for `SHA1.HashData` in `AppDiscoveryService`, which generates the **AppIds persisted in `settings.json`** — swapping it for a cheaper hash would invalidate every user's Pinned and Recent list, so it stays. ICU is already absent (the payload ships none).
+
+---
+
 ## Rejected / not pursued
 
 - **`PublishSingleFile`** — see §3 (~54 s cold autostart, unsigned). Kept multi-file.
@@ -248,3 +274,6 @@ With the data paint instant (§6) and truthful (§7), what a cold start *shows* 
 | **0.9.6** | **On-disk icon cache** (§8: PNG-per-id, mtime invalidation, negative-result caching — cold fill ~7.2 s → ~0.1–0.2 s); **framework-dependent installer variant** (§3, ~50 MB installed); `PublishTrimmed` shipped (−39 % payload, warning-clean) — **runtime-broken, reverted in 0.9.11** (§9). |
 | **0.9.11** | **Trimming reverted** — ILLink deletes uncalled `[ComImport]` interface members, shifting COM vtable slots: `IShellItem::GetDisplayName` dispatched into `GetParent`'s slot → `0xC0000005` on every cache-cold launch, past any `try/catch`. Proven by strict A/B; `TrimmerRootAssembly Include="MenYou"` landed (inert) as the precondition for any future attempt (§9). |
 | **0.9.13** | **FD cold start measured honestly** (§3): tray at +10.3 s on a true cold boot ≈ the trained SC build, because the shared runtime is just as cold when nothing else loads .NET 10 at logon — FD's unconditional win is size, not cold start. Warm starts 0.5–2.1 s; icon disk cache filled 144 tiles in ~200 ms on the same cold boot. |
+| **0.9.17** | Stopped loading bytes nothing uses: `WithInterFont()` dropped (registers a font no `FontFamily` asks for) and `Win32RenderingMode.Software` pinned, so ANGLE's `av_libGLESv2.dll` (~5.1 MB) leaves the load path. Modules from the install dir 32 → 27. |
+| **0.9.19** | **Input hooks installed before Avalonia** (`EarlyStartup`): the Start button and Win key used to be unhooked for the whole UI-stack load, so an early press opened *Windows'* Start menu. Presses that beat the UI are queued and replayed. Buys the Avalonia-init span, not the whole boot — the bulk is the runtime loading before `Main` runs. |
+| **0.9.29** | **Logon task priority 7 → 4** (§1) — the default put MenYou at below-normal CPU *and* reduced I/O priority for a start that is almost pure I/O, at the most contended moment on the machine. Plus `PublishReadyToRunComposite`, `av_libglesv2.dll` dropped from the payload, and `[InstallDelete]` for retired files (§10). Measured: 73 modules / 70.8 MB loaded, against 160 files / 61.6 MB shipped and never touched. |
