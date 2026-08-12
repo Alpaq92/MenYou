@@ -2,7 +2,7 @@
 
 How MenYou is kept fast, and the reasoning behind each change — focused on **startup**, which is what users feel most for a Start-menu replacement that lives in the tray and must be ready the moment they sign in.
 
-This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across four threads: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task), the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up), the **payload/packaging** work (§3, §9 — what ships, what pages in on a cold boot, and the trimming attempt that had to be reverted), and the **load-path** work (§10–§11 — measuring what is actually paged in, and what is left to do about it).
+This is an engineering record, not a changelog: it covers *what* was done, *why*, the *measurements* that justified it, and the approaches that were **tried and rejected** (so they aren't re-attempted). It spans **0.5.0 → 0.9.x**, across four threads: the **launch** era (§1–§5 — getting the process started promptly, fixed by the logon task), the **data-paint** era (§6–§8 — getting a truthful, fully-drawn menu the moment the process is up), the **payload/packaging** work (§3, §9 — what ships, what pages in on a cold boot, and the trimming attempt that had to be reverted), and the **load-path** work (§10–§11 — measuring what is actually loaded, and what is left to do about it).
 
 **Start at [§11](#11-reducing-launch-time--method-and-the-levers-that-are-left)** if you are here to make launch faster: it has the measurement method, where the time actually goes, and the remaining levers ranked.
 
@@ -64,7 +64,7 @@ The decisive insight came from **(3) − (2)**: the gap between the desktop bein
 **Fix.** Autostart was moved from the `HKCU\Run` value to a **per-user logon-triggered Scheduled Task** (`Win32AutostartService`), which is *exempt* from that throttle — it fires as part of the logon sequence. Key properties of the task:
 
 - **`LogonTrigger`** for the current user, **`Delay = PT1S`** (a 1 s nudge so the shell's notification area exists before the tray icon registers; measured to still land right after Explorer while shaving ~2 s off the earlier PT3S).
-- **`<Priority>4</Priority>`** — *not* Task Scheduler's default of 7. Escaping the Run-key throttle got MenYou **started** early; priority 7 then throttled it while it **ran**. Level 7 means below-normal CPU **and reduced I/O priority**, and MenYou's cold start is almost entirely I/O — a running instance pages in ~70 MB across ~73 modules. Logon is the most I/O-contended moment on the machine, so a below-normal task queues behind Explorer, OneDrive, Defender and every other startup item. 4 is the normal band. Not raised further: 0–3 are realtime/high and would be antisocial for a tray app. Fixed in 0.9.29; the value was inherited, never chosen.
+- **`<Priority>4</Priority>`** — *not* Task Scheduler's default of 7. Escaping the Run-key throttle got MenYou **started** early; priority 7 then throttled it while it **ran**. Level 7 means below-normal CPU **and reduced I/O priority**, and MenYou's cold start is almost entirely I/O — a running instance maps ~70 MB of module image across ~73 modules, all of which has to come off disk cold. Logon is the most I/O-contended moment on the machine, so a below-normal task queues behind Explorer, OneDrive, Defender and every other startup item. 4 is the normal band. Not raised further: 0–3 are realtime/high and would be antisocial for a tray app. Fixed in 0.9.29; the value was inherited, never chosen.
 - **`InteractiveToken` + `LeastPrivilege`** — runs in the user's session at medium integrity, *not* elevated. This is essential: MenYou installs low-level input hooks and manipulates Explorer's foreground, which only works at the same integrity level as the shell (an elevated autostart would break the hooks via UIPI).
 - **No admin needed** to create it — a user may freely register tasks that run as themselves.
 
@@ -232,11 +232,11 @@ Measured against a **running installed 0.9.27**, counting only modules loaded fr
 |---|---|
 | Measured on | installed **0.9.27** |
 | Modules loaded at startup | **73** |
-| Bytes on that load path | **70.8 MB** |
+| Module image mapped (`SizeOfImage`, not resident) | **70.8 MB** |
 | Files shipped | 236 (132.4 MB) |
 | Shipped but **never loaded** | **160 files, 61.6 MB** |
 
-The largest things actually paged in are irreducible — `System.Private.CoreLib` (15.6 MB), `libSkiaSharp` (11.4 MB), `Avalonia.Base` (6.8 MB), `coreclr` (4.6 MB). The largest things *not* loaded are pure waste: `System.Private.Xml` (7.6 MB), `System.Linq.Expressions` (3.6 MB), `System.Data.Common` (2.7 MB), `System.Private.DataContractSerialization` (2.0 MB), `Microsoft.DiaSymReader.Native` (2.1 MB).
+The largest images mapped are irreducible — `System.Private.CoreLib` (15.6 MB), `libSkiaSharp` (11.4 MB), `Avalonia.Base` (6.8 MB), `coreclr` (4.6 MB). The largest things *not* loaded are pure waste: `System.Private.Xml` (7.6 MB), `System.Linq.Expressions` (3.6 MB), `System.Data.Common` (2.7 MB), `System.Private.DataContractSerialization` (2.0 MB), `Microsoft.DiaSymReader.Native` (2.1 MB).
 
 That split is the whole story: **only trimming removes the 61.6 MB**, and trimming is blocked on §9. What was available without reopening it:
 
@@ -262,9 +262,11 @@ To see the load path on a running instance:
 $p = Get-Process MenYou; $dir = Split-Path $p.Path
 $mods = $p.Modules | Where-Object { $_.FileName -like "$dir*" }
 $mods.Count                                                      # modules from the install dir
-($mods | Measure-Object ModuleMemorySize -Sum).Sum / 1MB         # bytes on the load path
+($mods | Measure-Object ModuleMemorySize -Sum).Sum / 1MB         # MiB of loaded module IMAGE SIZE
 $mods | Sort-Object ModuleMemorySize -Descending | Select -First 15
 ```
+
+**What that number is, precisely.** `ModuleMemorySize` is the module's `SizeOfImage` — the *static* image size of everything mapped, not the pages actually faulted in. So it is an **upper bound** on what a cold start has to read, and a good proxy for "how much are we asking the OS to bring in", but it is not resident-set and must not be quoted as one. For true page-in, measure the working set or trace hard faults with ETW. The figures below are image size throughout, which is fine for the comparisons they are used for — ranking modules, and image-mapped versus shipped-and-never-loaded — because every value is the same metric.
 
 Diff that against everything shipped to find dead weight (that is how the 61.6 MB in §10 was found).
 
@@ -275,7 +277,7 @@ Diff that against everything shipped to find dead weight (that is how the 61.6 M
 | Stage | Roughly | Movable by |
 |---|---|---|
 | Task Scheduler fires the trigger | — | the task's `LogonDelay` (`PT1S`) — and nothing else; this is *when* the process is launched |
-| Runtime + assembly page-in (~70 MB, ~73 modules, measured on 0.9.27) | the bulk | trimming, shipping less, composite R2R, **and the task's `Priority`** (§1) — priority does not change *when* the task fires, it governs the CPU and I/O the process gets **once running**, which is exactly this stage |
+| Runtime + assembly load (~70 MB of module image, ~73 modules, on 0.9.27) | the bulk | trimming, shipping less, composite R2R, **and the task's `Priority`** (§1) — priority does not change *when* the task fires, it governs the CPU and I/O the process gets **once running**, which is exactly this stage |
 | MenYou synchronous init | ~244 ms | nothing worth having |
 | Warm-up (window build, first paint) | deferred by design | already off the critical path (§4) |
 
@@ -283,7 +285,7 @@ Diff that against everything shipped to find dead weight (that is how the 61.6 M
 
 1. **Trimming — the only thing that removes the 61.6 MB** (160 shipped files never loaded; measured on an installed **0.9.27**, see §10). Blocked on §9: ILLink deletes uncalled `[ComImport]` members and shifts COM vtable slots, which shipped a process-killing `0xC0000005` in 0.9.6–0.9.10. `TrimmerRootAssembly Include="MenYou"` is already in the csproj as the precondition. A retry is **not a flag flip** — the build is warning-clean either way, so it must be verified by *running* a trimmed build against jump lists, icons, Control Panel and app enumeration. Budget the verification, not the change.
 2. **Defer `System.Drawing` off the startup path.** `LoadFallbackIconAsync()` runs during synchronous init and is the only startup caller of `IconExtractor`, which is the only user of `System.Drawing` — pulling `System.Private.Windows.Core` (1.8 MB), `System.Drawing.Common` (892 KB), `System.Private.Windows.GdiPlus` (408 KB) and `System.Drawing.Primitives` (120 KB) — ~3.2 MB, measured on an installed **0.9.27** — for a *fallback* icon needed only when an app's own extraction fails. Honest caveat: those assemblies load anyway at the first icon fill, so this **moves** the cost rather than removing it — but it moves it out of the contended logon window, which is the same reasoning as the priority fix.
-3. **Composite ReadyToRun** — done in 0.9.29. Removes cross-assembly indirection stubs, and maps one native image instead of one per assembly, so it touches page-in as well — just far less of it than trimming would, since the bytes are still there.
+3. **Composite ReadyToRun** — done in 0.9.29. Removes cross-assembly indirection stubs, and maps one native image instead of one per assembly, so it touches the mapping cost too — just far less of it than trimming would, since the bytes are still there.
 4. **Ship less** — `av_libglesv2.dll` (5.3 MB as shipped in 0.9.27) removed in 0.9.29. Audit the publish output against the loaded-module list whenever a dependency is dropped, and add an `[InstallDelete]` line so upgraders benefit too.
 
 ### Evaluated and rejected
@@ -330,4 +332,4 @@ NativeAOT, `PublishSingleFile` and the trimming revert are covered in **Rejected
 | **0.9.13** | **FD cold start measured honestly** (§3): tray at +10.3 s on a true cold boot ≈ the trained SC build, because the shared runtime is just as cold when nothing else loads .NET 10 at logon — FD's unconditional win is size, not cold start. Warm starts 0.5–2.1 s; icon disk cache filled 144 tiles in ~200 ms on the same cold boot. |
 | **0.9.17** | Stopped loading bytes nothing uses: `WithInterFont()` dropped (registers a font no `FontFamily` asks for) and `Win32RenderingMode.Software` pinned, so ANGLE's `av_libGLESv2.dll` (~5.1 MB) leaves the load path. Modules from the install dir 32 → 27. |
 | **0.9.19** | **Input hooks installed before Avalonia** (`EarlyStartup`): the Start button and Win key used to be unhooked for the whole UI-stack load, so an early press opened *Windows'* Start menu. Presses that beat the UI are queued and replayed. Buys the Avalonia-init span, not the whole boot — the bulk is the runtime loading before `Main` runs. |
-| **0.9.29** | **Logon task priority 7 → 4** (§1) — the default put MenYou at below-normal CPU *and* reduced I/O priority for a start that is almost pure I/O, at the most contended moment on the machine. Plus `PublishReadyToRunComposite`, `av_libglesv2.dll` dropped from the payload, and `[InstallDelete]` for retired files (§10). Measured: 73 modules / 70.8 MB loaded, against 160 files / 61.6 MB shipped and never touched. |
+| **0.9.29** | **Logon task priority 7 → 4** (§1) — the default put MenYou at below-normal CPU *and* reduced I/O priority for a start that is almost pure I/O, at the most contended moment on the machine. Plus `PublishReadyToRunComposite`, `av_libglesv2.dll` dropped from the payload, and `[InstallDelete]` for retired files (§10). Measured on 0.9.27: 73 modules / 70.8 MB of module image mapped, against 160 files / 61.6 MB shipped and never loaded. |
