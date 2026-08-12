@@ -60,14 +60,29 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     // Zero offsets on purpose: FullShade halos the card evenly on all four
     // sides (the Windows11/Subtle pairs are offset downward). The tight first
     // layer doubles as the edge definition, since FullShade draws no hairline.
-    private static readonly BoxShadows ShadowFull   = BoxShadows.Parse("0 0 10 0 #4D000000, 0 0 28 3 #66000000");
+    // Deepened twice from the original "0 0 10 0 #4D000000, 0 0 28 3 #66000000":
+    // as the DEFAULT border it read too close to Subtle. Alphas are now 50%
+    // (inner) and 65% (outer), up from 30%/40%, with roughly half again the
+    // blur. Extent is blur 46 + spread 5 = 51, which is why FullShade's
+    // ShadowMarginDip below is 56 rather than the 40 the other styles use — the
+    // window is SizeToContent, so a shadow reaching past its band gets clipped.
+    // Headroom for going further: the widest layout is Win7 at 800 DIP and the
+    // window MaxWidth is 980, so the band cannot exceed 90.
+    private static readonly BoxShadows ShadowFull   = BoxShadows.Parse("0 0 16 0 #80000000, 0 0 46 5 #A6000000");
     private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 4 0 #33000000, 0 6 16 0 #52000000");
 
-    /// The drop shadow for the current <see cref="WindowBorder"/> — empty for
-    /// custom themes (they own their edge) and for Hairline / None. Bound to
-    /// RootBorder.BoxShadow; drawn by Skia into the transparent margin, so it
-    /// works on the transparent popup where a DWM shadow can't.
-    public BoxShadows MenuShadow => UseCustomTheme ? default : WindowBorder switch
+    /// The drop shadow for the current <see cref="WindowBorder"/> — empty only
+    /// for Hairline / None. Bound to RootBorder.BoxShadow; drawn by Skia into
+    /// the transparent margin, so it works on the transparent popup where a DWM
+    /// shadow can't.
+    ///
+    /// Custom themes USED to be excluded here, on the same "a theme owns its
+    /// edge" principle that squares their corners. That was wrong: a theme can
+    /// draw its own border and background, but it cannot draw a shadow OUTSIDE
+    /// the window, because the margin the shadow needs is the window's to give.
+    /// Excluding them just meant custom themes had no shadow at all and sat
+    /// flat against the desktop while every built-in layout floated.
+    public BoxShadows MenuShadow => WindowBorder switch
     {
         WindowBorder.Windows11 => ShadowSoft,
         WindowBorder.FullShade => ShadowFull,
@@ -77,19 +92,42 @@ public sealed partial class StartMenuViewModel : ViewModelBase
 
     /// Transparent margin (DIP) around the card that the shadow renders into;
     /// must exceed the shadow's reach. PositionAtTaskbar reads this to keep the
-    /// card anchored once the window grows by the band.
-    public double ShadowMarginDip => UseCustomTheme ? 0 : WindowBorder switch
+    /// card anchored once the window grows by the band. Applies to custom
+    /// themes too — see <see cref="MenuShadow"/> for why they are no longer
+    /// excluded.
+    public double ShadowMarginDip => WindowBorder switch
     {
-        // FullShade's extent is blur 28 + spread 3 ≈ 31, well inside the 40
-        // band the window Min/Max clamps are already sized for.
+        // FullShade gets a wider band than the rest: its extent is blur 46 +
+        // spread 5 = 51, so 40 would clip the tail. 56 clears it with room to
+        // spare and still fits the window MaxWidth of 980 for every layout
+        // (widest is Win7 at 800 -> 800 + 2*56 = 912).
         WindowBorder.Windows11 => 40,
-        WindowBorder.FullShade => 40,
+        WindowBorder.FullShade => 56,
         WindowBorder.Subtle    => 22,
         _                      => 0,
     };
 
     /// <see cref="ShadowMarginDip"/> as a uniform Thickness for RootBorder.Margin.
     public Thickness ShadowMargin => new(ShadowMarginDip);
+
+    // The window's minimum size. 400x500 is sized for the BUILT-IN layouts
+    // INCLUDING their shadow margin — Classic1 is the narrowest at 320 DIP and
+    // 320 + 2x40 lands exactly on 400. A custom theme can be smaller than any
+    // built-in, and under Hairline / None it gets no margin to make up the
+    // difference, so the same clamps letterbox it: the window is held at 400
+    // while the theme draws 320, and RootBorder fills the rest. (With a shadow
+    // selected the margin usually covers it — 320 + 2x56 is 432 — but the floor
+    // must not depend on which border style happens to be set.) Custom themes
+    // therefore get no floor and the window hugs whatever the theme declares,
+    // or its content's desired size when it declares nothing.
+    public double MenuMinWidth => UseCustomTheme ? 0 : 400;
+    public double MenuMinHeight => UseCustomTheme ? 0 : 500;
+
+    /// True when the menu should paint its own chrome background — i.e. always
+    /// EXCEPT under a custom theme, which supplies its own. RootBorder's opaque
+    /// square fill behind a theme that rounds itself showed as dark square
+    /// corners around the curve, so the theme read as square when it wasn't.
+    public bool PaintChromeBackground => !UseCustomTheme;
 
     partial void OnWindowBorderChanged(WindowBorder value) => RaiseShadow();
     partial void OnUseCustomThemeChanged(bool value) => RaiseShadow();
@@ -98,6 +136,9 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         OnPropertyChanged(nameof(MenuShadow));
         OnPropertyChanged(nameof(ShadowMarginDip));
         OnPropertyChanged(nameof(ShadowMargin));
+        // Toggling a custom theme changes the size floor too, not just the edge.
+        OnPropertyChanged(nameof(MenuMinWidth));
+        OnPropertyChanged(nameof(MenuMinHeight));
     }
 
     /// True while a subtle "Updating apps…" caption should show beside the All

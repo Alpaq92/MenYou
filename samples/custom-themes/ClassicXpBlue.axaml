@@ -1,0 +1,350 @@
+<!--
+  ClassicXpBlue.axaml: the Windows XP Classic layout, blue header intact.
+
+  Two columns: pinned / recent / all programs on the left, the shell
+  shortcut list on the right, power glyphs along the bottom.
+
+  The built-in layout EXACTLY as it stood before its header was de-coloured,
+  generated from that revision rather than reconstructed. Three things differ,
+  each because the host moved underneath it:
+
+    1. the header carries its own ClassicHeaderBrush — UserHeaderBrush no
+       longer resolves to blue
+    2. the account tile's white hover wash is re-declared — the app-level one
+       is now a theme grey that vanishes on blue
+    3. the whole thing is wrapped in a rounded Border (below)
+
+  On (3): the menu window squares its corners for ANY loaded custom theme
+  (CustomThemeCornerRadiusConverter) on the principle that a theme owns its own
+  edge. The built-in layout never had to think about it because the window gave
+  it 10 px corners. So this theme supplies them itself — CornerRadius 10 to
+  match MenYou's chrome, ClipToBounds so the blue header is cut to the curve
+  rather than poking out of it.
+
+  Everything else is verbatim, including the sign-out glyph. Load it from
+  Settings -> Custom -> Load...
+
+  Bindings are REFLECTION bindings (no x:DataType, no compiled-binding casts):
+  custom themes are parsed at runtime by AvaloniaRuntimeXamlLoader, which
+  cannot use compiled bindings. See docs/THEMING.md and Windows7Square.axaml.
+-->
+<Border xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="using:MenYou.Views.Controls"
+        xmlns:loc="using:MenYou.Platform.Windows"
+        xmlns:items="using:MenYou.ViewModels.Items"
+        Width="570" Height="580"
+        CornerRadius="10"
+        ClipToBounds="True"
+        Background="{DynamicResource MenuBackgroundBrush}">
+      <!-- XP-inspired two-column. Programs is a cascading menu instead of
+           an inline tree; search box spans the bottom of the left column;
+           right column flips between shell shortcuts (default) and the
+           per-app context panel (when a search result is Selected) —
+           mirrors Win7Layout so picking a result anywhere in MenYou
+           surfaces the same Open/RunAsAdmin/Recent files chrome. -->
+      <!-- Right column was 220 px but the 5-button power row + separator
+           + spacings naturally measures 209 px, and with the right column's
+           1 px left border + 8 px Border Padding L/R the available content
+           width was 203 — the buttons overflowed the Auto column by 6 px,
+           which the user saw as a smaller right margin than left.
+           240 px gives the row 223 px of content area (≈7 px breathing
+           room each side) without making the column wider than necessary
+           for the shell-shortcuts list above it. Total menu width 520. -->
+      <Grid RowDefinitions="56,*">
+      <Grid.Resources>
+        <LinearGradientBrush x:Key="ClassicHeaderBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+          <GradientStop Color="#0078D4" Offset="0" />
+          <GradientStop Color="#005A9E" Offset="1" />
+        </LinearGradientBrush>
+      </Grid.Resources>
+
+      <Grid.Styles>
+        <Style Selector="Button.user-tile:pointerover /template/ ContentPresenter">
+          <Setter Property="Background" Value="#22FFFFFF" />
+        </Style>
+        <Style Selector="Button.user-tile:pressed /template/ ContentPresenter">
+          <Setter Property="Background" Value="#33FFFFFF" />
+        </Style>
+      </Grid.Styles>
+
+
+          <!-- Top corners rounded to 10 px to match the window's chrome
+               (CustomThemeCornerRadiusConverter). Without it the header's square
+               corners met the window's rounded 1 px border and showed a dark
+               corner notch — the "black outline" against the blue bar. -->
+          <Border Grid.Row="0"
+                  Background="{StaticResource ClassicHeaderBrush}"
+                  CornerRadius="10,10,0,0"
+                  Padding="0">
+              <!-- Whole header is a clickable button — opens
+                   ms-settings:yourinfo. Padding moved onto the Button so
+                   the entire colored bar (full width × 56 px) is the hit
+                   target with the same 14,10 inner padding. -->
+              <Button Classes="user-tile"
+                      Command="{Binding OpenAccountSettingsCommand}"
+                      Padding="14,10">
+                  <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <!-- Bitmap-based user avatar, same pattern as Win7Layout:
+                       real account photo when one exists, falls back to the
+                       standard Windows silhouette via UserAvatarService when
+                       it doesn't. Initial-letter fallback only fires when
+                       Avatar is null (no photo + no silhouette readable). -->
+                  <Panel Width="36" Height="36" VerticalAlignment="Center">
+                      <Border Background="#33FFFFFF" CornerRadius="18"
+                              IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
+                          <TextBlock Text="{Binding UserName[0]}"
+                                     Foreground="White" FontSize="18" FontWeight="SemiBold"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Border>
+                      <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
+                               RenderOptions.BitmapInterpolationMode="HighQuality">
+                          <Ellipse.Fill>
+                              <ImageBrush Source="{Binding Avatar}" Stretch="UniformToFill" />
+                          </Ellipse.Fill>
+                      </Ellipse>
+                  </Panel>
+                  <TextBlock Text="{Binding UserName}"
+                             Foreground="White" FontSize="14" FontWeight="SemiBold"
+                             VerticalAlignment="Center" />
+                  </StackPanel>
+              </Button>
+          </Border>
+
+          <!-- Content row: two columns below the header. Splitting the header
+               into its own Grid row (instead of a ColumnSpan overlay with a
+               56 px top margin on each column) lets the header round its top
+               corners symmetrically into the window chrome. -->
+          <Grid Grid.Row="1" ColumnDefinitions="280,290">
+          <!-- LEFT -->
+          <Grid Grid.Column="0" RowDefinitions="*,Auto">
+              <Panel Grid.Row="0">
+                  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                      <StackPanel Margin="0,4">
+                          <TextBlock Classes="section" Text="{x:Static loc:Strings.Pinned}" />
+                          <ctrl:AppList Items="{Binding Pinned}" />
+                          <Separator Classes="menu" />
+                          <TextBlock Classes="section" Text="{x:Static loc:Strings.Recent}" />
+                          <ctrl:AppList Items="{Binding Recent}" />
+                          <Separator Classes="menu" />
+                          <!-- Inline TreeView mirrors Win7Layout — standard
+                               Avalonia chevron toggles for folder expand /
+                               collapse instead of the previous MenuFlyout
+                               cascade, which could open off-screen when the
+                               trigger button sat at the bottom of the
+                               scrollable column. -->
+                          <StackPanel Orientation="Horizontal">
+                              <TextBlock Classes="section" Text="{x:Static loc:Strings.AllPrograms}" />
+                              <TextBlock Classes="section" Text="{x:Static loc:Strings.UpdatingApps}"
+                                         IsVisible="{Binding IsRefreshing}" VerticalAlignment="Center"
+                                         Margin="10,0,0,0" FontSize="11" FontWeight="Normal" Opacity="0.55" />
+                          </StackPanel>
+                          <ctrl:ProgramsTree Items="{Binding Programs.Items}" />
+                      </StackPanel>
+                  </ScrollViewer>
+                  <Border Background="{DynamicResource MenuBackgroundBrush}"
+                          IsVisible="{Binding Search.HasQuery}">
+                      <ctrl:SearchResultsList DataContext="{Binding Search}" />
+                  </Border>
+              </Panel>
+              <TextBox Grid.Row="1"
+                       Classes="search"
+                       Margin="8"
+                       PlaceholderText="{x:Static loc:Strings.SearchPlaceholder}"
+                       Text="{Binding Search.Query, Mode=TwoWay}" />
+          </Grid>
+
+          <!-- RIGHT -->
+          <Border Grid.Column="1"
+                  Background="{DynamicResource MenuBackgroundAltBrush}"
+                  BorderBrush="{DynamicResource MenuBorderBrush}"
+                  BorderThickness="1,0,0,0">
+              <Grid RowDefinitions="*,Auto">
+                  <Panel Grid.Row="0">
+                      <!-- Default state: XP-style shell shortcuts list. Only
+                           visible while no search result is selected. -->
+                      <ScrollViewer IsVisible="{Binding Search.Selected, Converter={x:Static ObjectConverters.IsNull}}">
+                          <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}" Margin="6">
+                              <ItemsControl.ItemTemplate>
+                                  <DataTemplate>
+                                      <Button Classes="menu"
+                                              HorizontalAlignment="Stretch"
+                                              Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                                              CommandParameter="{Binding}">
+                                          <TextBlock Text="{Binding Title}" />
+                                      </Button>
+                                  </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                      </ScrollViewer>
+
+                      <!-- Active search: context panel for the Selected
+                           result. Same control surface as Win7Layout —
+                           shared item-action verbs (Open, RunAsAdmin,
+                           OpenFileLocation), app-published Tasks, and
+                           the per-app Recent files ListBox with Enter
+                           keybinding + DoubleTapped activation. Slightly
+                           smaller icon (64×64 vs Win7's 80×80) since the
+                           column is narrower. -->
+                      <Grid DataContext="{Binding Search}"
+                            IsVisible="{Binding Selected, Converter={x:Static ObjectConverters.IsNotNull}}"
+                            RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+                            Margin="0,12">
+                          <Border Grid.Row="0"
+                                  Width="64" Height="64"
+                                  Margin="0,4,0,8"
+                                  HorizontalAlignment="Center">
+                              <Image Source="{Binding Selected.LargeIcon}"
+                                     Stretch="Uniform"
+                                     RenderOptions.BitmapInterpolationMode="HighQuality" />
+                          </Border>
+                          <TextBlock Grid.Row="1"
+                                     Text="{Binding Selected.Title}"
+                                     FontSize="14" FontWeight="SemiBold"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     TextWrapping="Wrap"
+                                     Margin="8,0" />
+                          <TextBlock Grid.Row="2"
+                                     Text="{Binding Selected.Subtitle}"
+                                     Foreground="{DynamicResource MenuForegroundMutedBrush}"
+                                     FontSize="11"
+                                     HorizontalAlignment="Center"
+                                     TextAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"
+                                     Margin="8,2,8,10"
+                                     MaxWidth="200"
+                                     IsVisible="{Binding Selected.Subtitle, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                          <StackPanel Grid.Row="3" Spacing="2" Margin="6,0">
+                              <Button Classes="menu"
+                                      HorizontalAlignment="Stretch"
+                                      Command="{Binding LaunchSelectedCommand}">
+                                  <TextBlock Text="{x:Static loc:Strings.Open}" />
+                              </Button>
+                              <Button Classes="menu"
+                                      HorizontalAlignment="Stretch"
+                                      IsVisible="{Binding CanRunAsAdmin}"
+                                      Command="{Binding OpenSelectedAsAdminCommand}">
+                                  <TextBlock Text="{x:Static loc:Strings.RunAsAdmin}" />
+                              </Button>
+                              <Button Classes="menu"
+                                      HorizontalAlignment="Stretch"
+                                      IsVisible="{Binding CanOpenFileLocation}"
+                                      Command="{Binding OpenSelectedFileLocationCommand}">
+                                  <TextBlock Text="{x:Static loc:Strings.OpenFileLocation}" />
+                              </Button>
+
+                              <!-- App-published JumpList Tasks (Firefox's
+                                   "New private window" etc.). Same pattern
+                                   as Win7Layout. -->
+                              <Separator Classes="menu"
+                                         IsVisible="{Binding Selected.Tasks.Count}" />
+                              <ItemsControl ItemsSource="{Binding Selected.Tasks}"
+                                            IsVisible="{Binding Selected.Tasks.Count}">
+                                  <ItemsControl.ItemTemplate>
+                                      <DataTemplate>
+                                          <Button Classes="recent-item"
+                                                  HorizontalAlignment="Stretch"
+                                                  Command="{Binding $parent[ItemsControl].DataContext.OpenTaskCommand}"
+                                                  CommandParameter="{Binding}">
+                                              <TextBlock Text="{Binding Title}"
+                                                         TextTrimming="CharacterEllipsis" />
+                                          </Button>
+                                      </DataTemplate>
+                                  </ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                          </StackPanel>
+
+                          <TextBlock Grid.Row="4"
+                                     Classes="section"
+                                     Text="{x:Static loc:Strings.Recent}"
+                                     Margin="14,12,14,4"
+                                     IsVisible="{Binding Selected.Recent.Count}" />
+                          <ListBox Grid.Row="5"
+                                   x:Name="RecentList"
+                                   Classes="transparent"
+                                   IsVisible="{Binding Selected.Recent.Count}"
+                                   ItemsSource="{Binding Selected.Recent}"
+                                   SelectedItem="{Binding SelectedRecent, Mode=TwoWay}"
+                                   Margin="6,0">
+                              <ListBox.KeyBindings>
+                                  <KeyBinding Gesture="Enter"
+                                              Command="{Binding OpenRecentCommand}"
+                                              CommandParameter="{Binding SelectedRecent}" />
+                              </ListBox.KeyBindings>
+                              <ListBox.ItemTemplate>
+                                  <DataTemplate>
+                                      <Grid ColumnDefinitions="Auto,*"
+                                            ToolTip.Tip="{Binding Path}">
+                                          <Image Grid.Column="0"
+                                                 Width="16" Height="16"
+                                                 Margin="0,0,8,0"
+                                                 VerticalAlignment="Center"
+                                                 Source="{Binding Icon}"
+                                                 RenderOptions.BitmapInterpolationMode="HighQuality" />
+                                          <TextBlock Grid.Column="1"
+                                                     Text="{Binding DisplayName}"
+                                                     VerticalAlignment="Center"
+                                                     TextTrimming="CharacterEllipsis" />
+                                      </Grid>
+                                  </DataTemplate>
+                              </ListBox.ItemTemplate>
+                          </ListBox>
+                      </Grid>
+                  </Panel>
+
+                  <!-- Bottom power-button strip — Fluent Icons codepoints
+                       match Win7Layout for consistent glyph shapes.
+                       Geometric centering via a 3-column Grid (*,Auto,*)
+                       instead of an HorizontalAlignment hint that the
+                       framework may not honor under all measure-pass
+                       conditions; see Classic1Layout for the same pattern
+                       comment. No top BorderThickness — the horizontal
+                       divider above this row was removed per user request;
+                       visual separation now comes from the row spacing +
+                       consistent alt-panel background. -->
+                  <Border Grid.Row="1"
+                          Padding="8">
+                      <Grid ColumnDefinitions="*,Auto,*">
+                          <StackPanel Grid.Column="1"
+                                      Orientation="Horizontal"
+                                      Spacing="2">
+                              <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}"
+                                      Command="{Binding OpenSettingsCommand}">
+                                  <TextBlock Classes="power-glyph" Text="&#xE713;" />
+                              </Button>
+                              <!-- Phone Link (CellPhone glyph E8EA) — app
+                                   launcher, grouped with the cog before the
+                                   separator. -->
+                              <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.PhoneLinkTooltip}"
+                                      Command="{Binding OpenPhoneLinkCommand}">
+                                  <TextBlock Classes="power-glyph" Text="&#xE8EA;" />
+                              </Button>
+                              <Border Width="1" Margin="4,6" Background="{DynamicResource MenuSeparatorBrush}" />
+                              <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.LockTooltip}"
+                                      Command="{Binding Power.LockCommand}">
+                                  <TextBlock Classes="power-glyph" Text="&#xE72E;" />
+                              </Button>
+                              <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}"
+                                      Command="{Binding Power.SignOutCommand}">
+                                  <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+                              </Button>
+                              <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}"
+                                      Command="{Binding Power.SleepCommand}">
+                                  <TextBlock Classes="power-glyph" Text="&#xE708;" />
+                              </Button>
+                              <Border Width="1" Margin="4,6" Background="{DynamicResource MenuSeparatorBrush}" />
+                              <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
+                                      Foreground="{DynamicResource PowerDangerBrush}"
+                                      Command="{Binding Power.ShutdownCommand}">
+                                  <TextBlock Classes="power-glyph" Text="&#xE7E8;" />
+                              </Button>
+                          </StackPanel>
+                      </Grid>
+                  </Border>
+              </Grid>
+          </Border>
+          </Grid>
+
+      </Grid>
+</Border>

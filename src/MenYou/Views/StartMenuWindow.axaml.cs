@@ -429,19 +429,27 @@ public partial class StartMenuWindow : Window
         var scale = DesktopScaling;
         var pixelHeight = (int)(Bounds.Height * scale);
         var vm = DataContext as StartMenuViewModel;
-        // Offset the CARD from the taskbar/screen corner so the desktop shows
-        // around the menu — matches how Win 11's Start floats rather than
-        // sitting flush. Custom themes get no gap: they own their own (often
-        // square) chrome — e.g. Windows7Square — and read as "anchored into the
-        // corner" like the classic Start menu.
-        int gap = vm?.UseCustomTheme == true ? 0 : 16;
-        // Bounds now includes the transparent ShadowMargin band the drop shadow
+        // Bounds includes the transparent ShadowMargin band the drop shadow
         // renders into, so the window is larger than the visible card by
         // shadowPx per edge. Shift the window out by the band so the CARD keeps
         // its corner gap and the band just spills past the corner (transparent —
-        // only the blur shows). Hairline / None / custom have shadowPx = 0 and
-        // reduce to the plain corner-gap placement, unchanged from before.
+        // only the blur shows). Hairline / None have shadowPx = 0 and reduce to
+        // the plain corner-gap placement.
         int shadowPx = (int)((vm?.ShadowMarginDip ?? 0) * scale);
+        // Offset the CARD from the taskbar/screen corner so the desktop shows
+        // around the menu — matches how Win 11's Start floats rather than
+        // sitting flush.
+        //
+        // Custom themes were unconditionally flush (gap 0): they own their own
+        // often-square chrome — Windows7Square — and read as "anchored into the
+        // corner" like the classic Start menu. That held only while they had no
+        // shadow. They do now, and a shadow with no gap renders entirely
+        // off-screen: the card lands at x=0 on the taskbar's top edge, so the
+        // left and bottom bands fall outside the desktop and behind the taskbar
+        // and the theme looks like it lost its margin. So the gap follows the
+        // SHADOW, not the theme kind — a shadowless custom theme still anchors
+        // flush, exactly as before.
+        int gap = (vm?.UseCustomTheme == true && shadowPx == 0) ? 0 : 16;
         Position = new PixelPoint(
             work.X + gap - shadowPx,
             work.Y + work.Height - pixelHeight - gap + shadowPx);

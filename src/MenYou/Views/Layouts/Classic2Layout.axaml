@@ -21,7 +21,12 @@
          240 px gives the row 223 px of content area (≈7 px breathing
          room each side) without making the column wider than necessary
          for the shell-shortcuts list above it. Total menu width 520. -->
-    <Grid RowDefinitions="56,*" Width="570" Height="580">
+    <!-- Header row is 57, not 56: the header Border carries a 1 px bottom
+         separator, and Avalonia's Border deflates its child by BorderThickness,
+         so a 56 px row leaves the account Button 55 px. The button needs 56 —
+         a 36 px avatar plus 10+10 padding — and clips at 55. Classic1 is
+         unaffected because its header row is Auto-sized. -->
+    <Grid RowDefinitions="57,*" Width="570" Height="580">
 
         <!-- Top corners rounded to 10 px to match the window's chrome
              (CustomThemeCornerRadiusConverter). Without it the header's square
@@ -30,6 +35,8 @@
         <Border Grid.Row="0"
                 Background="{DynamicResource UserHeaderBrush}"
                 CornerRadius="10,10,0,0"
+                BorderBrush="{DynamicResource MenuSeparatorBrush}"
+                BorderThickness="0,0,0,1"
                 Padding="0">
             <!-- Whole header is a clickable button — opens
                  ms-settings:yourinfo. Padding moved onto the Button so
@@ -45,10 +52,10 @@
                      it doesn't. Initial-letter fallback only fires when
                      Avatar is null (no photo + no silhouette readable). -->
                 <Panel Width="36" Height="36" VerticalAlignment="Center">
-                    <Border Background="#33FFFFFF" CornerRadius="18"
+                    <Border Background="{DynamicResource AvatarOrbBrush}" CornerRadius="18"
                             IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
                         <TextBlock Text="{Binding UserName[0]}"
-                                   Foreground="White" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource MenuForegroundBrush}" FontSize="18" FontWeight="SemiBold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
                     <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
@@ -59,7 +66,7 @@
                     </Ellipse>
                 </Panel>
                 <TextBlock Text="{Binding UserName}"
-                           Foreground="White" FontSize="14" FontWeight="SemiBold"
+                           Foreground="{DynamicResource MenuForegroundBrush}" FontSize="14" FontWeight="SemiBold"
                            VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
@@ -281,7 +288,7 @@
                             </Button>
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}"
                                     Command="{Binding Power.SignOutCommand}">
-                                <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+                                <TextBlock Classes="power-glyph" Text="&#xE1E0;" />
                             </Button>
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}"
                                     Command="{Binding Power.SleepCommand}">

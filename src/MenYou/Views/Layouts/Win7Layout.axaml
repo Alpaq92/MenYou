@@ -378,7 +378,7 @@
                             </Button>
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}"
                                     Command="{Binding Power.SignOutCommand}">
-                                <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+                                <TextBlock Classes="power-glyph" Text="&#xE1E0;" />
                             </Button>
                             <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SleepTooltip}"
                                     Command="{Binding Power.SleepCommand}">

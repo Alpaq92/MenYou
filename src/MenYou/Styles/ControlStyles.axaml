@@ -218,15 +218,16 @@
         <Setter Property="VerticalContentAlignment" Value="Stretch" />
         <Setter Property="Cursor" Value="Hand" />
     </Style>
-    <!-- Subtle white-tint hover so the user knows the area is clickable —
-         all three layouts host this button on a colored UserHeaderBrush
-         (or alt-panel) background, so a low-alpha white wash reads as
-         a hover hint without clashing with any specific accent color. -->
+    <!-- Hover hint for the clickable account header. This used to be a
+         low-alpha white wash, which worked only because the header was a dark
+         coloured band; now that UserHeaderBrush follows MenuBackground, a white
+         wash is invisible on the light theme. The shared hover/highlight greys
+         are theme-aware and already tuned to read against the menu chrome. -->
     <Style Selector="Button.user-tile:pointerover /template/ ContentPresenter">
-        <Setter Property="Background" Value="#22FFFFFF" />
+        <Setter Property="Background" Value="{DynamicResource MenuHoverBrush}" />
     </Style>
     <Style Selector="Button.user-tile:pressed /template/ ContentPresenter">
-        <Setter Property="Background" Value="#33FFFFFF" />
+        <Setter Property="Background" Value="{DynamicResource MenuHighlightBrush}" />
     </Style>
 
     <Style Selector="TextBlock.section">
