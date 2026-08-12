@@ -259,8 +259,18 @@ Cold start is dominated by work that happens *before MenYou's own code runs at a
 To see the load path on a running instance:
 
 ```pwsh
+# MUST be a 64-bit PowerShell session. A 32-bit (WOW64) host cannot read a
+# 64-bit process's Path or Modules: they come back $null or as a partial list of
+# WOW64 stubs, so the count and total look plausible and are wrong. Fail loudly
+# rather than silently measuring nothing.
+if (-not [Environment]::Is64BitProcess) {
+    throw "Run this from 64-bit PowerShell - a 32-bit session cannot enumerate a 64-bit process's modules."
+}
+
 $p = Get-Process MenYou; $dir = Split-Path $p.Path
 $mods = $p.Modules | Where-Object { $_.FileName -like "$dir*" }
+if (-not $mods) { throw "No modules resolved - wrong architecture, or MenYou is not running." }
+
 $mods.Count                                                      # modules from the install dir
 ($mods | Measure-Object ModuleMemorySize -Sum).Sum / 1MB         # MiB of loaded module IMAGE SIZE
 $mods | Sort-Object ModuleMemorySize -Descending | Select -First 15
