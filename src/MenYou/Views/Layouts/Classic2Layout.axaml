@@ -21,7 +21,12 @@
          240 px gives the row 223 px of content area (≈7 px breathing
          room each side) without making the column wider than necessary
          for the shell-shortcuts list above it. Total menu width 520. -->
-    <Grid RowDefinitions="56,*" Width="570" Height="580">
+    <!-- Header row is 57, not 56: the header Border carries a 1 px bottom
+         separator, and Avalonia's Border deflates its child by BorderThickness,
+         so a 56 px row leaves the account Button 55 px. The button needs 56 —
+         a 36 px avatar plus 10+10 padding — and clips at 55. Classic1 is
+         unaffected because its header row is Auto-sized. -->
+    <Grid RowDefinitions="57,*" Width="570" Height="580">
 
         <!-- Top corners rounded to 10 px to match the window's chrome
              (CustomThemeCornerRadiusConverter). Without it the header's square

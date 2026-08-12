@@ -71,7 +71,7 @@ The corner rule exists so the window can't round off a theme that squares everyt
 
 `ClipToBounds` matters: without it a full-bleed child (the coloured account header) paints square right over the rounded corner.
 
-Sizing is yours as well — the window is `SizeToContent`, so it takes the `Width` / `Height` you declare and adds the shadow band around it. A theme that declares nothing stretches to the built-in minimum.
+Sizing is yours as well — the window is `SizeToContent`, so it takes the `Width` / `Height` you declare and adds the shadow band around it. A theme that declares neither is laid out at its content's desired size, still bounded by the window's maximum (980 × 840 including the band). The built-in 400 × 500 minimum does **not** apply to custom themes, so a small theme stays small instead of being letterboxed.
 
 ## Converter toolbox
 

@@ -112,13 +112,14 @@ public sealed partial class StartMenuViewModel : ViewModelBase
 
     // The window's minimum size. 400x500 is sized for the BUILT-IN layouts
     // INCLUDING their shadow margin — Classic1 is the narrowest at 320 DIP and
-    // 320 + 2x40 lands exactly on 400. A custom theme declares its own size and
-    // gets no margin (ShadowMarginDip is 0 for them), so those same clamps
-    // letterbox anything smaller: the window is held at 400 while the theme
-    // draws 320, and RootBorder's MenuBackground fills the 80 DIP difference as
-    // a band down both sides. Very visible on a Classic1-sized theme, where the
-    // band is a quarter of the width. Custom themes therefore get no floor and
-    // the window hugs whatever the theme declares.
+    // 320 + 2x40 lands exactly on 400. A custom theme can be smaller than any
+    // built-in, and under Hairline / None it gets no margin to make up the
+    // difference, so the same clamps letterbox it: the window is held at 400
+    // while the theme draws 320, and RootBorder fills the rest. (With a shadow
+    // selected the margin usually covers it — 320 + 2x56 is 432 — but the floor
+    // must not depend on which border style happens to be set.) Custom themes
+    // therefore get no floor and the window hugs whatever the theme declares,
+    // or its content's desired size when it declares nothing.
     public double MenuMinWidth => UseCustomTheme ? 0 : 400;
     public double MenuMinHeight => UseCustomTheme ? 0 : 500;
 
