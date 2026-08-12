@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.28](https://github.com/Alpaq92/MenYou/compare/v0.9.27...v0.9.28) (2026-08-12)
+
+
+### Features
+
+* **ui:** de-colour the Classic header, ship it as a theme, fix custom-theme chrome ([#134](https://github.com/Alpaq92/MenYou/issues/134)) ([f67afed](https://github.com/Alpaq92/MenYou/commit/f67afed46970fe9cfadcabaeefe253c3d41616ca))
+
 ## [0.9.27](https://github.com/Alpaq92/MenYou/compare/v0.9.26...v0.9.27) (2026-08-11)
 
 
