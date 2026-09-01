@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.31](https://github.com/Alpaq92/MenYou/compare/v0.9.30...v0.9.31) (2026-09-01)
+
+
+### Bug Fixes
+
+* **deps:** monthly dependency refresh ([#143](https://github.com/Alpaq92/MenYou/issues/143)) ([cbf2a20](https://github.com/Alpaq92/MenYou/commit/cbf2a20d5a3e3a25d14d6d111aab2c07ee1b0b81))
+
 ## [0.9.30](https://github.com/Alpaq92/MenYou/compare/v0.9.29...v0.9.30) (2026-09-01)
 
 
