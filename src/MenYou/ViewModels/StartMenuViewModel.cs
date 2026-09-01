@@ -60,15 +60,20 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     // Zero offsets on purpose: FullShade halos the card evenly on all four
     // sides (the Windows11/Subtle pairs are offset downward). The tight first
     // layer doubles as the edge definition, since FullShade draws no hairline.
-    // Deepened twice from the original "0 0 10 0 #4D000000, 0 0 28 3 #66000000":
-    // as the DEFAULT border it read too close to Subtle. Alphas are now 50%
-    // (inner) and 65% (outer), up from 30%/40%, with roughly half again the
-    // blur. Extent is blur 46 + spread 5 = 51, which is why FullShade's
-    // ShadowMarginDip below is 56 rather than the 40 the other styles use — the
-    // window is SizeToContent, so a shadow reaching past its band gets clipped.
-    // Headroom for going further: the widest layout is Win7 at 800 DIP and the
-    // window MaxWidth is 980, so the band cannot exceed 90.
-    private static readonly BoxShadows ShadowFull   = BoxShadows.Parse("0 0 16 0 #80000000, 0 0 46 5 #A6000000");
+    // Deepened once from the original "0 0 10 0 #4D000000, 0 0 28 3 #66000000":
+    // as the DEFAULT border it read too close to Subtle. Alphas 30%->40%
+    // (inner) and 40%->55% (outer), with a little more blur and spread.
+    //
+    // A second, heavier pass (50%/65%, blur 16/46, spread 5, band 56) shipped in
+    // 0.9.28 and was BACKED OUT: on a dark desktop it reads as a large black
+    // rectangle framing the menu rather than as a shadow. That is inherent, not
+    // a tuning miss — a drop shadow can only darken what is behind it, and a
+    // dark backdrop sits around 21/255, so the extra alpha bought roughly two
+    // brightness levels while the wider band made the darkened area visibly
+    // bigger. Cost without benefit. If the menu edge needs to read against a
+    // dark desktop, that wants a hairline (as Windows11/Hairline use), not more
+    // shadow.
+    private static readonly BoxShadows ShadowFull   = BoxShadows.Parse("0 0 12 0 #66000000, 0 0 32 4 #8C000000");
     private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 4 0 #33000000, 0 6 16 0 #52000000");
 
     /// The drop shadow for the current <see cref="WindowBorder"/> — empty only
@@ -97,12 +102,12 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// excluded.
     public double ShadowMarginDip => WindowBorder switch
     {
-        // FullShade gets a wider band than the rest: its extent is blur 46 +
-        // spread 5 = 51, so 40 would clip the tail. 56 clears it with room to
-        // spare and still fits the window MaxWidth of 980 for every layout
-        // (widest is Win7 at 800 -> 800 + 2*56 = 912).
+        // FullShade's extent is blur 32 + spread 4 = 36, inside this 40 band.
+        // It was widened to 56 for the heavier shadow in 0.9.28 and is back with
+        // it — a bigger band means a bigger darkened area, which is what made
+        // the menu look framed in black on a dark desktop.
         WindowBorder.Windows11 => 40,
-        WindowBorder.FullShade => 56,
+        WindowBorder.FullShade => 40,
         WindowBorder.Subtle    => 22,
         _                      => 0,
     };
@@ -116,8 +121,8 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     // built-in, and under Hairline / None it gets no margin to make up the
     // difference, so the same clamps letterbox it: the window is held at 400
     // while the theme draws 320, and RootBorder fills the rest. (With a shadow
-    // selected the margin usually covers it — 320 + 2x56 is 432 — but the floor
-    // must not depend on which border style happens to be set.) Custom themes
+    // selected the margin happens to cover it exactly — 320 + 2x40 is 400 — but
+    // the floor must not depend on which border style is set.) Custom themes
     // therefore get no floor and the window hugs whatever the theme declares,
     // or its content's desired size when it declares nothing.
     public double MenuMinWidth => UseCustomTheme ? 0 : 400;
