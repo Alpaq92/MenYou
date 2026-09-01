@@ -8,6 +8,14 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.30](https://github.com/Alpaq92/MenYou/compare/v0.9.29...v0.9.30) (2026-09-01)
+
+
+### Bug Fixes
+
+* Bump the nuget-minor-and-patch group with 2 updates ([#140](https://github.com/Alpaq92/MenYou/issues/140)) ([b6bb8b3](https://github.com/Alpaq92/MenYou/commit/b6bb8b33ea382c217cfaa2721d69ee9f739cd9c2))
+* **ui:** back out the heavier full shade — it framed the menu in black ([#141](https://github.com/Alpaq92/MenYou/issues/141)) ([8d89578](https://github.com/Alpaq92/MenYou/commit/8d8957811f4ede85ee4dfa84fb84916f3d22dce3))
+
 ## [0.9.29](https://github.com/Alpaq92/MenYou/compare/v0.9.28...v0.9.29) (2026-08-12)
 
 
