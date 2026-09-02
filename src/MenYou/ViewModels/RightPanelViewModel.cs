@@ -87,6 +87,11 @@ public sealed partial class RightPanelViewModel : ViewModelBase
         // of MenYou uses), so reuse it here instead of maintaining a
         // second translation table.
         Shortcuts.Add(new ShellShortcut(Strings.Settings, "settings"));
+        // Task Manager sits with the other system tools (Control Panel,
+        // Settings) rather than the folder Places, and before "Run..." so
+        // the list still ends on the verb. Title is system-sourced via
+        // Strings.TaskManager, so it matches whatever the shell calls it.
+        Shortcuts.Add(new ShellShortcut(Strings.TaskManager, "taskmanager"));
         // "Run..." is shell32.dll,-12710 on every modern Windows build.
         Shortcuts.Add(FromIndirect("run", @"@%SystemRoot%\System32\shell32.dll,-12710", "Run..."));
 
@@ -232,6 +237,14 @@ public sealed partial class RightPanelViewModel : ViewModelBase
                         Environment.GetFolderPath(Environment.SpecialFolder.Windows),
                         "ImmersiveControlPanel", "SystemSettings.exe")),
 
+                // Task Manager's own binary icon. Unlike Settings there's no
+                // AppX indirection — taskmgr.exe is a plain Win32 binary, so
+                // SHGetFileInfo on it returns exactly what Explorer paints.
+                // SpecialFolder.System rather than a literal path so a
+                // non-C: or relocated Windows install still resolves.
+                "taskmanager" => IconExtractor.ExtractForFile(Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.System), "Taskmgr.exe")),
+
                 _           => null,
             };
         }
@@ -256,6 +269,11 @@ public sealed partial class RightPanelViewModel : ViewModelBase
             case "network":   _launcher.Launch("explorer.exe", "shell:NetworkPlacesFolder"); break;
             case "control":   _launcher.Launch("control.exe"); break;
             case "settings":  _launcher.Launch("ms-settings:"); break;
+            // Bare exe name, not a System32 path, so WOW64 redirection still
+            // resolves it. Launched non-elevated like every other Place —
+            // Task Manager self-elevates when the user has configured it to,
+            // and forcing a UAC prompt behind a menu row would be wrong.
+            case "taskmanager": _launcher.Launch("taskmgr.exe"); break;
             case "run":       _launcher.Launch("rundll32.exe", "shell32.dll,#61"); break;
             case "startmenu": SynthesizeWinKey(); break;
         }
