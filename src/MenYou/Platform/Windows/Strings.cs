@@ -84,9 +84,31 @@ public static class Strings
     // phrasing — no shell DLL carries these as standalone strings, so they
     // are JSON-only.
     public static string AllProgramsOrder        => Resolve("AllProgramsOrder");
-    // Window-border style picker (Settings → Appearance). MenYou-specific,
-    // JSON-only.
-    public static string WindowBorderLabel       => Resolve("WindowBorderLabel");
+    // Window-border style picker (Settings → Appearance).
+    //
+    // oleaccrc.dll,-1119 is the MSAA role name for ROLE_SYSTEM_BORDER —
+    // the bare noun ("obramowanie" / "border"), localized by Windows in
+    // every display language. The ID is principled, not incidental: the
+    // role table is laid out at 1100 + role constant, and the neighbours
+    // confirm it (1110 client / 1118 dialog / 1119 border / 1120 grouping
+    // / 1121 separator / 1122 toolbar = roles 10 / 18 / 19 / 20 / 21 / 22).
+    // Found by parsing the RT_STRING tables out of every .mui in
+    // System32\<locale>: it is the ONLY standalone border noun the shell
+    // exposes. The other candidates don't work —
+    // netshell.dll / qedit.dll / sysmon.ocx carry a capitalized
+    // "Obramowanie" but only inside RT_DIALOG control captions, which
+    // SHLoadIndirectString cannot address; themecpl.dll has it only inside
+    // Win 7-era sentences ("Dopasuj kolor obramowań okien."); themeui.dll
+    // has "Obramowanie aktywnego/nieaktywnego okna", too specific to
+    // reuse; and the Win 11 wording ("Title bars and window borders")
+    // lives in the Settings app's PRI, not a System32 DLL.
+    //
+    // Role text is LOWER-CASE at the resource level (it is what a screen
+    // reader speaks mid-sentence), so the view sentence-cases it through
+    // FirstLetterUpperConverter — see the binding in SettingsWindow.axaml.
+    // The JSON entry stays as the fallback and keeps the fuller wording
+    // ("Window border" / "Obramowanie okna") for when the resource misses.
+    public static string WindowBorderLabel       => Resolve("WindowBorderLabel", $@"@{Sys}\oleaccrc.dll,-1119");
     public static string WindowBorderWin11         => Resolve("WindowBorderWin11");
     public static string WindowBorderFullShade     => Resolve("WindowBorderFullShade");
     public static string WindowBorderSubtleShadow  => Resolve("WindowBorderSubtleShadow");

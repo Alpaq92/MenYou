@@ -215,7 +215,13 @@
                      only), None (flat). Outline applied in StartMenuWindow's
                      ApplyDwmWindowChrome; shadow is a BoxShadow binding. -->
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto" ColumnSpacing="12">
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.WindowBorderLabel}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <!-- Sourced from Windows' MSAA role table, which is
+                         lower-case by design — see Strings.WindowBorderLabel
+                         and FirstLetterUpperConverter. -->
+                    <TextBlock Grid.Row="0" Grid.Column="0"
+                               Text="{Binding Source={x:Static loc:Strings.WindowBorderLabel},
+                                              Converter={x:Static conv:FirstLetterUpperConverter.Instance}}"
+                               VerticalAlignment="Center" TextWrapping="Wrap" />
                     <ComboBox Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
                               ItemsSource="{Binding WindowBorders}"
                               SelectedItem="{Binding SelectedWindowBorder, Mode=TwoWay}"
@@ -274,7 +280,11 @@
                     </ComboBox>
                 </Grid>
 
-                <StackPanel Spacing="6">
+                <!-- Spacing 10, not the 6 used by the mixed checkbox/help
+                     stacks in the other tabs: this is a bare list of
+                     toggles with no help text between them, so 6 read as
+                     cramped against the 14-px group rhythm above it. -->
+                <StackPanel Spacing="10">
                     <CheckBox Content="{x:Static loc:Strings.ShowPinned}" IsChecked="{Binding ShowPinned, Mode=TwoWay}" />
                     <CheckBox Content="{x:Static loc:Strings.ShowRecent}" IsChecked="{Binding ShowRecent, Mode=TwoWay}" />
                     <CheckBox Content="{x:Static loc:Strings.ShowSearch}" IsChecked="{Binding ShowSearch, Mode=TwoWay}" />
