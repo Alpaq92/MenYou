@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.34](https://github.com/Alpaq92/MenYou/compare/v0.9.33...v0.9.34) (2026-09-02)
+
+
+### Features
+
+* **menu:** open Task Manager from Places ([#149](https://github.com/Alpaq92/MenYou/issues/149)) ([6863593](https://github.com/Alpaq92/MenYou/commit/68635932a580f7f2bc2cc8066330f32274348054))
+
 ## [0.9.33](https://github.com/Alpaq92/MenYou/compare/v0.9.32...v0.9.33) (2026-09-02)
 
 
