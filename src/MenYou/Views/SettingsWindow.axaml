@@ -7,10 +7,20 @@
         x:DataType="vm:SettingsViewModel"
         Title="{x:Static loc:Strings.SettingsTitle}"
         Icon="avares://MenYou/Assets/icon_v2.ico"
-        Width="720" Height="560"
-        MinWidth="600" MinHeight="420"
+        Width="720" Height="640"
+        MinWidth="600" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Opacity="0">
+
+    <!-- Height 640, not 560: the Appearance tab outgrew the old size. The
+         TabControl below deliberately has no ScrollViewer (see its comment),
+         so the design invariant is "every tab fits without scrolling" — and
+         at 560 the last of the three visibility checkboxes fell behind the
+         button bar. MinHeight raised with it so the window can't be dragged
+         back into the clipped state; it is not raised all the way to 640, so
+         a small screen can still shrink it somewhat. If a future tab grows
+         past this, raise the height again or give each tab its own
+         ScrollViewer — do not shrink the spacing back. -->
 
     <!-- Fade-in reveal (the "shine"). The window is created Opacity=0 and the
          code-behind sets Opacity=1 once it's centered + painted (Loaded
