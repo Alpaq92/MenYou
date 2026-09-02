@@ -146,37 +146,72 @@ public partial class App : Application
     /// this cog instead of an empty 32×32 hole. Runs off the UI thread;
     /// the assignment hops back to UI to refresh any items already on
     /// screen.
-    private async Task LoadFallbackIconAsync()
+    private Task LoadFallbackIconAsync()
     {
-        try
-        {
-            // Settings cog as the generic "app failed to load" placeholder.
-            var cog = await Task.Run(() => IconExtractor.ExtractForAumid(
-                "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"));
-            // Shell's generic folder icon (shell32.dll #3, native 32 px) for
-            // folder entries — keeps All-Programs nodes readable as folders
-            // even when our per-item icon extraction skips them. Rendered
-            // 1:1 in the 32 px tile.
-            var folder = await Task.Run(() =>
+        // The two fallback icons are extracted CONCURRENTLY and published
+        // INDEPENDENTLY, as each resolves.
+        //
+        // They used to be sequential awaits with the cog first, which meant the
+        // folder icon — a single ExtractIconEx against shell32, costing
+        // microseconds and never failing — waited behind the cog, whose UWP
+        // AUMID lookup goes through the shell's app resolver: precisely the call
+        // that crawls during the post-logon storm. Measured on a cold start,
+        // both landed at +23.7 s while the tiles had already drawn at +21.2 s
+        // from the icon disk cache. Net effect: ordinary apps had icons and
+        // every All-Programs FOLDER sat blank until the cog finally resolved.
+        // Nothing was broken — the folder icon was just queued behind the one
+        // call guaranteed to be slow.
+        var folder = PublishFallbackAsync(
+            static () =>
             {
                 var shell32 = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.System), "shell32.dll");
+                // shell32 #3 is the shell's generic folder icon (native 32 px,
+                // rendered 1:1 in the tile) so folders match the user's theme.
                 return IconExtractor.ExtractAvaloniaBitmap(shell32, 3);
-            });
+            },
+            static icon => ViewModels.Items.MenuItemViewModel.FolderFallbackIcon = icon,
+            "folder");
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (cog is not null)
-                    ViewModels.Items.MenuItemViewModel.FallbackIcon = cog;
-                if (folder is not null)
-                    ViewModels.Items.MenuItemViewModel.FolderFallbackIcon = folder;
-            });
-            HookTrace.Log("Startup: fallback icons loaded");
-        }
-        catch
+        var cog = PublishFallbackAsync(
+            static () => IconExtractor.ExtractForAumid(
+                "windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel"),
+            static icon => ViewModels.Items.MenuItemViewModel.FallbackIcon = icon,
+            "cog");
+
+        return Task.WhenAll(folder, cog);
+    }
+
+    /// Extract one fallback icon off the UI thread and publish it the moment it
+    /// resolves. Setting the static raises a change notification on every live
+    /// item still showing no icon, so items already on screen pick it up.
+    ///
+    /// LongRunning, not Task.Run: it asks for a dedicated thread instead of the
+    /// thread pool, which is saturated at startup by discovery, the Start mirror
+    /// and the icon fill. A pool queue is the other half of why this arrived so
+    /// late. Best-effort throughout — a missing fallback just means the old
+    /// "render nothing" behaviour for that item type, never a failed startup.
+    private static async Task PublishFallbackAsync(
+        Func<Avalonia.Media.Imaging.Bitmap?> extract,
+        Action<Avalonia.Media.Imaging.Bitmap> publish,
+        string name)
+    {
+        try
         {
-            // Fallback loading is best-effort. If the shell refuses we
-            // simply keep the existing "show nothing" behavior on null.
+            var icon = await Task.Factory.StartNew(
+                extract, CancellationToken.None,
+                TaskCreationOptions.LongRunning, TaskScheduler.Default).ConfigureAwait(false);
+            if (icon is null)
+            {
+                HookTrace.Log($"Startup: {name} fallback icon unavailable");
+                return;
+            }
+            await Dispatcher.UIThread.InvokeAsync(() => publish(icon));
+            HookTrace.Log($"Startup: {name} fallback icon published");
+        }
+        catch (Exception ex)
+        {
+            HookTrace.Log($"Startup: {name} fallback icon failed ({ex.GetType().Name})");
         }
     }
 
