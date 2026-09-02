@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Apps en opdrachten zoeken...",
+  "UpdatingApps": "Apps bijwerken…",
   "OpenMenYou": "MenYou openen",
   "MirrorWinStart": "Windows 11 Start-vastmaakitems spiegelen",
   "PushToWinStart": "Vastgemaakte items naar Windows Start sturen",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Schrijft de vastmaaklijst van MenYou naar het ConfigureStartPins-beleid en start Verkenner opnieuw. Eenmalig — Windows past de items toe bij de volgende aanmelding. Voer dit opnieuw uit om opnieuw te versturen.",
   "CheckForUpdates": "Controleren op updates",
   "About": "Over",
+  "ViewReleaseNotes": "Releaseopmerkingen weergeven",
   "UpdateUpToDate": "Bijgewerkt",
   "UpdateDownloaded": "Update gereed — start MenYou opnieuw",
   "UpdateCheckFailed": "Controle op updates mislukt",
+  "UpdateBlockedByAntivirus": "Update geblokkeerd door antivirus — een bekende valse melding. Download deze handmatig van de MenYou-releasepagina.",
   "StyleWin7": "Modern (Windows 7)",
   "StyleWin7Desc": "Twee kolommen, vastgemaakte tegels, ingebouwde programmaboom",
   "StyleClassic2": "Klassiek twee kolommen (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Grootte",
   "Preview": "Voorbeeld",
   "Searching": "Bezig met zoeken…",
-  "SearchResults": "Zoekresultaten"
+  "SearchResults": "Zoekresultaten",
+  "AllProgramsOrder": "Volgorde van alle apps",
+  "OrderFoldersFirst": "Mappen eerst",
+  "OrderAppsFirst": "Apps eerst",
+  "OrderAlphabetical": "Alfabetisch",
+  "WindowBorderLabel": "Vensterrand",
+  "WindowBorderWin11": "Windows 11 (rand + schaduw)",
+  "WindowBorderFullShade": "Volle schaduw",
+  "WindowBorderSubtleShadow": "Subtiele schaduw",
+  "WindowBorderHairline": "Haarlijn",
+  "WindowBorderNone": "Geen"
 }

@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "アプリやコマンドを検索...",
+  "UpdatingApps": "アプリを更新しています…",
   "OpenMenYou": "MenYou を開く",
   "MirrorWinStart": "Windows のスタートにピン留めしたアプリをミラー",
   "PushToWinStart": "ピン留めを Windows スタートへ送信",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "MenYou のピンリストを ConfigureStartPins ポリシーに書き込み Explorer を再起動します。1 回限り — 次回サインイン時に Windows が適用します。再送するには再実行してください。",
   "CheckForUpdates": "更新を確認",
   "About": "バージョン情報",
+  "ViewReleaseNotes": "リリース ノートを表示",
   "UpdateUpToDate": "最新です",
   "UpdateDownloaded": "更新の準備ができました — MenYou を再起動してください",
   "UpdateCheckFailed": "更新の確認に失敗しました",
+  "UpdateBlockedByAntivirus": "ウイルス対策ソフトが更新をブロックしました — 既知の誤検知です。MenYou のリリース ページから手動でダウンロードしてください。",
   "StyleWin7": "モダン (Windows 7)",
   "StyleWin7Desc": "2 列、ピン留めタイル、プログラム ツリー",
   "StyleClassic2": "クラシック 2 列 (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "サイズ",
   "Preview": "プレビュー",
   "Searching": "検索しています…",
-  "SearchResults": "検索結果"
+  "SearchResults": "検索結果",
+  "AllProgramsOrder": "すべてのアプリの並べ替え",
+  "OrderFoldersFirst": "フォルダーを先に",
+  "OrderAppsFirst": "アプリを先に",
+  "OrderAlphabetical": "アルファベット順",
+  "WindowBorderLabel": "ウィンドウの境界線",
+  "WindowBorderWin11": "Windows 11 (境界線 + 影)",
+  "WindowBorderFullShade": "濃い影",
+  "WindowBorderSubtleShadow": "淡い影",
+  "WindowBorderHairline": "細線",
+  "WindowBorderNone": "なし"
 }
