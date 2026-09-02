@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.32](https://github.com/Alpaq92/MenYou/compare/v0.9.31...v0.9.32) (2026-09-02)
+
+
+### Bug Fixes
+
+* **icons:** folder icons blank on cold start — the cheap fallback waited on the slow one ([#145](https://github.com/Alpaq92/MenYou/issues/145)) ([1e4e4f9](https://github.com/Alpaq92/MenYou/commit/1e4e4f96fed5725789ea4bdd79557bbf65cfc187))
+
 ## [0.9.31](https://github.com/Alpaq92/MenYou/compare/v0.9.30...v0.9.31) (2026-09-01)
 
 
