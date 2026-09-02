@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "搜索应用和命令...",
+  "UpdatingApps": "正在更新应用…",
   "OpenMenYou": "打开 MenYou",
   "MirrorWinStart": "镜像 Windows 开始菜单的固定项",
   "PushToWinStart": "推送固定项到 Windows 开始菜单",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "将 MenYou 的固定列表写入 ConfigureStartPins 策略并重启资源管理器。一次性操作 — Windows 在下次登录时应用。再次推送请重新运行。",
   "CheckForUpdates": "检查更新",
   "About": "关于",
+  "ViewReleaseNotes": "查看发行说明",
   "UpdateUpToDate": "已是最新版本",
   "UpdateDownloaded": "更新就绪 — 请重启 MenYou",
   "UpdateCheckFailed": "检查更新失败",
+  "UpdateBlockedByAntivirus": "更新被杀毒软件拦截 — 这是已知的误报。请从 MenYou 发布页面手动下载。",
   "StyleWin7": "现代 (Windows 7)",
   "StyleWin7Desc": "双列、固定磁贴、内嵌程序树",
   "StyleClassic2": "经典双列 (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "大小",
   "Preview": "预览",
   "Searching": "正在搜索…",
-  "SearchResults": "搜索结果"
+  "SearchResults": "搜索结果",
+  "AllProgramsOrder": "所有应用的排序",
+  "OrderFoldersFirst": "文件夹优先",
+  "OrderAppsFirst": "应用优先",
+  "OrderAlphabetical": "按字母顺序",
+  "WindowBorderLabel": "窗口边框",
+  "WindowBorderWin11": "Windows 11（边框 + 阴影）",
+  "WindowBorderFullShade": "完整阴影",
+  "WindowBorderSubtleShadow": "淡阴影",
+  "WindowBorderHairline": "细线",
+  "WindowBorderNone": "无"
 }

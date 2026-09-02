@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Пошук програм і команд...",
+  "UpdatingApps": "Оновлення програм…",
   "OpenMenYou": "Відкрити MenYou",
   "MirrorWinStart": "Дзеркалити закріплені з меню Пуск Windows",
   "PushToWinStart": "Надіслати закріплені в меню Пуск Windows",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Записує список закріплень MenYou у політику ConfigureStartPins і перезапускає Провідник. Одноразова дія — Windows застосує закріплення під час наступного входу. Запустіть знову, щоб надіслати ще раз.",
   "CheckForUpdates": "Перевірити оновлення",
   "About": "Про програму",
+  "ViewReleaseNotes": "Переглянути нотатки до випуску",
   "UpdateUpToDate": "Актуальна версія",
   "UpdateDownloaded": "Оновлення готове — перезапустіть MenYou",
   "UpdateCheckFailed": "Не вдалося перевірити оновлення",
+  "UpdateBlockedByAntivirus": "Антивірус заблокував оновлення — це відоме хибне спрацювання. Завантажте його вручну зі сторінки випусків MenYou.",
   "StyleWin7": "Сучасний (Windows 7)",
   "StyleWin7Desc": "Дві колонки, закріплені плитки, вбудоване дерево програм",
   "StyleClassic2": "Класичний двоколонковий (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Розмір",
   "Preview": "Попередній перегляд",
   "Searching": "Триває пошук…",
-  "SearchResults": "Результати пошуку"
+  "SearchResults": "Результати пошуку",
+  "AllProgramsOrder": "Порядок усіх програм",
+  "OrderFoldersFirst": "Спочатку папки",
+  "OrderAppsFirst": "Спочатку програми",
+  "OrderAlphabetical": "За алфавітом",
+  "WindowBorderLabel": "Межа вікна",
+  "WindowBorderWin11": "Windows 11 (межа + тінь)",
+  "WindowBorderFullShade": "Повна тінь",
+  "WindowBorderSubtleShadow": "Легка тінь",
+  "WindowBorderHairline": "Тонка лінія",
+  "WindowBorderNone": "Немає"
 }

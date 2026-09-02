@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Rechercher des applications et des commandes...",
+  "UpdatingApps": "Mise à jour des applications…",
   "OpenMenYou": "Ouvrir MenYou",
   "MirrorWinStart": "Refléter les épingles du menu Démarrer de Windows",
   "PushToWinStart": "Envoyer les épingles au menu Démarrer",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Écrit la liste d'épingles de MenYou dans la stratégie ConfigureStartPins et redémarre l'Explorateur. Action ponctuelle — Windows applique les épingles à la prochaine connexion. Relancez pour pousser à nouveau.",
   "CheckForUpdates": "Vérifier les mises à jour",
   "About": "À propos",
+  "ViewReleaseNotes": "Afficher les notes de version",
   "UpdateUpToDate": "À jour",
   "UpdateDownloaded": "Mise à jour prête — redémarrez MenYou",
   "UpdateCheckFailed": "Échec de la vérification des mises à jour",
+  "UpdateBlockedByAntivirus": "Mise à jour bloquée par l'antivirus — un faux positif connu. Téléchargez-la manuellement depuis la page des versions de MenYou.",
   "StyleWin7": "Moderne (Windows 7)",
   "StyleWin7Desc": "Deux colonnes, tuiles épinglées, arbre des programmes intégré",
   "StyleClassic2": "Classique deux colonnes (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Taille",
   "Preview": "Aperçu",
   "Searching": "Recherche en cours…",
-  "SearchResults": "Résultats de la recherche"
+  "SearchResults": "Résultats de la recherche",
+  "AllProgramsOrder": "Ordre de toutes les applications",
+  "OrderFoldersFirst": "Dossiers d'abord",
+  "OrderAppsFirst": "Applications d'abord",
+  "OrderAlphabetical": "Alphabétique",
+  "WindowBorderLabel": "Bordure de fenêtre",
+  "WindowBorderWin11": "Windows 11 (bordure + ombre)",
+  "WindowBorderFullShade": "Ombre complète",
+  "WindowBorderSubtleShadow": "Ombre subtile",
+  "WindowBorderHairline": "Filet",
+  "WindowBorderNone": "Aucune"
 }

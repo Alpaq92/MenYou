@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Pesquisar aplicativos e comandos...",
+  "UpdatingApps": "Atualizando aplicativos…",
   "OpenMenYou": "Abrir MenYou",
   "MirrorWinStart": "Espelhar fixados do menu Iniciar do Windows",
   "PushToWinStart": "Enviar fixados para o Iniciar",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Grava a lista de fixados do MenYou na política ConfigureStartPins e reinicia o Explorer. Ação única — o Windows aplica os fixados no próximo login. Execute novamente para enviar de novo.",
   "CheckForUpdates": "Verificar atualizações",
   "About": "Sobre",
+  "ViewReleaseNotes": "Ver notas da versão",
   "UpdateUpToDate": "Atualizado",
   "UpdateDownloaded": "Atualização pronta — reinicie o MenYou",
   "UpdateCheckFailed": "Falha ao verificar atualizações",
+  "UpdateBlockedByAntivirus": "Atualização bloqueada pelo antivírus — um falso positivo conhecido. Baixe-a manualmente na página de versões do MenYou.",
   "StyleWin7": "Moderno (Windows 7)",
   "StyleWin7Desc": "Duas colunas, blocos fixados, árvore de programas embutida",
   "StyleClassic2": "Clássico de duas colunas (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Tamanho",
   "Preview": "Pré-visualização",
   "Searching": "Pesquisando…",
-  "SearchResults": "Resultados da pesquisa"
+  "SearchResults": "Resultados da pesquisa",
+  "AllProgramsOrder": "Ordem de todos os aplicativos",
+  "OrderFoldersFirst": "Pastas primeiro",
+  "OrderAppsFirst": "Aplicativos primeiro",
+  "OrderAlphabetical": "Alfabética",
+  "WindowBorderLabel": "Borda da janela",
+  "WindowBorderWin11": "Windows 11 (borda + sombra)",
+  "WindowBorderFullShade": "Sombra total",
+  "WindowBorderSubtleShadow": "Sombra sutil",
+  "WindowBorderHairline": "Linha fina",
+  "WindowBorderNone": "Nenhuma"
 }

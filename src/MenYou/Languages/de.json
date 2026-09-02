@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Apps und Befehle suchen...",
+  "UpdatingApps": "Apps werden aktualisiert…",
   "OpenMenYou": "MenYou öffnen",
   "MirrorWinStart": "Windows-Start-Anheftungen spiegeln",
   "PushToWinStart": "Anheftungen an Windows-Start senden",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Schreibt die MenYou-Pinliste in die Richtlinie ConfigureStartPins und startet den Explorer neu. Einmalige Aktion — Windows wendet die Anheftungen bei der nächsten Anmeldung an. Erneut ausführen, um Aktualisierungen zu übertragen.",
   "CheckForUpdates": "Nach Aktualisierungen suchen",
   "About": "Über",
+  "ViewReleaseNotes": "Versionshinweise anzeigen",
   "UpdateUpToDate": "Auf dem neuesten Stand",
   "UpdateDownloaded": "Aktualisierung bereit — MenYou neu starten",
   "UpdateCheckFailed": "Aktualisierungsprüfung fehlgeschlagen",
+  "UpdateBlockedByAntivirus": "Update vom Virenschutz blockiert — ein bekannter Fehlalarm. Laden Sie es manuell von der MenYou-Releaseseite herunter.",
   "StyleWin7": "Modern (Windows 7)",
   "StyleWin7Desc": "Zwei Spalten, angeheftete Kacheln, eingebetteter Programmbaum",
   "StyleClassic2": "Klassisch zweispaltig (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Größe",
   "Preview": "Vorschau",
   "Searching": "Suchvorgang läuft…",
-  "SearchResults": "Suchergebnisse"
+  "SearchResults": "Suchergebnisse",
+  "AllProgramsOrder": "Reihenfolge aller Apps",
+  "OrderFoldersFirst": "Ordner zuerst",
+  "OrderAppsFirst": "Apps zuerst",
+  "OrderAlphabetical": "Alphabetisch",
+  "WindowBorderLabel": "Fensterrahmen",
+  "WindowBorderWin11": "Windows 11 (Rahmen + Schatten)",
+  "WindowBorderFullShade": "Voller Schatten",
+  "WindowBorderSubtleShadow": "Dezenter Schatten",
+  "WindowBorderHairline": "Haarlinie",
+  "WindowBorderNone": "Keiner"
 }

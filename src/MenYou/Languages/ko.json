@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "앱 및 명령 검색...",
+  "UpdatingApps": "앱 업데이트 중…",
   "OpenMenYou": "MenYou 열기",
   "MirrorWinStart": "Windows 시작 메뉴 고정 항목 미러링",
   "PushToWinStart": "고정 항목을 Windows 시작 메뉴로 보내기",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "MenYou의 고정 목록을 ConfigureStartPins 정책에 기록하고 탐색기를 다시 시작합니다. 일회성 — Windows가 다음 로그인 시 적용합니다. 다시 보내려면 이 작업을 다시 실행하세요.",
   "CheckForUpdates": "업데이트 확인",
   "About": "정보",
+  "ViewReleaseNotes": "릴리스 정보 보기",
   "UpdateUpToDate": "최신 상태",
   "UpdateDownloaded": "업데이트 준비 완료 — MenYou를 다시 시작하세요",
   "UpdateCheckFailed": "업데이트 확인 실패",
+  "UpdateBlockedByAntivirus": "바이러스 백신이 업데이트를 차단했습니다 — 알려진 오탐입니다. MenYou 릴리스 페이지에서 직접 다운로드하세요.",
   "StyleWin7": "모던 (Windows 7)",
   "StyleWin7Desc": "2열, 고정 타일, 인라인 프로그램 트리",
   "StyleClassic2": "고전 2열 (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "크기",
   "Preview": "미리 보기",
   "Searching": "검색 중…",
-  "SearchResults": "검색 결과"
+  "SearchResults": "검색 결과",
+  "AllProgramsOrder": "모든 앱 정렬 순서",
+  "OrderFoldersFirst": "폴더 먼저",
+  "OrderAppsFirst": "앱 먼저",
+  "OrderAlphabetical": "사전순",
+  "WindowBorderLabel": "창 테두리",
+  "WindowBorderWin11": "Windows 11 (테두리 + 그림자)",
+  "WindowBorderFullShade": "진한 그림자",
+  "WindowBorderSubtleShadow": "옅은 그림자",
+  "WindowBorderHairline": "가는 선",
+  "WindowBorderNone": "없음"
 }

@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Buscar aplicaciones y comandos...",
+  "UpdatingApps": "Actualizando aplicaciones…",
   "OpenMenYou": "Abrir MenYou",
   "MirrorWinStart": "Reflejar anclajes del menú Inicio de Windows",
   "PushToWinStart": "Enviar anclajes al menú Inicio",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Escribe la lista de anclados de MenYou en la directiva ConfigureStartPins y reinicia el Explorador. Acción única — Windows aplica los anclajes en el siguiente inicio de sesión. Vuelva a ejecutarlo para enviar de nuevo.",
   "CheckForUpdates": "Buscar actualizaciones",
   "About": "Acerca de",
+  "ViewReleaseNotes": "Ver notas de la versión",
   "UpdateUpToDate": "Actualizado",
   "UpdateDownloaded": "Actualización lista — reinicie MenYou",
   "UpdateCheckFailed": "Error al comprobar las actualizaciones",
+  "UpdateBlockedByAntivirus": "El antivirus ha bloqueado la actualización: es un falso positivo conocido. Descárguela manualmente desde la página de versiones de MenYou.",
   "StyleWin7": "Moderno (Windows 7)",
   "StyleWin7Desc": "Dos columnas, mosaicos anclados, árbol de programas en línea",
   "StyleClassic2": "Clásico de dos columnas (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Tamaño",
   "Preview": "Vista previa",
   "Searching": "Buscando…",
-  "SearchResults": "Resultados de la búsqueda"
+  "SearchResults": "Resultados de la búsqueda",
+  "AllProgramsOrder": "Orden de todas las aplicaciones",
+  "OrderFoldersFirst": "Carpetas primero",
+  "OrderAppsFirst": "Aplicaciones primero",
+  "OrderAlphabetical": "Alfabético",
+  "WindowBorderLabel": "Borde de ventana",
+  "WindowBorderWin11": "Windows 11 (borde + sombra)",
+  "WindowBorderFullShade": "Sombra completa",
+  "WindowBorderSubtleShadow": "Sombra sutil",
+  "WindowBorderHairline": "Línea fina",
+  "WindowBorderNone": "Ninguno"
 }

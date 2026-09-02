@@ -1,5 +1,6 @@
 {
   "SearchPlaceholder": "Wyszukaj aplikacje i polecenia...",
+  "UpdatingApps": "Aktualizowanie aplikacji…",
   "OpenMenYou": "Otwórz MenYou",
   "MirrorWinStart": "Synchronizuj przypięte z menu Start systemu Windows",
   "PushToWinStart": "Wyślij przypięte do menu Start systemu Windows",
@@ -21,9 +22,11 @@
   "PushToWinStartDescription": "Zapisuje listę przypiętych z MenYou do zasady ConfigureStartPins i restartuje Eksplorator. Operacja jednorazowa — Windows zastosuje przypięcia przy następnym logowaniu. Po edycji w MenYou uruchom ponownie, aby zaktualizować.",
   "CheckForUpdates": "Sprawdź aktualizacje",
   "About": "O programie",
+  "ViewReleaseNotes": "Zobacz informacje o wersji",
   "UpdateUpToDate": "Aktualna wersja",
   "UpdateDownloaded": "Aktualizacja gotowa — uruchom ponownie MenYou",
   "UpdateCheckFailed": "Sprawdzanie aktualizacji nie powiodło się",
+  "UpdateBlockedByAntivirus": "Program antywirusowy zablokował aktualizację — to znany fałszywy alarm. Pobierz ją ręcznie ze strony wydań MenYou.",
   "StyleWin7": "Nowoczesny (Windows 7)",
   "StyleWin7Desc": "Dwie kolumny, kafelki przypiętych, drzewo programów",
   "StyleClassic2": "Klasyczny dwukolumnowy (XP)",
@@ -54,5 +57,15 @@
   "LogSize": "Rozmiar",
   "Preview": "Podgląd",
   "Searching": "Trwa wyszukiwanie…",
-  "SearchResults": "Wyniki wyszukiwania"
+  "SearchResults": "Wyniki wyszukiwania",
+  "AllProgramsOrder": "Kolejność wszystkich aplikacji",
+  "OrderFoldersFirst": "Najpierw foldery",
+  "OrderAppsFirst": "Najpierw aplikacje",
+  "OrderAlphabetical": "Alfabetycznie",
+  "WindowBorderLabel": "Obramowanie okna",
+  "WindowBorderWin11": "Windows 11 (obramowanie + cień)",
+  "WindowBorderFullShade": "Pełny cień",
+  "WindowBorderSubtleShadow": "Delikatny cień",
+  "WindowBorderHairline": "Cienka linia",
+  "WindowBorderNone": "Brak"
 }
