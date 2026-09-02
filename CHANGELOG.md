@@ -8,6 +8,13 @@ Do not hand-edit released sections — release-please regenerates them from the 
 
 <!-- release-please starts maintaining content below this comment. -->
 
+## [0.9.33](https://github.com/Alpaq92/MenYou/compare/v0.9.32...v0.9.33) (2026-09-02)
+
+
+### Bug Fixes
+
+* **i18n:** settings labels showed in English in every locale ([#147](https://github.com/Alpaq92/MenYou/issues/147)) ([95451d3](https://github.com/Alpaq92/MenYou/commit/95451d3bfd686f00e6096e88eb829c2b2c8b61a2))
+
 ## [0.9.32](https://github.com/Alpaq92/MenYou/compare/v0.9.31...v0.9.32) (2026-09-02)
 
 
