@@ -162,18 +162,20 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// Curated subset of <see cref="RightPanelViewModel.Shortcuts"/> —
     /// Start Menu, Documents, Settings, Control Panel — surfaced as the
     /// "Places" group custom-theme samples use (notably MintCinnamon).
-    /// Filtered + ordered here so XAML themes can bind a four-entry
-    /// list without reproducing the action-string filter logic. The
-    /// full Shortcuts collection (10 entries including Pictures, Music,
-    /// Downloads, This PC, Network, Run...) stays available for themes
-    /// that want everything.
+    /// Filtered + ordered here so XAML themes can bind a short list
+    /// without reproducing the action-string filter logic. Task Manager
+    /// joins the four originals because the other four layouts reach it
+    /// through the full Shortcuts list; without it here, Mint Cinnamon
+    /// would be the one style with no way to open it. The full Shortcuts
+    /// collection (Pictures, Music, Downloads, This PC, Network, Run...)
+    /// stays available for themes that want everything.
     public IEnumerable<RightPanelViewModel.ShellShortcut> Places
     {
         get
         {
             // Walk the source in declaration order to keep Title look-up
             // O(n) but predictable; the Shortcuts list is tiny (≤ 10).
-            var wanted = new[] { "startmenu", "documents", "settings", "control" };
+            var wanted = new[] { "startmenu", "documents", "settings", "control", "taskmanager" };
             foreach (var action in wanted)
             {
                 foreach (var s in RightPanel.Shortcuts)

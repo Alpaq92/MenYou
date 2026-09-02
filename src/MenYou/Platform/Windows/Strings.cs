@@ -349,6 +349,17 @@ public static class Strings
     public static string PhoneLink        => Resolve("PhoneLink", $@"@{Sys}\wpdshext.dll,-510");
     public static string PhoneLinkTooltip => PhoneLink;
 
+    // Task Manager — a Places row, so this is the row TITLE, not a tooltip.
+    // Unusually well-served: an RT_STRING sweep of the localized MUI
+    // resources found the name in four places, all returning the identical
+    // string ("Menedżer zadań" on a Polish Windows). Ordered most-stable
+    // first — shell32 ships on every SKU, Taskmgr.exe's own resource is the
+    // canonical name but the binary is absent on Server Core, and
+    // Taskbar.dll is Win 11-era. ConsoleLogon.dll,-113 is a fourth source,
+    // left out as the least likely to survive a rewrite.
+    public static string TaskManager => Resolve("TaskManager",
+        $@"@{Sys}\shell32.dll,-24743", $@"@{Sys}\Taskmgr.exe,-32420", $@"@{Sys}\Taskbar.dll,-22001");
+
     // ---- helpers ---------------------------------------------------------
 
     /// Tries each Windows indirect-string resource in order, then falls
