@@ -1,0 +1,268 @@
+<!--
+  AnduinDark.axaml: a MenYou custom theme inspired by the AnduinOS menu
+  (https://www.anduinos.com) — translated into MenYou's own vocabulary rather
+  than copied pixel-for-pixel.
+
+  What AnduinOS's menu actually is, from its screenshot:
+
+    • TWO columns on ONE flat near-black surface (#1F1F1F sampled), with no
+      alternate panel shade behind either column — the only thing separating
+      them is a 1 px hairline.
+    • LEFT  — a plain vertical list of apps: small real icon, label, generous
+      row height, no tiles and no grid.
+    • RIGHT — the user at the top, then shell locations, then system entries,
+      the groups separated by whitespace rather than by rules or headers.
+    • BOTTOM — a full-width bar: a PILL-shaped search field on the left and a
+      short row of monochrome glyph buttons on the right.
+
+  What is deliberately NOT copied:
+
+    • AnduinOS draws the right column's icons as monochrome outlines. MenYou's
+      Places are data-driven (RightPanelViewModel.ShellShortcut) and carry the
+      REAL extracted shell bitmaps; IconGlyph is empty for almost every entry,
+      so a monochrome column would mean inventing a per-row glyph table that
+      the host cannot feed. The real icons are used instead — the same choice
+      the built-in Mint Cinnamon layout makes.
+    • AnduinOS has no section captions at all. MenYou's lists are Pinned /
+      Recent / All programs, which are genuinely different things, so the
+      captions stay — restyled small, muted and uppercase-weight so they read
+      as quiet dividers rather than headings.
+
+  Bindings are REFLECTION bindings (no x:DataType, no compiled-binding casts):
+  custom themes are parsed at runtime by AvaloniaRuntimeXamlLoader, which
+  cannot use compiled bindings. See docs/THEMING.md.
+
+  The menu window squares its corners for a loaded custom theme
+  (CustomThemeCornerRadiusConverter), on the principle that a theme owns its
+  own edge — so this file supplies its own CornerRadius + ClipToBounds. (Under
+  the native-backdrop option the window itself is rounded instead, because the
+  backdrop fills the whole window rectangle.)
+
+  Load it from Settings -> Custom -> Load...
+-->
+<Border xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="using:MenYou.Views.Controls"
+        xmlns:loc="using:MenYou.Platform.Windows"
+        Width="700" Height="600"
+        CornerRadius="10"
+        ClipToBounds="True"
+        BorderBrush="{DynamicResource AnduinEdge}"
+        BorderThickness="1"
+        Background="{DynamicResource AnduinSurface}">
+
+  <Border.Resources>
+    <!-- Sampled straight off the AnduinOS screenshot rather than guessed:
+         the menu body is a flat (31,31,31) with no gradient and no second
+         panel tone, and the search field is the single lighter element at
+         (54,56,58). Declared locally because MenYou's own dark surface is
+         #1A1A1A with a distinct Alt panel — the whole point of this theme is
+         the single flat plane, so it cannot reuse those tokens. -->
+    <SolidColorBrush x:Key="AnduinSurface"    Color="#1F1F1F" />
+    <SolidColorBrush x:Key="AnduinDivider"    Color="#2F2F2F" />
+    <!-- Outer hairline. AnduinOS's menu has no visible outline because it sits
+         on a bright wallpaper, where a flat #1F1F1F edge separates on its own.
+         On a dark backdrop it does not: measured against a window behind at
+         (26,26,26), the surface at (31,31,31) left the rounded corner cut
+         correctly but invisible — a 5/255 step. The corners were there; they
+         could not be SEEN, which amounts to the same thing. This hairline is
+         what makes the edge and its radius read against any backdrop. -->
+    <SolidColorBrush x:Key="AnduinEdge"       Color="#3A3A3A" />
+    <SolidColorBrush x:Key="AnduinSearchFill" Color="#36383A" />
+    <SolidColorBrush x:Key="AnduinText"       Color="#E6E6E6" />
+    <SolidColorBrush x:Key="AnduinMuted"      Color="#9A9A9A" />
+  </Border.Resources>
+
+  <Grid RowDefinitions="*,Auto" ColumnDefinitions="*,268">
+
+    <Grid.Styles>
+      <!-- Pill search field. AnduinOS's is fully rounded and is the only
+           raised surface in the menu; MenYou's shared TextBox.search is a
+           4 px rectangle, so it is overridden here only (scoped to this
+           theme's tree, so no other layout is affected). -->
+      <Style Selector="TextBox.search">
+        <Setter Property="CornerRadius" Value="18" />
+        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="16,6" />
+        <Setter Property="Background" Value="{DynamicResource AnduinSearchFill}" />
+        <Setter Property="BorderThickness" Value="0" />
+      </Style>
+
+      <!-- Section captions demoted to quiet labels: AnduinOS has none at all,
+           so these are kept only for the information they carry and given as
+           little weight as possible. -->
+      <Style Selector="TextBlock.section">
+        <Setter Property="Foreground" Value="{DynamicResource AnduinMuted}" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="16,12,16,4" />
+      </Style>
+
+      <!-- Row hover: a flat translucent wash with a small 6 px radius, inset
+           from the column edges by the parent StackPanel's margin — AnduinOS's
+           highlight is a soft full-width pill rather than a raised tile. -->
+      <Style Selector="Button.anduin-row">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+      </Style>
+      <Style Selector="Button.anduin-row:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#1AFFFFFF" />
+      </Style>
+      <Style Selector="Button.anduin-row:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="#26FFFFFF" />
+      </Style>
+
+      <!-- Inset the overlay scrollbar top and bottom so it floats inside the
+           column rather than running into the menu's rounded top edge and the
+           bottom bar's rule. Right inset too, so the thumb is not flush
+           against the vertical hairline. -->
+      <Style Selector="ScrollBar:vertical">
+        <Setter Property="Margin" Value="0,12,3,12" />
+      </Style>
+    </Grid.Styles>
+
+    <!-- ===== LEFT COLUMN — the app list ================================ -->
+    <!-- AnduinOS closes this column with an "All Apps" row carrying a grid
+         glyph. That row is a BUTTON there: it swaps the column over to the
+         full app list. MenYou renders that list inline already, so the row had
+         nothing to do — it duplicated the caption below it verbatim and did
+         not respond to clicks. Dropped, glyph and all (see the caption note
+         below for why the glyph did not move onto the caption either). -->
+    <ScrollViewer Grid.Row="0" Grid.Column="0" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="0,6,0,0">
+        <TextBlock Classes="section" Text="{x:Static loc:Strings.Pinned}" />
+        <ctrl:AppList Items="{Binding Pinned}" />
+
+        <TextBlock Classes="section" Text="{x:Static loc:Strings.Recent}" />
+        <ctrl:AppList Items="{Binding Recent}" />
+
+        <!-- No glyph on this caption. AnduinOS's equivalent is an "All Apps"
+             BUTTON that swaps the column over to the full app list; MenYou
+             renders that list inline, so the control has nothing to do. An
+             earlier pass kept its grid glyph here as a nod to the original —
+             but NO MenYou style puts an icon on a section caption (checked
+             all five built-in layouts and all three shipped themes: every
+             one is a bare TextBlock.section). Carrying the motif across
+             would have made this theme the odd one out in the app it has to
+             live in, so the motif loses. -->
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Classes="section" Text="{x:Static loc:Strings.AllPrograms}" />
+          <TextBlock Classes="section" Text="{x:Static loc:Strings.UpdatingApps}"
+                     IsVisible="{Binding IsRefreshing}"
+                     VerticalAlignment="Center" Opacity="0.55" />
+        </StackPanel>
+        <ctrl:ProgramsTree Items="{Binding Programs.Items}" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Hairline between the columns — the ONLY separation AnduinOS uses.
+         Stops short of the bottom bar, matching the screenshot where the rule
+         ends above the search row. -->
+    <Border Grid.Row="0" Grid.Column="1" Width="1" Margin="0,14,0,14"
+            HorizontalAlignment="Left"
+            Background="{DynamicResource AnduinDivider}" />
+
+    <!-- ===== RIGHT COLUMN — user, places, system ======================= -->
+    <ScrollViewer Grid.Row="0" Grid.Column="1" Margin="1,0,0,0"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="12,16,12,8" Spacing="2">
+
+        <Button Classes="anduin-row" Command="{Binding OpenAccountSettingsCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Panel Width="26" Height="26" VerticalAlignment="Center">
+              <Border Background="#33FFFFFF" CornerRadius="13"
+                      IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNull}}">
+                <TextBlock Text="{Binding UserName[0]}"
+                           Foreground="{DynamicResource AnduinText}"
+                           FontSize="13" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <Ellipse IsVisible="{Binding Avatar, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       RenderOptions.BitmapInterpolationMode="HighQuality">
+                <Ellipse.Fill>
+                  <ImageBrush Source="{Binding Avatar}" Stretch="UniformToFill" />
+                </Ellipse.Fill>
+              </Ellipse>
+            </Panel>
+            <TextBlock Text="{Binding UserName}"
+                       Foreground="{DynamicResource AnduinText}"
+                       FontSize="13" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <!-- Whitespace, not a rule — AnduinOS groups by gap. -->
+        <Panel Height="10" />
+
+        <ItemsControl ItemsSource="{Binding RightPanel.Shortcuts}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Classes="anduin-row"
+                      Command="{Binding $parent[ItemsControl].DataContext.RightPanel.OpenCommand}"
+                      CommandParameter="{Binding}">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <Image Source="{Binding Icon}" Width="18" Height="18"
+                         VerticalAlignment="Center"
+                         RenderOptions.BitmapInterpolationMode="HighQuality" />
+                  <TextBlock Text="{Binding Title}"
+                             Foreground="{DynamicResource AnduinText}"
+                             FontSize="13" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- ===== BOTTOM BAR — pill search + glyph row ====================== -->
+    <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+            BorderBrush="{DynamicResource AnduinDivider}"
+            BorderThickness="0,1,0,0"
+            Padding="16,10">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Classes="search"
+                 PlaceholderText="{x:Static loc:Strings.SearchPlaceholder}"
+                 Text="{Binding Search.Query, Mode=TwoWay}" />
+        <!-- AnduinOS's row is sign-out, lock, restart, power. The MenYou cog
+             is added at the head of it: a custom theme that cannot reach
+             Settings strands the user with no way back to the theme picker. -->
+        <StackPanel Grid.Column="1" Orientation="Horizontal"
+                    Spacing="2" Margin="14,0,0,0" VerticalAlignment="Center">
+          <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SettingsTooltip}"
+                  Command="{Binding OpenSettingsCommand}">
+            <TextBlock Classes="power-glyph" Text="&#xE713;" />
+          </Button>
+          <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.SignOutTooltip}"
+                  Command="{Binding Power.SignOutCommand}">
+            <TextBlock Classes="power-glyph" Text="&#xF3B1;" />
+          </Button>
+          <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.LockTooltip}"
+                  Command="{Binding Power.LockCommand}">
+            <TextBlock Classes="power-glyph" Text="&#xE72E;" />
+          </Button>
+          <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.RestartTooltip}"
+                  Command="{Binding Power.RestartCommand}">
+            <TextBlock Classes="power-glyph" Text="&#xE777;" />
+          </Button>
+          <Button Classes="power" ToolTip.Tip="{x:Static loc:Strings.ShutdownTooltip}"
+                  Foreground="{DynamicResource PowerDangerBrush}"
+                  Command="{Binding Power.ShutdownCommand}">
+            <TextBlock Classes="power-glyph" Text="&#xE7E8;" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Search overlay, same contract as the other sample themes: covers the
+         content rows only, leaving the search field itself reachable. -->
+    <Border Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
+            Background="{DynamicResource AnduinSurface}"
+            IsVisible="{Binding Search.HasQuery}">
+      <ctrl:SearchResultsList DataContext="{Binding Search}" />
+    </Border>
+  </Grid>
+</Border>

@@ -3,6 +3,7 @@ using System.Runtime.Versioning;
 using System.Security;
 using System.Security.Principal;
 using System.Text;
+using MenYou.Platform.Windows;
 using Microsoft.Win32;
 
 namespace MenYou.Services;
@@ -53,10 +54,53 @@ public sealed class Win32AutostartService : IAutostartService
     // backstop. (Vastly faster than the Run-key throttle this replaces.)
     private const string LogonDelay = "PT1S";
 
+    /// Revision of the task XML built by BuildTaskXml. BUMP THIS whenever that
+    /// XML changes in a way existing installs must pick up: their task keeps the
+    /// XML it was created with, and App.EnsureAutostartDefault re-creates it
+    /// once when UserSettings.AutostartTaskXmlRevision is behind this value.
+    ///   1 — Priority 4 instead of Task Scheduler's default 7
+    /// (A RestartOnFailure "watchdog" was added and removed again before it
+    /// shipped: Task Scheduler applies it only when a task fails to START, never
+    /// to the exit code, so it could not restart a crashed MenYou. Crash
+    /// recovery lives in CrashGuard instead.)
+    public const int TaskXmlRevision = 1;
+
     public bool IsEnabled => TaskExists() || RunValueMatchesUs();
+
+    /// True only when this build was installed by the Inno installer. The
+    /// uninstaller sits beside the exe in an install and nowhere else — not in
+    /// a dev build, a `dotnet run`, or a portable extract.
+    ///
+    /// Path.Join, not Path.Combine: Combine RESETS to the second argument when
+    /// it looks rooted, silently discarding BaseDirectory.
+    internal static bool RunningFromInstall() =>
+        File.Exists(Path.Join(AppContext.BaseDirectory, "unins000.exe"));
 
     public void SetEnabled(bool enabled)
     {
+        // Registration records Environment.ProcessPath, so enabling autostart
+        // from a build that is not installed points the user's real autostart
+        // at a binary that may be deleted, rebuilt, or moved at any time.
+        //
+        // This guard used to exist at only ONE of the three callers
+        // (App.EnsureAutostartDefault), which left the other two open — and
+        // SettingsViewModel's Apply is one of them, so simply opening Settings
+        // in a dev build and clicking Apply silently repointed a real install's
+        // logon task at the dev output. Observed in practice, not theorised.
+        // Guarding inside the service covers every caller, present and future.
+        // (App still checks RunningFromInstall itself, for a different reason:
+        // to keep a dev build from spending the shared one-shot markers.)
+        //
+        // Only ENABLING is blocked. Disabling still works from anywhere: that
+        // removes a task the user has asked not to have, and refusing would
+        // trap them with autostart they cannot turn off.
+        if (enabled && !RunningFromInstall())
+        {
+            HookTrace.Log("Autostart: enable ignored — not running from an install " +
+                          $"(base={AppContext.BaseDirectory})");
+            return;
+        }
+
         if (enabled)
         {
             // Prefer the task. On success drop the legacy Run value so MenYou

@@ -23,6 +23,73 @@ public partial class StartMenuWindow : Window
         Activated += OnActivated;
         Deactivated += OnDeactivated;
         Opened += OnOpened;
+        DataContextChanged += (_, _) =>
+        {
+            if (DataContext is not StartMenuViewModel vm) return;
+            ApplyBackdrop(vm.UseWindowTransparency);
+            // The level can settle before the view model is attached; sync it.
+            vm.IsBackdropActive = ActualTransparencyLevel == WindowTransparencyLevel.Mica;
+        };
+    }
+
+    /// Follows the transparency level the platform actually SETTLED on.
+    ///
+    /// That — not the setting — decides whether the menu looks like a backdrop
+    /// menu. The setting only decides what is REQUESTED; Windows may refuse
+    /// Mica (Windows 10, a missing ANGLE library, a GPU without composition),
+    /// and the request then degrades to Transparent (see ApplyBackdrop). Driving
+    /// the look from the setting meant a refused request still dropped the
+    /// shadow and the surface fills, leaving a flat menu with no backdrop
+    /// behind it. Driving it from the granted level means a refusal simply
+    /// leaves the normal look in place.
+    ///
+    /// The level resolves asynchronously, after the window has a platform
+    /// handle, which is also why it is logged here rather than at request time
+    /// (reading it there reports a stale "None" whatever really happens).
+    /// The rounded window region is kept in step with the size while active.
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == ActualTransparencyLevelProperty)
+        {
+            HookTrace.Log($"StartMenuWindow: transparency level settled on {change.NewValue}");
+            if (DataContext is StartMenuViewModel vm)
+            {
+                vm.IsBackdropActive = change.NewValue is WindowTransparencyLevel l
+                                      && l == WindowTransparencyLevel.Mica;
+                if (IsVisible) ApplyDwmWindowChrome();
+            }
+        }
+        else if (change.Property == ClientSizeProperty
+                 && DataContext is StartMenuViewModel { IsBackdropActive: true })
+            ApplyRoundedRegion();
+    }
+
+    /// Requests the native backdrop, once, when the view model arrives.
+    ///
+    /// Once is enough: UseWindowTransparency is snapshotted for the process
+    /// lifetime (see StartMenuViewModel), because the Win32 rendering mode it
+    /// depends on is fixed at startup.
+    ///
+    /// Enabled: { Mica, Transparent }. Disabled: { Transparent }. Both lists end
+    /// in Transparent, because this window must stay see-through in every state:
+    /// the drop shadow is drawn into a transparent margin around the card, and
+    /// an opaque window would turn that margin into a solid rectangle.
+    ///
+    /// Set directly rather than through Fluid.Avalonia's TransparencyService,
+    /// which is where the mechanism was learned from. The service is built for
+    /// ordinary windows: it requests { Mica, None } and reconciles a refusal to
+    /// a SOLID background — the right fallback for a normal window, and exactly
+    /// the wrong one here. A refused Mica must degrade to the historical
+    /// transparent popup, not to an opaque one.
+    private void ApplyBackdrop(bool enabled)
+    {
+        TransparencyLevelHint = enabled
+            ? new[] { WindowTransparencyLevel.Mica, WindowTransparencyLevel.Transparent }
+            : new[] { WindowTransparencyLevel.Transparent };
+        if (HookTrace.Enabled)
+            HookTrace.Log($"StartMenuWindow: backdrop enabled={enabled} " +
+                          $"requested=[{string.Join(",", TransparencyLevelHint)}]");
     }
 
     private void OnActivated(object? sender, EventArgs e)
@@ -182,8 +249,9 @@ public partial class StartMenuWindow : Window
     /// the inner Border's CornerRadius. The floating drop shadow is NOT done
     /// here — a borderless transparent popup can't receive a native DWM shadow,
     /// so it's an Avalonia BoxShadow on the card (see MenuShadow / the AXAML).
-    /// Custom themes opt out (they own their edge, and many are square) — same
-    /// contract as the corner / border-thickness converters.
+    /// Custom themes get square window corners and no hairline (they own their
+    /// edge, and many are square) — except under a native backdrop, where the
+    /// window rectangle itself becomes visible and must be rounded (below).
     private void ApplyDwmWindowChrome()
     {
         var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
@@ -193,6 +261,13 @@ public partial class StartMenuWindow : Window
         var custom = vm?.UseCustomTheme == true;
 
         // Corners: round for every built-in edge style; square for custom.
+        //
+        // Under the native backdrop this preference turns out NOT to round the
+        // window at all: DWM ignores it for this frameless popup. Measured with
+        // a light card against a dark desktop, the very corner pixel was Mica,
+        // not desktop — a square slab of backdrop around a rounded card. The
+        // window REGION set by ApplyRoundedRegion is what rounds it instead.
+        var backdrop = vm?.IsBackdropActive == true;
         int pref = custom ? DWMWCP_DONOTROUND : DWMWCP_ROUND;
         _ = DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref pref, sizeof(int));
 
@@ -200,6 +275,13 @@ public partial class StartMenuWindow : Window
         // faint to read on the dark menu ("I don't see the border"). The outlined
         // styles draw their own visible MenuBorderBrush hairline (RootBorder,
         // below) instead.
+        //
+        // Not even under a native backdrop, where the edge is most needed: DWM
+        // ROUNDS this popup (DWMWCP_ROUND, above) but will not draw a BORDER on
+        // a frameless window at all. Measured: DWMWA_COLOR_DEFAULT and an
+        // explicit #3D3D3D both left the corner pixels identical to NONE. The
+        // backdrop's edge is therefore drawn by Avalonia — see the hairline
+        // below.
         int border = unchecked((int)DWMWA_COLOR_NONE);
         _ = DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, ref border, sizeof(int));
 
@@ -216,16 +298,85 @@ public partial class StartMenuWindow : Window
         // custom themes own their edge. Read from the VM's WindowBorder mirror,
         // which SettingsService.Changed refreshes, so a Settings change takes
         // effect on the next open (chrome is re-applied every ShowMenu).
+        //
+        // Also forced ON under a native backdrop, whatever WindowBorder says.
+        // The backdrop replaces the drop shadow, DWM won't border a frameless
+        // popup (see the DWMWA_BORDER_COLOR note above), and Mica measured as
+        // dark as the windows behind the menu — 26 inside vs 32 outside. With
+        // nothing defining the edge, a correctly ROUNDED menu read as a square
+        // grey slab. This hairline is the edge: RootBorder draws it rounded and
+        // anti-aliased, and paints no fill under the backdrop (the .backdrop
+        // class in StartMenuWindow.axaml), so Mica shows through everywhere
+        // inside it. Not for custom themes — they own their edge, and
+        // AnduinDark already draws its own.
         var style = vm?.WindowBorder ?? WindowBorder.FullShade;
-        var hairline = !custom && style is WindowBorder.Windows11 or WindowBorder.Hairline;
+        var hairline = !custom
+                       && (backdrop || style is WindowBorder.Windows11 or WindowBorder.Hairline);
         RootBorder.BorderThickness = new Thickness(hairline ? 1 : 0);
+
+        if (backdrop) ApplyRoundedRegion();
+        else ClearRoundedRegion();
     }
+
+    private bool _regionApplied;
+
+    /// Removes the backdrop's window region, so a window that was rounded for
+    /// Mica goes back to an unclipped rectangle if the backdrop is lost — an
+    /// unclipped rectangle is what the transparent shadow margin needs.
+    private void ClearRoundedRegion()
+    {
+        if (!_regionApplied) return;
+        var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (hwnd == IntPtr.Zero) return;
+        SetWindowRgn(hwnd, IntPtr.Zero, true);
+        _regionApplied = false;
+    }
+
+    /// Rounds the window itself under the native backdrop, by giving it a
+    /// rounded window REGION.
+    ///
+    /// Mica paints the entire window rectangle, so the window's own shape is
+    /// what the user sees as the menu's corners — and DWM will not round this
+    /// window: DWMWA_WINDOW_CORNER_PREFERENCE is ignored for a frameless popup,
+    /// and even the demo's shape (BorderOnly + extended client area) came out
+    /// square. Three variants were rendered side by side under Mica; only a
+    /// region produced round corners, because a region clips everything the
+    /// window draws, the DWM backdrop included.
+    ///
+    /// The cost is that a region is binary per pixel, so the curve is a small
+    /// stair-step rather than anti-aliased. The 1 px hairline RootBorder draws
+    /// under the backdrop sits on that same edge at the same radius and covers
+    /// most of it. Radius 10 matches RootBorder's own CornerRadius (and the
+    /// shipped themes'). Re-applied on every resize: the menu is SizeToContent.
+    private void ApplyRoundedRegion()
+    {
+        var hwnd = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
+        if (hwnd == IntPtr.Zero) return;
+        var scale = RenderScaling;
+        int w = (int)Math.Ceiling(ClientSize.Width * scale);
+        int h = (int)Math.Ceiling(ClientSize.Height * scale);
+        int d = (int)Math.Round(2 * 10 * scale);   // CreateRoundRectRgn takes the ellipse DIAMETER
+        if (w <= 0 || h <= 0) return;
+        var rgn = CreateRoundRectRgn(0, 0, w + 1, h + 1, d, d);
+        // On success the system owns the region; only free it if the call failed.
+        if (rgn == IntPtr.Zero) return;
+        if (SetWindowRgn(hwnd, rgn, true) == 0) DeleteObject(rgn);
+        else _regionApplied = true;
+    }
+
+    [DllImport("gdi32.dll")]
+    private static extern IntPtr CreateRoundRectRgn(int left, int top, int right, int bottom, int widthEllipse, int heightEllipse);
+
+    [DllImport("user32.dll")]
+    private static extern int SetWindowRgn(IntPtr hwnd, IntPtr hrgn, bool redraw);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr hObject);
 
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWA_BORDER_COLOR = 34;
     private const int DWMWCP_ROUND = 2;
     private const int DWMWCP_DONOTROUND = 1;
-    private const uint DWMWA_COLOR_DEFAULT = 0xFFFFFFFF;
     private const uint DWMWA_COLOR_NONE = 0xFFFFFFFE;
 
     [DllImport("dwmapi.dll")]

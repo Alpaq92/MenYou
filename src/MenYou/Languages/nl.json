@@ -18,6 +18,8 @@
   "ReplaceStart": "Start vervangen: taakbalkklik + Shift+Win",
   "ReplaceStartDescription": "De Win-toets alleen opent nog steeds het systeemmenu (Microsoft verplaatste de detector achter DirectComposition in Windows 11 24H2 — Open-Shell liep tegen dezelfde muur en raadt Shift+Win aan).",
   "HideOnFocusLost": "Verbergen wanneer focus verloren gaat",
+  "WindowTransparency": "Venstertransparantie",
+  "WindowTransparencyDescription": "Gebruikt de systeemachtergrond (Mica op Windows 11) achter het menu. Vervangt de slagschaduw in plaats van die aan te vullen, dus de randstijl hierboven wordt niet toegepast zolang dit aanstaat. Werkt pas na een herstart van MenYou, omdat de achtergrond een andere renderingmodus nodig heeft — die het opstarten ook iets trager maakt zolang dit aanstaat.",
   "MirrorWinStartDescription": "Indien aan weerspiegelt de sectie Vastgemaakt de live vastmaaklijst van het Windows 11 Start-menu (via Export-StartLayout + een bestandsbewaker op start2.bin). Handmatig vastmaken/losmaken in MenYou is uitgeschakeld — het systeem-Start is de bron van waarheid.",
   "PushToWinStartDescription": "Schrijft de vastmaaklijst van MenYou naar het ConfigureStartPins-beleid en start Verkenner opnieuw. Eenmalig — Windows past de items toe bij de volgende aanmelding. Voer dit opnieuw uit om opnieuw te versturen.",
   "CheckForUpdates": "Controleren op updates",

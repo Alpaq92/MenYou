@@ -134,15 +134,31 @@ public sealed class UserSettings
     // re-runs. See [[Win32AutostartService]].
     public bool AutostartTaskMigrated { get; set; } = false;
 
-    // The logon task was originally created at Task Scheduler's default
-    // Priority 7 (below-normal cpu + reduced I/O), which throttles MenYou's
-    // page-in during the most contended moment on the machine. The XML now
-    // asks for 4, but an EXISTING task keeps whatever it was created with —
-    // the self-heal only re-registers autostart that is MISSING, not autostart
-    // that is merely stale. This one-shot flag forces a single re-create so
-    // installed users actually get the new priority. See [[Win32AutostartService]].
-    public bool AutostartPriorityApplied { get; set; } = false;
+    // The Win32AutostartService.TaskXmlRevision the logon task was last created
+    // from. An EXISTING task keeps whatever XML it was created with, and the
+    // self-heal only re-registers autostart that is MISSING, not autostart that
+    // is merely stale — so App.EnsureAutostartDefault re-creates the task once
+    // whenever this is behind the current revision. A number rather than one
+    // bool per change (it replaced AutostartPriorityApplied): each extra bool
+    // is easy to forget at one of its three touch points. Installs carrying the
+    // old bool read 0 here and re-create exactly once, picking up every revision.
+    // See [[Win32AutostartService]].
+    public int AutostartTaskXmlRevision { get; set; } = 0;
     public bool HideOnFocusLost { get; set; } = true;
+
+    /// Requests the OS's native translucent backdrop (Mica on Windows 11) for
+    /// the menu window, via Fluid.Avalonia's TransparencyService.
+    ///
+    /// OFF by default, and deliberately not seeded from the OS "Transparency
+    /// effects" setting: turning it on REPLACES the drop shadow. The shadow is
+    /// drawn by Skia into a transparent margin around the card because an
+    /// undecorated popup gets no DWM shadow, and the levels Mica requests
+    /// ({ Mica, None }) do not include Transparent — so the margin would stop
+    /// being see-through and the card would sit in a backdrop-filled rectangle.
+    /// Defaulting this on would therefore silently change the look of every
+    /// existing install on upgrade. See [[StartMenuViewModel]] (MenuShadow /
+    /// ShadowMarginDip both collapse while this is set).
+    public bool UseWindowTransparency { get; set; } = false;
     public int MaxRecentItems { get; set; } = 8;
 
     /// Caps how many per-app JumpList "recent files" appear in the right-click

@@ -20,6 +20,7 @@ public sealed class Win32HotkeyService : IHotkeyService
     private StartClickHook? _startClick;
     private WinKeyHook? _winKey;
     private BridgeInjector? _bridge;
+    private ExplorerRestartWatcher? _explorerWatcher;
     private volatile Action? _callback;
     private bool _fallbackRegistered;
 
@@ -190,12 +191,54 @@ public sealed class Win32HotkeyService : IHotkeyService
             {
                 _bridge.Dispose();
                 _bridge = null;
+                return;
             }
+            // Only worth watching once there IS a hook to lose. The hook lives
+            // on Explorer's UI thread, so an Explorer restart silently destroys
+            // it — see ExplorerRestartWatcher for why nothing else notices.
+            _explorerWatcher = new ExplorerRestartWatcher();
+            _explorerWatcher.ExplorerRestarted += OnExplorerRestarted;
         }
         else
         {
+            if (_explorerWatcher is not null)
+            {
+                _explorerWatcher.ExplorerRestarted -= OnExplorerRestarted;
+                _explorerWatcher.Dispose();
+                _explorerWatcher = null;
+            }
             _bridge?.Dispose();
             _bridge = null;
         }
+    }
+
+    /// Runs on the watcher's thread. SetWindowsHookEx is callable from any
+    /// thread, so no marshalling is needed — but the bridge can be torn down
+    /// concurrently by EnsureBridge, hence the local copy and the null check.
+    ///
+    /// Retries because TaskbarCreated announces the new taskbar WINDOW, which
+    /// can beat the tray thread being ready to accept a hook; a single failed
+    /// attempt would leave the hook broken for the rest of the session, which
+    /// is the exact failure this watcher exists to prevent. Bounded and short:
+    /// if Explorer is not hookable within a couple of seconds the log says so
+    /// rather than the loop spinning.
+    private void OnExplorerRestarted()
+    {
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            var bridge = _bridge;
+            if (bridge is null) return;
+            try
+            {
+                if (bridge.Reinject()) return;
+            }
+            catch (Exception ex)
+            {
+                HookTrace.Log($"Win32HotkeyService: reinject threw ({ex.GetType().Name})");
+                return;
+            }
+            if (attempt < 3) Thread.Sleep(500 * attempt);
+        }
+        HookTrace.Log("Win32HotkeyService: reinject failed after 3 attempts — Win key will fall back to the system menu");
     }
 }

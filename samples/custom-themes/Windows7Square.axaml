@@ -44,12 +44,20 @@
   whenever a custom theme is active (StartMenuWindow binds its corner
   radius to UseCustomTheme), so the outer edges are square too — a
   custom theme owns its full edge treatment.
+
+  It owns its BACKGROUND too: the window paints no fill behind a custom
+  theme (docs/THEMING.md, "Chrome a custom theme owns"), hence the
+  Background on the root Grid below. This file used to omit it and only
+  rendered opaque because the window's fill was silently winning over the
+  rule meant to remove it; once that rule took effect, the Recent / All
+  Programs column showed the desktop straight through.
 -->
 <Grid xmlns="https://github.com/avaloniaui"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       xmlns:ctrl="using:MenYou.Views.Controls"
       xmlns:loc="using:MenYou.Platform.Windows"
       Width="770" Height="620"
+      Background="{DynamicResource MenuBackgroundBrush}"
       RowDefinitions="Auto,*,Auto">
 
   <!-- Square-corner overrides. Each selector mirrors an app-level style

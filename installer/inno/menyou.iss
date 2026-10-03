@@ -176,12 +176,18 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; install and, more importantly, removes 100 MB from Defender's first-run scan
 ; surface on a fresh (unsigned) install. MenYou's own symbols are embedded
 ; (DebugType=embedded), so no managed debugging is lost either.
-; av_libglesv2.dll is ANGLE's GLES translator, ~5.3 MB. Program.cs pins
-; Win32PlatformOptions.RenderingMode to Software ONLY, so the ANGLE path can
-; never be selected and the DLL is never loaded (verified against a running
-; process's module list). Excluded rather than shipped-and-ignored. If GPU
-; rendering is ever re-enabled in Program.cs, DROP THIS EXCLUDE with it.
-Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,av_libglesv2.dll"; Flags: recursesubdirs createallsubdirs ignoreversion
+; av_libglesv2.dll (ANGLE's GLES translator, ~5.3 MB) IS shipped again. It was
+; excluded from 0.9.17 while Program.cs pinned RenderingMode to Software only,
+; but the native-backdrop option now selects ANGLE when it is on, and Mica is
+; ONLY granted on the ANGLE path. Measured on the release publish with PATH
+; cleaned: no DLL -> granted=None; DLL beside the exe -> granted=Mica. With the
+; option off (the default) RenderingMode is still Software and the DLL is never
+; loaded, so it costs disk, not startup.
+; Shipping it also matters with the option ON: without a copy in {app}, Windows
+; resolves the name through PATH and loads whatever ANGLE build some other app
+; put there (Git for Windows ships one: 2.1.22045 vs our 2.1.1). The app
+; directory is searched first, so our copy wins.
+Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb"; Flags: recursesubdirs createallsubdirs ignoreversion
 ; Custom-theme sample, shipped as an on-disk reference users can copy and
 ; edit. It is NOT a built-in style and is never auto-loaded — Settings ->
 ; Custom loads an .axaml the user points it at. This is just a worked
@@ -193,6 +199,7 @@ Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Excludes: "*.pdb,av_libglesv2.dll
 Source: "..\..\samples\custom-themes\Windows7Square.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
 Source: "..\..\samples\custom-themes\ClassicXpBlue.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
 Source: "..\..\samples\custom-themes\Classic9xBlue.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
+Source: "..\..\samples\custom-themes\AnduinDark.axaml"; DestDir: "{app}\samples\custom-themes"; Flags: ignoreversion
 ; Uninstaller icon (blue disc + silver close cross) referenced by
 ; UninstallDisplayIcon and the Start-menu uninstall shortcut.
 Source: "..\..\icon_uninstall.ico"; DestDir: "{app}"; Flags: ignoreversion
@@ -207,14 +214,16 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [InstallDelete]
 ; Inno never removes a file that has DROPPED OUT of [Files] — it only stops
 ; installing it — so every payload removal leaves an orphan behind on upgrade
-; and the install dir only ever grows. These were both measured still sitting
-; in a 0.9.27 install long after the code stopped referencing them. Add a line
-; here whenever a shipped file is retired.
+; and the install dir only ever grows. This was measured still sitting in a
+; 0.9.27 install long after the code stopped referencing it. Add a line here
+; whenever a shipped file is retired.
 ;   Avalonia.Fonts.Inter.dll — package reference dropped in 0.9.25 (nothing
 ;   asks for the Inter font; every FontFamily in the app is Segoe-based).
-;   av_libglesv2.dll — excluded above; software rendering since 0.9.17.
+; (av_libglesv2.dll used to be listed here too and is shipped again — see
+; [Files]. Its line had been corrupted into a BEL control character where
+; '\a' should be, so it never matched anything; that is why older installs
+; still carry a copy.)
 Type: files; Name: "{app}\Avalonia.Fonts.Inter.dll"
-Type: files; Name: "{app}v_libglesv2.dll"
 
 [UninstallDelete]
 ; The native bridge is shadow-copied here at runtime — outside {app}, so an

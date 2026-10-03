@@ -18,6 +18,8 @@
   "ReplaceStart": "Start ersetzen: Taskleisten-Start-Klick + Shift+Win",
   "ReplaceStartDescription": "Die alleinige Win-Taste öffnet weiterhin das Systemmenü (Microsoft hat den Detektor unter Windows 11 24H2 hinter DirectComposition versteckt — Open-Shell ist auf dieselbe Wand gestoßen und empfiehlt Shift+Win).",
   "HideOnFocusLost": "Menü beim Verlieren des Fokus ausblenden",
+  "WindowTransparency": "Fenstertransparenz",
+  "WindowTransparencyDescription": "Verwendet den Systemhintergrund (Mica unter Windows 11) hinter dem Menü. Ersetzt den Schlagschatten, statt ihn zu ergänzen — der Rahmenstil oben wird daher nicht angewendet, solange dies aktiv ist. Wird erst nach einem Neustart von MenYou wirksam, da der Hintergrund einen anderen Rendermodus benötigt — der den Start bei aktivierter Option etwas verlangsamt.",
   "MirrorWinStartDescription": "Wenn aktiviert, spiegelt der Bereich „Angeheftet“ die aktuelle Windows 11 Start-Anheftungsliste (via Export-StartLayout + Datei-Watcher auf start2.bin). Manuelles Anheften/Lösen in MenYou ist deaktiviert — Start ist die Quelle der Wahrheit.",
   "PushToWinStartDescription": "Schreibt die MenYou-Pinliste in die Richtlinie ConfigureStartPins und startet den Explorer neu. Einmalige Aktion — Windows wendet die Anheftungen bei der nächsten Anmeldung an. Erneut ausführen, um Aktualisierungen zu übertragen.",
   "CheckForUpdates": "Nach Aktualisierungen suchen",

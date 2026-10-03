@@ -128,7 +128,13 @@
 
   <!-- Background fill spans both content rows; the bottom-bar Border
        paints over it with its own darker shade. -->
-  <Border Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource Win11Bg}" />
+  <!-- Hidden under a native backdrop, not faded: Mica IS the surface there.
+       An earlier pass faded this fill to 0.72 instead, and that made the menu
+       SEE-THROUGH — the windows behind bled in and it went milky. Mica is an
+       opaque material tinted by the wallpaper; rendered side by side, the faded
+       surface washed out while an unpainted one came up clean. -->
+  <Border Grid.Row="0" Grid.RowSpan="2" Background="{DynamicResource Win11Bg}"
+          IsVisible="{Binding !IsBackdropActive}" />
 
   <!-- ===================================================================
        Row 0: search bar.
@@ -341,7 +347,14 @@
        left/right breathing room around the orb + name WITHOUT pushing the
        orb off the 12 px line (4 + 8 = 12), so it stays aligned with the
        shutdown circle on the right. -->
+  <!-- Bottom-bar fill split out as its own childless element so the
+       native-backdrop option can hide the SURFACE without hiding the avatar,
+       name and power glyphs sitting on it (IsVisible on a parent hides the
+       whole subtree). The content Border below keeps the hairline divider and
+       padding, and stays visible in both states. -->
   <Border Grid.Row="2" Background="{DynamicResource Win11BottomBar}"
+          IsVisible="{Binding !IsBackdropActive}" />
+  <Border Grid.Row="2"
           BorderBrush="{DynamicResource Win11Divider}" BorderThickness="0,1,0,0"
           Padding="4,4,12,4">
     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">

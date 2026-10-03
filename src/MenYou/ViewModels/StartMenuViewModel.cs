@@ -52,6 +52,30 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// option in Settings takes effect on the next open.
     [ObservableProperty] private WindowBorder _windowBorder;
 
+    /// <see cref="UserSettings.UseWindowTransparency"/>, SNAPSHOTTED at
+    /// construction rather than mirrored live like the other settings. It drives
+    /// the native backdrop request in StartMenuWindow, suppresses the drop shadow
+    /// (the two are mutually exclusive — see UserSettings), and stops RootBorder
+    /// and the layout from painting over the backdrop.
+    ///
+    /// Snapshotted because the Win32 rendering mode Mica needs is chosen once in
+    /// Program.Main and cannot change for the life of the process. Following the
+    /// setting live meant that ticking it in Settings removed the shadow and the
+    /// surface fills immediately while Mica was still refused under the Software
+    /// renderer — leaving a menu with no shadow, no fill and no backdrop until the
+    /// restart the help text asks for. Now the whole feature flips together, at
+    /// restart. Get-only: it never changes, so it needs no change notification.
+    public bool UseWindowTransparency { get; }
+
+    /// True only while Windows has actually GRANTED the native backdrop (the
+    /// window's ActualTransparencyLevel is Mica). Set by StartMenuWindow when
+    /// the level settles. Everything VISUAL keys off this, not off
+    /// UseWindowTransparency: the shadow, the RootBorder fill, the layout
+    /// fills, the hairline and the window rounding. The setting is only a
+    /// request, and a refused request (Windows 10, no ANGLE, no composition)
+    /// must leave the normal look in place rather than strip it.
+    [ObservableProperty] private bool _isBackdropActive;
+
     // Soft (Win 11-like) and lighter drop shadows, drawn as a BoxShadow on the
     // menu card. Kept next to their margins (ShadowMarginDip) so the two never
     // drift: the margin must exceed the shadow's reach or the window (which is
@@ -76,8 +100,8 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     private static readonly BoxShadows ShadowFull   = BoxShadows.Parse("0 0 12 0 #66000000, 0 0 32 4 #8C000000");
     private static readonly BoxShadows ShadowSubtle = BoxShadows.Parse("0 1 4 0 #33000000, 0 6 16 0 #52000000");
 
-    /// The drop shadow for the current <see cref="WindowBorder"/> — empty only
-    /// for Hairline / None. Bound to RootBorder.BoxShadow; drawn by Skia into
+    /// The drop shadow for the current <see cref="WindowBorder"/> — empty for
+    /// Hairline / None, and while the native backdrop is granted. Bound to RootBorder.BoxShadow; drawn by Skia into
     /// the transparent margin, so it works on the transparent popup where a DWM
     /// shadow can't.
     ///
@@ -87,7 +111,7 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// the window, because the margin the shadow needs is the window's to give.
     /// Excluding them just meant custom themes had no shadow at all and sat
     /// flat against the desktop while every built-in layout floated.
-    public BoxShadows MenuShadow => WindowBorder switch
+    public BoxShadows MenuShadow => IsBackdropActive ? default : WindowBorder switch
     {
         WindowBorder.Windows11 => ShadowSoft,
         WindowBorder.FullShade => ShadowFull,
@@ -100,7 +124,7 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     /// card anchored once the window grows by the band. Applies to custom
     /// themes too — see <see cref="MenuShadow"/> for why they are no longer
     /// excluded.
-    public double ShadowMarginDip => WindowBorder switch
+    public double ShadowMarginDip => IsBackdropActive ? 0 : WindowBorder switch
     {
         // FullShade's extent is blur 32 + spread 4 = 36, inside this 40 band.
         // It was widened to 56 for the heavier shadow in 0.9.28 and is back with
@@ -128,14 +152,9 @@ public sealed partial class StartMenuViewModel : ViewModelBase
     public double MenuMinWidth => UseCustomTheme ? 0 : 400;
     public double MenuMinHeight => UseCustomTheme ? 0 : 500;
 
-    /// True when the menu should paint its own chrome background — i.e. always
-    /// EXCEPT under a custom theme, which supplies its own. RootBorder's opaque
-    /// square fill behind a theme that rounds itself showed as dark square
-    /// corners around the curve, so the theme read as square when it wasn't.
-    public bool PaintChromeBackground => !UseCustomTheme;
-
     partial void OnWindowBorderChanged(WindowBorder value) => RaiseShadow();
     partial void OnUseCustomThemeChanged(bool value) => RaiseShadow();
+    partial void OnIsBackdropActiveChanged(bool value) => RaiseShadow();
     private void RaiseShadow()
     {
         OnPropertyChanged(nameof(MenuShadow));
@@ -220,6 +239,7 @@ public sealed partial class StartMenuViewModel : ViewModelBase
         UseCustomTheme = settings.Current.UseCustomTheme;
         CustomThemeXaml = settings.Current.CustomThemeXaml;
         WindowBorder = settings.Current.WindowBorder;
+        UseWindowTransparency = settings.Current.UseWindowTransparency;
         ImmediateReveal = settings.Current.ImmediateMenuReveal;
         settings.Changed += () =>
         {

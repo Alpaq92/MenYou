@@ -32,6 +32,14 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        // A throw inside a UI callback. CrashGuard survives a one-off (a glitched
+        // frame beats losing the menu) and lets a burst through so a fresh
+        // process replaces a broken one. Installed here, not with the BCL
+        // handlers in Program.Main: subscribing there would load Avalonia.Base
+        // ahead of the early hooks.
+        Dispatcher.UIThread.UnhandledException += (_, e) =>
+            e.Handled = CrashGuard.OnUiException(e.Exception);
+
         // Initialize the localizer BEFORE anything touches Strings.X.
         // Strings.cs evaluates its culture-dict properties lazily through
         // Localizer.Get, and the tray-icon setup, SetupHotkey, etc. below
@@ -771,39 +779,10 @@ public partial class App : Application
     /// ERROR_HOTKEY_ALREADY_REGISTERED).
     private void RestartApp()
     {
-        var exe = Environment.ProcessPath;
-        if (string.IsNullOrEmpty(exe))
-        {
-            // No path means we're running from a context where
-            // Environment.ProcessPath isn't populated (single-file
-            // bundles before .NET 6 SP1, certain debugger hosts).
-            // Skip the relaunch — exiting alone would be more
-            // surprising than a no-op, so just bail.
-            return;
-        }
-
-        try
-        {
-            // `start "" "<exe>"` opens the exe detached from cmd, so
-            // the cmd process terminates without holding a handle on
-            // MenYou. The empty "" is cmd's required window-title arg
-            // before the actual command.
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c timeout /t 1 /nobreak >nul & start \"\" \"{exe}\"",
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            });
-        }
-        catch
-        {
-            // Best-effort. If cmd refused (locked-down environment,
-            // unusual PATH), don't kill our process — the user can
-            // still close + relaunch manually.
-            return;
-        }
-        ExitApp();
+        // Best-effort: if nothing could be scheduled (no ProcessPath, cmd.exe
+        // refused), stay running — exiting with no relaunch would be more
+        // surprising than a no-op. See AppRelaunch for the one-second delay.
+        if (AppRelaunch.Schedule()) ExitApp();
     }
 
     private void ShowSettings()
@@ -996,15 +975,15 @@ public partial class App : Application
             {
                 try
                 {
-                    // Only from a real install. SetEnabled registers
-                    // Environment.ProcessPath, so doing this from a dev build /
-                    // `dotnet run` / portable extract would point autostart at a
-                    // throwaway binary. The uninstaller sits beside the exe in an
-                    // Inno install and nowhere else. Path.Join, not Path.Combine:
-                    // Combine RESETS to the second argument when it looks
-                    // rooted, so it silently discards BaseDirectory on a bad
-                    // input; Join always concatenates.
-                    if (!File.Exists(Path.Join(AppContext.BaseDirectory, "unins000.exe")))
+                    // Only from a real install. SetEnabled now refuses to
+                    // register from anywhere else on its own, but this early
+                    // return is still needed: a dev build shares settings.json
+                    // with the real install, and without it the steps below
+                    // would mark the shared one-shot state (TaskXmlRevision,
+                    // and IsEnabled sees the INSTALL's task by name) without
+                    // ever rewriting the task — so the real install would never
+                    // pick the new XML up.
+                    if (!Win32AutostartService.RunningFromInstall())
                         return;
 
                     // Re-read the preference here rather than trusting the one
@@ -1022,21 +1001,20 @@ public partial class App : Application
                         HookTrace.Log("Autostart: wanted but not registered — re-registering");
                         autostart.SetEnabled(true);
                         HookTrace.Log($"Autostart: re-registered (enabled={autostart.IsEnabled})");
-                        MarkPriorityApplied(settings);   // fresh task already has Priority 4
+                        MarkTaskXmlApplied(settings);   // fresh task already has the current XML
                         return;
                     }
 
-                    // Autostart IS registered — but a task created before the
-                    // priority fix keeps Task Scheduler's default Priority 7
-                    // (below-normal cpu + reduced I/O), which throttles page-in
-                    // at logon, the most I/O-contended moment there is. The XML
-                    // now asks for 4; an existing task does not pick that up on
-                    // its own, and the self-heal above deliberately only repairs
-                    // autostart that is MISSING. So re-create it exactly once.
-                    if (settings.Current.AutostartPriorityApplied) return;
-                    HookTrace.Log("Autostart: re-creating task to apply Priority 4");
+                    // Autostart IS registered — but a task keeps whatever XML it
+                    // was created with, and the self-heal above deliberately
+                    // only repairs autostart that is MISSING, never autostart
+                    // that is merely stale. So re-create it once whenever the
+                    // stored revision is behind Win32AutostartService's
+                    // TaskXmlRevision (the changes it covers are listed there).
+                    if (settings.Current.AutostartTaskXmlRevision >= Win32AutostartService.TaskXmlRevision) return;
+                    HookTrace.Log($"Autostart: re-creating task for XML revision {Win32AutostartService.TaskXmlRevision}");
                     autostart.SetEnabled(true);   // /create /f — idempotent rewrite
-                    if (autostart.IsEnabled) MarkPriorityApplied(settings);
+                    if (autostart.IsEnabled) MarkTaskXmlApplied(settings);
                 }
                 catch (Exception ex)
                 {
@@ -1047,13 +1025,13 @@ public partial class App : Application
         }
     }
 
-    /// Persist the one-shot "logon task has the new Priority" marker. Written
-    /// on the UI thread because SettingsService.Save raises Changed, which
-    /// listeners handle there.
-    private static void MarkPriorityApplied(ISettingsService settings) =>
+    /// Persist the one-shot "logon task was created from the current XML"
+    /// markers. Written on the UI thread because SettingsService.Save raises
+    /// Changed, which listeners handle there.
+    private static void MarkTaskXmlApplied(ISettingsService settings) =>
         Dispatcher.UIThread.Post(() =>
         {
-            settings.Current.AutostartPriorityApplied = true;
+            settings.Current.AutostartTaskXmlRevision = Win32AutostartService.TaskXmlRevision;
             settings.Save();
         });
 

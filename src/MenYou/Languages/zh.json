@@ -18,6 +18,8 @@
   "ReplaceStart": "替换开始：任务栏开始点击 + Shift+Win",
   "ReplaceStartDescription": "单独按 Win 键仍会打开系统菜单（Microsoft 在 Windows 11 24H2 把检测器移到 DirectComposition 之后 — Open-Shell 也撞墙后推荐 Shift+Win）。",
   "HideOnFocusLost": "失去焦点时隐藏",
+  "WindowTransparency": "窗口透明效果",
+  "WindowTransparencyDescription": "在菜单后面使用系统背景效果（Windows 11 上为 Mica）。它会替换阴影而不是叠加，因此启用时上面的边框样式不再生效。该效果需要不同的渲染模式，因此在 MenYou 重启后才会生效；启用期间启动也会稍慢一些。",
   "MirrorWinStartDescription": "启用后，固定项区域将实时反映 Windows 11 开始菜单的固定列表（通过 Export-StartLayout + start2.bin 文件监视）。MenYou 中手动固定/取消固定被禁用 — 系统开始菜单为唯一来源。",
   "PushToWinStartDescription": "将 MenYou 的固定列表写入 ConfigureStartPins 策略并重启资源管理器。一次性操作 — Windows 在下次登录时应用。再次推送请重新运行。",
   "CheckForUpdates": "检查更新",

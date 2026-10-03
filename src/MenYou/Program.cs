@@ -16,6 +16,10 @@ internal static class Program
         if (!SingleInstance.TryAcquire())
             return 0;
 
+        // Record and recover from crashes; see CrashGuard. BCL-only, so it can go
+        // in before EarlyStartup without loading Avalonia ahead of the hooks.
+        CrashGuard.Install();
+
         // Get the Start button and the Win key hooked BEFORE Avalonia loads.
         // The UI stack takes seconds to come up on a cold boot, and until it
         // did the hooks weren't in — so an early press opened Windows' Start
@@ -28,14 +32,24 @@ internal static class Program
         // GitHub-Releases update check (GitHubUpdateService). Inno handles
         // install / upgrade / uninstall out of process, so there's no other
         // boot hook to run here.
-        return BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+        // The rendering mode must be chosen BEFORE AppBuilder is configured,
+        // and it depends on a user setting. EarlyStartup has already loaded
+        // settings for the hooks, so read it from there rather than parsing
+        // settings.json a second time on the cold-start path. Null only if
+        // EarlyStartup failed outright, in which case the default (off) holds.
+        return BuildAvaloniaApp(EarlyStartup.Settings?.Current.UseWindowTransparency == true)
+            .StartWithClassicDesktopLifetime(args);
     }
+
+    /// Parameterless overload kept for the Avalonia designer / tooling, which
+    /// looks for exactly this signature by convention.
+    public static AppBuilder BuildAvaloniaApp() => BuildAvaloniaApp(false);
 
     // Cold start is dominated by loading the UI stack, not by MenYou's own init:
     // a traced cold boot reached the first line of our code at +7.3 s and then
     // finished every sync step (cache preload, tray, hooks, bridge) in 244 ms.
     // So the levers here are about NOT loading bytes we never use.
-    public static AppBuilder BuildAvaloniaApp() =>
+    public static AppBuilder BuildAvaloniaApp(bool wantsBackdrop) =>
         AppBuilder.Configure<App>()
             .UsePlatformDetect()
             // No WithInterFont() — the Avalonia.Fonts.Inter package is
@@ -55,7 +69,26 @@ internal static class Program
                 // bring-up — and the window stays a per-pixel-alpha composition
                 // surface, so the rounded corners and the card's BoxShadow are
                 // unaffected (verified on screen).
-                RenderingMode = [Win32RenderingMode.Software],
+                // Software UNLESS the user asked for the native backdrop.
+                //
+                // Measured, one variable, everything else identical:
+                //   default (ANGLE/GPU) -> requested=[Mica,None] granted=Mica
+                //   Software            -> requested=[Mica,None] granted=None
+                // Mica is only granted on a composition-backed window, and
+                // Software gives a per-pixel-alpha redirection surface instead.
+                // Requesting it under Software fails SILENTLY — Avalonia reports
+                // None and the menu quietly falls back to plain alpha, which
+                // looks like translucency but has no blur and no wallpaper tint.
+                //
+                // So the cold-start win is kept for everyone who leaves the
+                // option off (the default), and only those who turn it on pay
+                // for ANGLE. Leaving it hardcoded to Software would make the
+                // setting a no-op; forcing GPU for everyone would hand the
+                // whole user base a startup regression for an off-by-default
+                // feature.
+                RenderingMode = wantsBackdrop
+                    ? [Win32RenderingMode.AngleEgl, Win32RenderingMode.Wgl, Win32RenderingMode.Software]
+                    : [Win32RenderingMode.Software],
             })
             .LogToTrace();
 }
