@@ -18,6 +18,8 @@
   "ReplaceStart": "Replace Start: capture taskbar Start click + Shift+Win shortcut",
   "ReplaceStartDescription": "Lone Win key still opens the system menu (Microsoft moved its detector behind DirectComposition on Win 11 24H2 — Open-Shell hit the same wall and recommends Shift+Win).",
   "HideOnFocusLost": "Hide menu when it loses focus",
+  "WindowTransparency": "Window transparency",
+  "WindowTransparencyDescription": "Uses the system backdrop (Mica on Windows 11) behind the menu. Replaces the drop shadow rather than adding to it, so the border style above stops applying while this is on. Takes effect after MenYou restarts, because the backdrop needs a different rendering mode — which also makes startup slightly slower while it is enabled.",
   "MirrorWinStartDescription": "When on, MenYou's Pinned section reflects the live Windows 11 Start menu pin list (via Export-StartLayout + a file-watcher on start2.bin). Manual Pin/Unpin inside MenYou is disabled — the system Start is the source of truth.",
   "PushToWinStartDescription": "Writes MenYou's pin list to the ConfigureStartPins policy and restarts Explorer. One-shot — Windows applies pins on next sign-in. The user can edit Start pins after; re-run this to push again.",
   "CheckForUpdates": "Check for updates",

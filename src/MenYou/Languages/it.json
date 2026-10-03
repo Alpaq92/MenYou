@@ -18,6 +18,8 @@
   "ReplaceStart": "Sostituisci Start: clic sulla barra delle applicazioni + Shift+Win",
   "ReplaceStartDescription": "Il solo tasto Win apre comunque il menu di sistema (Microsoft ha spostato il rilevatore dietro DirectComposition in Windows 11 24H2 — Open-Shell ha trovato lo stesso muro e consiglia Shift+Win).",
   "HideOnFocusLost": "Nascondi quando perde il focus",
+  "WindowTransparency": "Trasparenza della finestra",
+  "WindowTransparencyDescription": "Usa lo sfondo di sistema (Mica su Windows 11) dietro il menu. Sostituisce l'ombra invece di aggiungersi a essa, quindi lo stile del bordo qui sopra non viene applicato mentre è attiva. Ha effetto dopo il riavvio di MenYou, perché lo sfondo richiede una diversa modalità di rendering, che rende anche l'avvio un po' più lento finché è attiva.",
   "MirrorWinStartDescription": "Quando attivo, la sezione Appuntati riflette in tempo reale l'elenco degli elementi appuntati del menu Start di Windows 11 (tramite Export-StartLayout + un watcher su start2.bin). L'aggiunta/rimozione manuale in MenYou è disattivata — Start di sistema è la fonte attendibile.",
   "PushToWinStartDescription": "Scrive l'elenco degli elementi appuntati di MenYou nei criteri ConfigureStartPins e riavvia Explorer. Operazione singola — Windows applica gli elementi al successivo accesso. Esegui di nuovo per inviare un altro aggiornamento.",
   "CheckForUpdates": "Verifica aggiornamenti",

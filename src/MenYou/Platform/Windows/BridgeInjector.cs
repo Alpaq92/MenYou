@@ -96,10 +96,37 @@ internal sealed class BridgeInjector : IDisposable
         return true;
     }
 
+    /// Re-installs the Explorer hook after Explorer has restarted.
+    ///
+    /// <see cref="Inject"/> alone cannot do this: it short-circuits on
+    /// <c>_hHook != IntPtr.Zero</c>, and after a restart that handle is a stale
+    /// non-zero value referring to a thread that no longer exists — so a plain
+    /// Inject() would report success and change nothing. Tear the old hook and
+    /// module down first, then install against the new Explorer's tray thread.
+    /// FreeLibrary matters as much as the unhook: Inject() calls LoadLibrary
+    /// every time, so skipping it would leak a module refcount per restart.
+    public bool Reinject()
+    {
+        if (_disposed) return false;
+        ReleaseHook();
+        var ok = Inject();
+        HookTrace.Log($"BridgeInjector: reinject after Explorer restart ok={ok}");
+        return ok;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         _disposed = true;
+        ReleaseHook();
+        HookTrace.Log("BridgeInjector: disposed");
+    }
+
+    /// Unhooks and releases the module, zeroing both handles. One copy, shared
+    /// by Reinject and Dispose, so the release order can't drift between them —
+    /// a missed FreeLibrary on either path leaks a module refcount.
+    private void ReleaseHook()
+    {
         if (_hHook != IntPtr.Zero)
         {
             UnhookWindowsHookEx(_hHook);
@@ -110,7 +137,6 @@ internal sealed class BridgeInjector : IDisposable
             FreeLibrary(_hModule);
             _hModule = IntPtr.Zero;
         }
-        HookTrace.Log("BridgeInjector: disposed");
     }
 
     /// Resolves the native bridge to inject — but deliberately NOT the copy

@@ -18,6 +18,8 @@
   "ReplaceStart": "Przejmij Start: kliknięcie ikony na pasku zadań + Shift+Win",
   "ReplaceStartDescription": "Pojedynczy klawisz Win nadal otwiera menu systemowe (Microsoft schował detektor za DirectComposition w Windows 11 24H2 — Open-Shell trafił na tę samą ścianę i rekomenduje Shift+Win).",
   "HideOnFocusLost": "Ukryj menu po utracie fokusu",
+  "WindowTransparency": "Przezroczystość okna",
+  "WindowTransparencyDescription": "Używa tła systemowego (Mica w systemie Windows 11) za menu. Zastępuje cień, a nie go uzupełnia — styl obramowania powyżej nie jest stosowany, gdy ta opcja jest włączona. Działa po ponownym uruchomieniu MenYou, ponieważ tło wymaga innego trybu renderowania — który przy włączonej opcji nieco spowalnia uruchamianie.",
   "MirrorWinStartDescription": "Po włączeniu sekcja Przypięte odzwierciedla aktualną listę przypiętych aplikacji menu Start systemu Windows 11 (przez Export-StartLayout + obserwator pliku start2.bin). Ręczne przypinanie/odpinanie w MenYou jest wyłączone — systemowy menu Start jest źródłem prawdy.",
   "PushToWinStartDescription": "Zapisuje listę przypiętych z MenYou do zasady ConfigureStartPins i restartuje Eksplorator. Operacja jednorazowa — Windows zastosuje przypięcia przy następnym logowaniu. Po edycji w MenYou uruchom ponownie, aby zaktualizować.",
   "CheckForUpdates": "Sprawdź aktualizacje",

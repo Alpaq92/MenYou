@@ -18,6 +18,8 @@
   "ReplaceStart": "Remplacer Démarrer : clic dans la barre des tâches + Shift+Win",
   "ReplaceStartDescription": "La touche Win seule continue d'ouvrir le menu système (Microsoft a déplacé le détecteur derrière DirectComposition dans Windows 11 24H2 — Open-Shell a rencontré le même mur et recommande Shift+Win).",
   "HideOnFocusLost": "Masquer le menu à la perte du focus",
+  "WindowTransparency": "Transparence de la fenêtre",
+  "WindowTransparencyDescription": "Utilise l'arrière-plan du système (Mica sous Windows 11) derrière le menu. Remplace l'ombre portée au lieu de s'y ajouter : le style de bordure ci-dessus ne s'applique plus tant que cette option est active. Prend effet après le redémarrage de MenYou, car l'arrière-plan exige un autre mode de rendu — qui ralentit aussi légèrement le démarrage tant qu'il est activé.",
   "MirrorWinStartDescription": "Quand activé, la section Épinglés reflète en direct la liste d'épingles de Windows 11 (via Export-StartLayout + un file-watcher sur start2.bin). L'épinglage manuel dans MenYou est désactivé — Démarrer fait foi.",
   "PushToWinStartDescription": "Écrit la liste d'épingles de MenYou dans la stratégie ConfigureStartPins et redémarre l'Explorateur. Action ponctuelle — Windows applique les épingles à la prochaine connexion. Relancez pour pousser à nouveau.",
   "CheckForUpdates": "Vérifier les mises à jour",

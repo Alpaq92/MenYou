@@ -216,6 +216,10 @@ public static class Strings
     // and reads natively in every Windows locale.
     public static string StartWithWindows        => Resolve("StartWithWindows", $@"@{Sys}\shell32.dll,-21787");
     public static string HideOnFocusLost         => Resolve("HideOnFocusLost");
+    // Native-backdrop toggle. MenYou-specific phrasing (it describes our own
+    // shadow/backdrop trade-off, not a Windows setting), so JSON-only.
+    public static string WindowTransparency            => Resolve("WindowTransparency");
+    public static string WindowTransparencyDescription => Resolve("WindowTransparencyDescription");
 
     // ---- Developer tab ---------------------------------------------------
     // Developer: a deep SHLoadIndirectString probe over shell32 / twinui /

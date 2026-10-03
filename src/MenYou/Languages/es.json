@@ -18,6 +18,8 @@
   "ReplaceStart": "Reemplazar Inicio: clic en barra de tareas + Shift+Win",
   "ReplaceStartDescription": "La tecla Win sola sigue abriendo el menú del sistema (Microsoft movió el detector tras DirectComposition en Windows 11 24H2 — Open-Shell topó con lo mismo y recomienda Shift+Win).",
   "HideOnFocusLost": "Ocultar el menú al perder el foco",
+  "WindowTransparency": "Transparencia de la ventana",
+  "WindowTransparencyDescription": "Usa el fondo del sistema (Mica en Windows 11) detrás del menú. Sustituye a la sombra en lugar de sumarse a ella, por lo que el estilo de borde de arriba deja de aplicarse mientras esté activado. Surte efecto tras reiniciar MenYou, porque el fondo requiere otro modo de representación, que además hace el inicio algo más lento mientras está activo.",
   "MirrorWinStartDescription": "Cuando está activado, la sección Anclados refleja la lista en vivo del menú Inicio de Windows 11 (vía Export-StartLayout + observador de start2.bin). El anclaje manual en MenYou se desactiva — Inicio es la fuente de verdad.",
   "PushToWinStartDescription": "Escribe la lista de anclados de MenYou en la directiva ConfigureStartPins y reinicia el Explorador. Acción única — Windows aplica los anclajes en el siguiente inicio de sesión. Vuelva a ejecutarlo para enviar de nuevo.",
   "CheckForUpdates": "Buscar actualizaciones",

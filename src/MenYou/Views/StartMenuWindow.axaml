@@ -14,7 +14,7 @@
         WindowDecorations="None"
         ShowInTaskbar="False"
         Topmost="True"
-        TransparencyLevelHint="Transparent,Mica,AcrylicBlur,Blur"
+        TransparencyLevelHint="Transparent"
         Background="Transparent"
         FontFamily="Segoe UI Variable Text, Segoe UI, Inter"
         FontSize="13"
@@ -38,7 +38,27 @@
              rounds ITSELF shows up as dark square corners around the curve —
              the theme looks square even though it isn't. Drop the fill for
              custom themes and let the theme paint its own background. -->
+        <!-- RootBorder's default fill lives HERE, as a style, not as a local
+             Background attribute on the element. A local value outranks every
+             style setter in Avalonia, so while the fill was set inline the two
+             class overrides below could never win: RootBorder painted
+             MenuBackground behind custom themes all along, and behind the
+             native backdrop too. Measured with MenYou on Light and Windows on
+             dark: the "backdrop" interior read 250,250,250 — RootBorder's
+             #FAFAFA, not Mica. Class-activated styles take precedence over this
+             plain one, so the overrides now actually apply. -->
+        <Style Selector="Border#RootBorder">
+            <Setter Property="Background" Value="{DynamicResource MenuBackgroundBrush}" />
+        </Style>
         <Style Selector="Border#RootBorder.customtheme">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+
+        <!-- Same for a native backdrop: Mica IS the surface there, so an opaque
+             MenuBackground fill on top of it would hide the backdrop entirely.
+             This replaces a StartMenuViewModel.PaintChromeBackground property
+             that was meant to do the job but was never bound to anything. -->
+        <Style Selector="Border#RootBorder.backdrop">
             <Setter Property="Background" Value="Transparent" />
         </Style>
     </Window.Styles>
@@ -62,8 +82,8 @@
             CornerRadius="{Binding UseCustomTheme, Converter={x:Static c:CustomThemeCornerRadiusConverter.Instance}}"
             BorderThickness="0"
             BorderBrush="{DynamicResource MenuBorderBrush}"
-            Background="{DynamicResource MenuBackgroundBrush}"
             Classes.customtheme="{Binding UseCustomTheme}"
+            Classes.backdrop="{Binding IsBackdropActive}"
             Margin="{Binding ShadowMargin}"
             BoxShadow="{Binding MenuShadow}"
             ClipToBounds="False">

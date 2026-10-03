@@ -18,6 +18,8 @@
   "ReplaceStart": "Substituir Iniciar: clique na barra de tarefas + Shift+Win",
   "ReplaceStartDescription": "A tecla Win sozinha ainda abre o menu do sistema (a Microsoft moveu o detector para trás do DirectComposition no Windows 11 24H2 — o Open-Shell enfrentou o mesmo obstáculo e recomenda Shift+Win).",
   "HideOnFocusLost": "Ocultar ao perder o foco",
+  "WindowTransparency": "Transparência da janela",
+  "WindowTransparencyDescription": "Usa o fundo do sistema (Mica no Windows 11) atrás do menu. Substitui a sombra em vez de se somar a ela, portanto o estilo de borda acima deixa de ser aplicado enquanto estiver ativado. Passa a valer após reiniciar o MenYou, porque o fundo exige outro modo de renderização — que também deixa a inicialização um pouco mais lenta enquanto estiver ativo.",
   "MirrorWinStartDescription": "Quando ativado, a seção Fixados reflete a lista de fixados do menu Iniciar do Windows 11 em tempo real (via Export-StartLayout + um monitor de arquivo em start2.bin). Fixar/desafixar manualmente no MenYou fica desativado — o Iniciar do sistema é a fonte da verdade.",
   "PushToWinStartDescription": "Grava a lista de fixados do MenYou na política ConfigureStartPins e reinicia o Explorer. Ação única — o Windows aplica os fixados no próximo login. Execute novamente para enviar de novo.",
   "CheckForUpdates": "Verificar atualizações",

@@ -179,6 +179,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty] private bool _replaceWinKey;
     [ObservableProperty] private bool _startWithWindows;
     [ObservableProperty] private bool _hideOnFocusLost;
+    [ObservableProperty] private bool _useWindowTransparency;
     [ObservableProperty] private bool _mirrorWindowsStart;
     [ObservableProperty] private int _maxRecentItems;
     [ObservableProperty] private int _contextMenuRecentCount;
@@ -294,6 +295,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _replaceWinKey = s.ReplaceWinKey;
         _startWithWindows = s.StartWithWindows;
         _hideOnFocusLost = s.HideOnFocusLost;
+        _useWindowTransparency = s.UseWindowTransparency;
         _mirrorWindowsStart = s.MirrorWindowsStart;
         _maxRecentItems = s.MaxRecentItems;
         _contextMenuRecentCount = s.ContextMenuRecentCount;
@@ -331,6 +333,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         s.ReplaceWinKey = ReplaceWinKey;
         s.StartWithWindows = StartWithWindows;
         s.HideOnFocusLost = HideOnFocusLost;
+        s.UseWindowTransparency = UseWindowTransparency;
         s.MirrorWindowsStart = MirrorWindowsStart;
         s.MaxRecentItems = MaxRecentItems;
         s.ContextMenuRecentCount = ContextMenuRecentCount;
@@ -408,6 +411,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ReplaceWinKey = s.ReplaceWinKey;
         StartWithWindows = s.StartWithWindows;
         HideOnFocusLost = s.HideOnFocusLost;
+        UseWindowTransparency = s.UseWindowTransparency;
         MirrorWindowsStart = s.MirrorWindowsStart;
         MaxRecentItems = s.MaxRecentItems;
         ContextMenuRecentCount = s.ContextMenuRecentCount;

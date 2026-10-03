@@ -7,20 +7,25 @@
         x:DataType="vm:SettingsViewModel"
         Title="{x:Static loc:Strings.SettingsTitle}"
         Icon="avares://MenYou/Assets/icon_v2.ico"
-        Width="720" Height="640"
+        Width="720" Height="760"
         MinWidth="600" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Opacity="0">
 
-    <!-- Height 640, not 560: the Appearance tab outgrew the old size. The
-         TabControl below deliberately has no ScrollViewer (see its comment),
-         so the design invariant is "every tab fits without scrolling" — and
-         at 560 the last of the three visibility checkboxes fell behind the
-         button bar. MinHeight raised with it so the window can't be dragged
-         back into the clipped state; it is not raised all the way to 640, so
-         a small screen can still shrink it somewhat. If a future tab grows
-         past this, raise the height again or give each tab its own
-         ScrollViewer — do not shrink the spacing back. -->
+    <!-- Height 760. The Appearance tab has outgrown the window twice: at 560
+         the third visibility checkbox fell behind the button bar, so the
+         height went to 640; then the "Window transparency" checkbox and its
+         help text added ~115 px and pushed all three back under it (measured:
+         last checkbox bottom at 673 in a 640 window). 760 fits today's content
+         with the same small slack.
+
+         Height alone only fixes today's content, so each stacked tab is also
+         wrapped in its own ScrollViewer (see the TabControl below): at the
+         default size nothing scrolls, but a smaller window — MinHeight 560, a
+         768-px laptop screen — or a future option can never hide a control
+         again; the tab scrolls instead. The Custom tab is the exception: its
+         editor and preview FILL the tab and must not be given infinite height.
+         Do not shrink the spacing to make room. -->
 
     <!-- Fade-in reveal (the "shine"). The window is created Opacity=0 and the
          code-behind sets Opacity=1 once it's centered + painted (Loaded
@@ -168,16 +173,22 @@
              share vertical space, so adding a new section can never
              push another section out of view. This is the structural
              fix for the recurring "X is overflowing the scroll pane"
-             complaints. Per-tab content is short enough to fit
-             comfortably in the default window height, and the
-             editor/preview pane in the last tab gets the full tab
-             content area without competing with other sections. -->
+             complaints. Per-tab content is meant to fit the default
+             window height, and the editor/preview pane in the Custom
+             tab gets the full tab content area without competing with
+             other sections. Each OTHER tab additionally sits in its own
+             ScrollViewer as a fallback — per tab, so the tabs still
+             never compete — because "meant to fit" failed once already:
+             adding one option clipped the Appearance tab with no way to
+             reach the hidden controls. -->
+
         <TabControl Grid.Row="0" Padding="20,12">
             <!-- "Wygląd" + "Układ" merged into one tab per user request.
                  Header uses the Appearance string; the Layout controls
                  sit below the Appearance grid in the same StackPanel,
                  separated only by visual breathing space. -->
             <TabItem Header="{x:Static loc:Strings.Appearance}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="14">
                 <Grid ColumnDefinitions="220,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="12">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static loc:Strings.MenuStyle}" VerticalAlignment="Center" />
@@ -244,6 +255,20 @@
                     </ComboBox>
                 </Grid>
 
+                <!-- Sits directly under the border picker because the two
+                     interact: a native backdrop replaces the drop shadow
+                     rather than joining it, so whichever shadow style is
+                     selected above stops applying while this is ticked. The
+                     help text says so, since the border combo stays enabled
+                     and would otherwise look like it was being ignored. -->
+                <StackPanel Spacing="6">
+                    <CheckBox Content="{x:Static loc:Strings.WindowTransparency}"
+                              IsChecked="{Binding UseWindowTransparency, Mode=TwoWay}" />
+                    <Border Classes="help">
+                        <TextBlock Text="{x:Static loc:Strings.WindowTransparencyDescription}" />
+                    </Border>
+                </StackPanel>
+
                 <Separator />
 
                 <!-- Layout controls follow Appearance under the same
@@ -300,9 +325,11 @@
                     <CheckBox Content="{x:Static loc:Strings.ShowSearch}" IsChecked="{Binding ShowSearch, Mode=TwoWay}" />
                 </StackPanel>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="{x:Static loc:Strings.Behavior}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="6">
                     <CheckBox Content="{x:Static loc:Strings.ReplaceStart}"
                               IsChecked="{Binding ReplaceWinKey, Mode=TwoWay}" />
@@ -314,9 +341,11 @@
                     <CheckBox Content="{x:Static loc:Strings.HideOnFocusLost}"
                               IsChecked="{Binding HideOnFocusLost, Mode=TwoWay}" />
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="{x:Static loc:Strings.Synchronization}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="6">
                     <CheckBox Content="{x:Static loc:Strings.MirrorWinStart}"
                               IsChecked="{Binding MirrorWindowsStart, Mode=TwoWay}" />
@@ -335,6 +364,7 @@
                         <TextBlock Text="{Binding PushStatus}" />
                     </Border>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="{x:Static loc:Strings.CustomTab}">
@@ -444,12 +474,41 @@
                              preview — the user wants to see the whole
                              thing at the available size, regardless of
                              the theme's native dimensions. -->
+                        <!-- Backdrop is a checkerboard, NOT MenuBackgroundBrush.
+                             It used to be that brush — the very one a theme
+                             paints ITSELF with — so a theme's edges vanished
+                             into the pane and you couldn't see where the
+                             preview stopped and the pane began. A checker also
+                             shows through anything the theme leaves
+                             transparent, which a flat fill hides.
+
+                             Mid-grey in both light and dark (the image-editor
+                             convention) instead of theme-aware shades: the
+                             point is to differ from the CONTENT, and custom
+                             themes come in both polarities, so a backdrop that
+                             followed the app theme would collide with half of
+                             them. Mid-grey collides with neither a ~#1A1A1A
+                             dark theme nor a ~#FAFAFA light one. -->
                         <Border Grid.Column="1"
                                 BorderBrush="{DynamicResource MenuBorderBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4"
-                                Background="{DynamicResource MenuBackgroundBrush}"
                                 ClipToBounds="True">
+                            <Border.Background>
+                                <DrawingBrush TileMode="Tile"
+                                              SourceRect="0,0,16,16"
+                                              DestinationRect="0,0,16,16"
+                                              Stretch="None">
+                                    <DrawingBrush.Drawing>
+                                        <DrawingGroup>
+                                            <DrawingGroup.Children>
+                                                <GeometryDrawing Brush="#A8A8A8" Geometry="M0,0 H16 V16 H0 Z" />
+                                                <GeometryDrawing Brush="#8E8E8E" Geometry="M0,0 H8 V8 H0 Z M8,8 H16 V16 H8 Z" />
+                                            </DrawingGroup.Children>
+                                        </DrawingGroup>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Border.Background>
                             <Viewbox Stretch="Uniform">
                                 <ContentControl Content="{Binding CustomThemeXaml, Converter={x:Static conv:XamlStringToControlConverter.Instance}}" />
                             </Viewbox>
@@ -459,6 +518,7 @@
             </TabItem>
 
             <TabItem Header="{x:Static loc:Strings.Developer}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Spacing="6">
                     <CheckBox Content="{x:Static loc:Strings.UseDiscoveryCache}"
                               IsChecked="{Binding UseDiscoveryCache, Mode=TwoWay}" />
@@ -488,6 +548,7 @@
                                        Value="{Binding MaxLogSizeMb, Mode=TwoWay}" />
                     </Grid>
                 </StackPanel>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
 
